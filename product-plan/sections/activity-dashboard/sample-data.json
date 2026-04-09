@@ -1,0 +1,268 @@
+{
+  "_meta": {
+    "models": {
+      "summary": "Headline KPI stats for the selected time range and member scope. All numbers represent totals within the filtered period.",
+      "patrolActivity": "Day-by-day patrol counts within the selected time range. Used to render the patrol activity bar chart.",
+      "trailCoverage": "Per-trail patrol summary for the selected period. Each record represents one trail and shows patrol frequency, member participation, and hiker contact totals.",
+      "patrolsByTrailId": "Patrol rows keyed by trail ID for the coverage drill-down view; must match the same time range and member scope as the dashboard.",
+      "violationsByCategory": "Aggregated violation counts grouped by violation type. Sourced from t_rpt_violation joined to lu_obs_type.",
+      "treesCleared": "Trees cleared during patrol, broken down by size class. Includes both an org-wide aggregate and a per-trail breakdown.",
+      "members": "Member list used to populate the member selector dropdown. Only includes active members with at least one patrol in the database.",
+      "currentScope": "The currently active filter state: which time range preset is selected and which member context is active."
+    },
+    "relationships": [
+      "trailCoverage records reference area names from lu_area (Pawnee Buttes, Big Thompson/Estes Park, Lower Poudre Canyon, Pingree Park, Red Feather Lakes, Upper Poudre Canyon, Rawah Wilderness)",
+      "treesCleared.byTrail entries reference trail names from lu_trail",
+      "members are sourced from t_member; only active members with patrol history are included in the selector"
+    ]
+  },
+
+  "currentUserId": 1042,
+
+  "currentScope": {
+    "timeRange": "7d",
+    "memberContext": "all"
+  },
+
+  "summary": {
+    "patrols": 14,
+    "patrolsDelta": 3,
+    "trailsCovered": 8,
+    "trailsCoveredDelta": -1,
+    "treesCleared": 6,
+    "treesClearedDelta": 2,
+    "hikersContacted": 203,
+    "hikersContactedDelta": 31,
+    "volunteerHours": 42.5,
+    "totalActiveMembers": 252,
+    "periodLabel": "Mar 23 – Mar 30, 2026"
+  },
+
+  "patrolActivity": [
+    { "date": "2026-03-24", "dayLabel": "Mon", "patrols": 1 },
+    { "date": "2026-03-25", "dayLabel": "Tue", "patrols": 0 },
+    { "date": "2026-03-26", "dayLabel": "Wed", "patrols": 2 },
+    { "date": "2026-03-27", "dayLabel": "Thu", "patrols": 3 },
+    { "date": "2026-03-28", "dayLabel": "Fri", "patrols": 1 },
+    { "date": "2026-03-29", "dayLabel": "Sat", "patrols": 5 },
+    { "date": "2026-03-30", "dayLabel": "Sun", "patrols": 2 }
+  ],
+
+  "trailCoverage": [
+    {
+      "trailId": 117,
+      "trailName": "Greyrock",
+      "trailNumber": "946",
+      "area": "Lower Poudre Canyon",
+      "lengthMiles": 3.1,
+      "inWilderness": false,
+      "patrols": 3,
+      "members": 4,
+      "hikersSeen": 94,
+      "hikersContacted": 78,
+      "lastPatrolDate": "2026-03-29"
+    },
+    {
+      "trailId": 126,
+      "trailName": "Hewlett Gulch",
+      "trailNumber": "954",
+      "area": "Lower Poudre Canyon",
+      "lengthMiles": 2.0,
+      "inWilderness": false,
+      "patrols": 2,
+      "members": 2,
+      "hikersSeen": 56,
+      "hikersContacted": 45,
+      "lastPatrolDate": "2026-03-29"
+    },
+    {
+      "trailId": 318,
+      "trailName": "Young Gulch",
+      "trailNumber": "999",
+      "area": "Lower Poudre Canyon",
+      "lengthMiles": 4.9,
+      "inWilderness": false,
+      "patrols": 2,
+      "members": 3,
+      "hikersSeen": 36,
+      "hikersContacted": 29,
+      "lastPatrolDate": "2026-03-30"
+    },
+    {
+      "trailId": 171,
+      "trailName": "Lion Gulch",
+      "trailNumber": "949",
+      "area": "Big Thompson/Estes Park",
+      "lengthMiles": 3.4,
+      "inWilderness": false,
+      "patrols": 2,
+      "members": 2,
+      "hikersSeen": 38,
+      "hikersContacted": 31,
+      "lastPatrolDate": "2026-03-28"
+    },
+    {
+      "trailId": 3,
+      "trailName": "Beaver Creek",
+      "trailNumber": "942",
+      "area": "Upper Poudre Canyon",
+      "lengthMiles": 6.6,
+      "inWilderness": true,
+      "patrols": 2,
+      "members": 3,
+      "hikersSeen": 18,
+      "hikersContacted": 14,
+      "lastPatrolDate": "2026-03-27"
+    },
+    {
+      "trailId": 87,
+      "trailName": "Emmaline Lake",
+      "trailNumber": "945",
+      "area": "Pingree Park",
+      "lengthMiles": 5.8,
+      "inWilderness": true,
+      "patrols": 1,
+      "members": 2,
+      "hikersSeen": 8,
+      "hikersContacted": 6,
+      "lastPatrolDate": "2026-03-26"
+    },
+    {
+      "trailId": 240,
+      "trailName": "Mummy Pass",
+      "trailNumber": "937",
+      "area": "Pingree Park",
+      "lengthMiles": 3.5,
+      "inWilderness": true,
+      "patrols": 1,
+      "members": 1,
+      "hikersSeen": 2,
+      "hikersContacted": 0,
+      "lastPatrolDate": "2026-03-26"
+    },
+    {
+      "trailId": 276,
+      "trailName": "Signal Mountain",
+      "trailNumber": "928",
+      "area": "Upper Poudre Canyon",
+      "lengthMiles": 5.9,
+      "inWilderness": true,
+      "patrols": 1,
+      "members": 2,
+      "hikersSeen": 0,
+      "hikersContacted": 0,
+      "lastPatrolDate": "2026-03-24"
+    }
+  ],
+
+  "patrolsByTrailId": {
+    "117": [
+      { "date": "2026-03-29", "memberName": "Sarah Mitchell", "hikersSeen": 39, "hikersContacted": 32, "durationHours": 4.5 },
+      { "date": "2026-03-27", "memberName": "Tom Eriksen", "hikersSeen": 34, "hikersContacted": 28, "durationHours": 3.5 },
+      { "date": "2026-03-24", "memberName": "Sarah Mitchell & Diane Waller", "hikersSeen": 21, "hikersContacted": 18, "durationHours": 5 }
+    ],
+    "126": [
+      { "date": "2026-03-29", "memberName": "Marcus Tran", "hikersSeen": 27, "hikersContacted": 22, "durationHours": 3 },
+      { "date": "2026-03-26", "memberName": "Julie Okonkwo", "hikersSeen": 29, "hikersContacted": 23, "durationHours": 2.5 }
+    ],
+    "318": [
+      { "date": "2026-03-30", "memberName": "Robert Schaefer", "hikersSeen": 19, "hikersContacted": 15, "durationHours": 4 },
+      { "date": "2026-03-28", "memberName": "Elena Vasquez", "hikersSeen": 17, "hikersContacted": 14, "durationHours": 3 }
+    ],
+    "171": [
+      { "date": "2026-03-28", "memberName": "Dave Hutchins", "hikersSeen": 22, "hikersContacted": 18, "durationHours": 3 },
+      { "date": "2026-03-25", "memberName": "Sarah Mitchell", "hikersSeen": 16, "hikersContacted": 13, "durationHours": 2.5 }
+    ],
+    "3": [
+      { "date": "2026-03-27", "memberName": "Tom Eriksen", "hikersSeen": 10, "hikersContacted": 8, "durationHours": 6 },
+      { "date": "2026-03-22", "memberName": "Diane Waller", "hikersSeen": 8, "hikersContacted": 6, "durationHours": 5.5 }
+    ],
+    "87": [
+      { "date": "2026-03-26", "memberName": "Marcus Tran & Julie Okonkwo", "hikersSeen": 8, "hikersContacted": 6, "durationHours": 4 }
+    ],
+    "240": [
+      { "date": "2026-03-26", "memberName": "Robert Schaefer", "hikersSeen": 2, "hikersContacted": 0, "durationHours": 3.5 }
+    ],
+    "276": [
+      { "date": "2026-03-24", "memberName": "Dave Hutchins", "hikersSeen": 0, "hikersContacted": 0, "durationHours": 4.5 }
+    ]
+  },
+
+  "violationsByCategory": [
+    { "category": "Off-leash dog", "count": 11, "color": "amber" },
+    { "category": "Camping outside designated site", "count": 4, "color": "amber" },
+    { "category": "Fire in restricted area", "count": 2, "color": "amber" },
+    { "category": "Group size exceeded", "count": 2, "color": "amber" },
+    { "category": "Shortcutting / trail damage", "count": 1, "color": "amber" },
+    { "category": "Prohibited equipment (e-bike)", "count": 1, "color": "amber" }
+  ],
+
+  "treesCleared": {
+    "aggregate": [
+      { "sizeClass": "< 8\"", "label": "Small\n(< 8\")", "count": 12 },
+      { "sizeClass": "8\" – 15\"", "label": "Medium\n(8–15\")", "count": 7 },
+      { "sizeClass": "16\" – 23\"", "label": "Large\n(16–23\")", "count": 3 },
+      { "sizeClass": "24\" – 36\"", "label": "XL\n(24–36\")", "count": 1 },
+      { "sizeClass": "> 36\"", "label": "XXL\n(> 36\")", "count": 0 }
+    ],
+    "byTrail": [
+      {
+        "trailName": "Beaver Creek",
+        "trailNumber": "942",
+        "trees": [
+          { "sizeClass": "< 8\"", "count": 5 },
+          { "sizeClass": "8\" – 15\"", "count": 3 },
+          { "sizeClass": "16\" – 23\"", "count": 1 },
+          { "sizeClass": "24\" – 36\"", "count": 0 },
+          { "sizeClass": "> 36\"", "count": 0 }
+        ],
+        "total": 9
+      },
+      {
+        "trailName": "Emmaline Lake",
+        "trailNumber": "945",
+        "trees": [
+          { "sizeClass": "< 8\"", "count": 4 },
+          { "sizeClass": "8\" – 15\"", "count": 3 },
+          { "sizeClass": "16\" – 23\"", "count": 2 },
+          { "sizeClass": "24\" – 36\"", "count": 1 },
+          { "sizeClass": "> 36\"", "count": 0 }
+        ],
+        "total": 10
+      },
+      {
+        "trailName": "Signal Mountain",
+        "trailNumber": "928",
+        "trees": [
+          { "sizeClass": "< 8\"", "count": 3 },
+          { "sizeClass": "8\" – 15\"", "count": 1 },
+          { "sizeClass": "16\" – 23\"", "count": 0 },
+          { "sizeClass": "24\" – 36\"", "count": 0 },
+          { "sizeClass": "> 36\"", "count": 0 }
+        ],
+        "total": 4
+      }
+    ]
+  },
+
+  "membersByAge": [
+    { "ageGroup": "20–29", "active": 3,  "inactive": 12 },
+    { "ageGroup": "30–39", "active": 8,  "inactive": 18 },
+    { "ageGroup": "40–49", "active": 14, "inactive": 32 },
+    { "ageGroup": "50–59", "active": 22, "inactive": 45 },
+    { "ageGroup": "60–69", "active": 18, "inactive": 52 },
+    { "ageGroup": "70–79", "active": 7,  "inactive": 31 },
+    { "ageGroup": "80+",   "active": 2,  "inactive": 9  }
+  ],
+
+  "members": [
+    { "personId": 1042, "firstName": "Sarah", "lastName": "Mitchell", "fullName": "Sarah Mitchell", "patrols": 47 },
+    { "personId": 2187, "firstName": "Tom", "lastName": "Eriksen", "fullName": "Tom Eriksen", "patrols": 63 },
+    { "personId": 893, "firstName": "Diane", "lastName": "Waller", "fullName": "Diane Waller", "patrols": 31 },
+    { "personId": 3301, "firstName": "Marcus", "lastName": "Tran", "fullName": "Marcus Tran", "patrols": 28 },
+    { "personId": 1556, "firstName": "Julie", "lastName": "Okonkwo", "fullName": "Julie Okonkwo", "patrols": 19 },
+    { "personId": 2740, "firstName": "Robert", "lastName": "Schaefer", "fullName": "Robert Schaefer", "patrols": 55 },
+    { "personId": 4102, "firstName": "Elena", "lastName": "Vasquez", "fullName": "Elena Vasquez", "patrols": 12 },
+    { "personId": 617, "firstName": "Dave", "lastName": "Hutchins", "fullName": "Dave Hutchins", "patrols": 88 }
+  ]
+}

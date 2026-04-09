@@ -1,0 +1,13 @@
+/* Design Tokens — PWV Insights */
+
+:root {
+  /* Colors (Tailwind-aligned names — map to your theme) */
+  --color-primary: emerald;
+  --color-secondary: amber;
+  --color-neutral: stone;
+
+  /* Typography */
+  --font-heading: "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}

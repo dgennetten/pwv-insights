@@ -1,0 +1,3559 @@
+{
+  "_meta": {
+    "models": {
+      "Trail": "A named Forest Service trail with computed health stats derived from patrol reports. Includes both list-view summary fields and full detail data.",
+      "PatrolEntry": "A single patrol visit to a trail — who patrolled, when, how many hikers they contacted, and how long they were out.",
+      "TreeSizeBreakdown": "Counts of fallen trees grouped by diameter class: small (<8\"), medium (8–15\"), large (16–23\"), xl (24–36\"), xxl (>36\").",
+      "ViolationCategory": "A rule violation type observed on this trail and the total count recorded.",
+      "MaintenanceWorkEntry": "A trail maintenance or clearing task performed during a patrol, typed by work category."
+    },
+    "relationships": [
+      "Each Trail has many PatrolEntries in its patrolHistory",
+      "Each Trail has treesDown and treesCleared counts broken down by size class",
+      "Each Trail has many ViolationCategory totals",
+      "Each Trail has many MaintenanceWorkEntries"
+    ]
+  },
+  "trails": [
+    {
+      "id": "greyrock",
+      "name": "Greyrock",
+      "trailNumber": 946,
+      "lengthMiles": 3.1,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": false,
+      "patrolCount": 14,
+      "patrolFrequency": 3.5,
+      "efficiencyScore": 88,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-28",
+          "memberName": "Sarah K.",
+          "hikersSeen": 84,
+          "hikersContacted": 67,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-03-21",
+          "memberName": "Tom R.",
+          "hikersSeen": 68,
+          "hikersContacted": 54,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-03-14",
+          "memberName": "Sarah K.",
+          "hikersSeen": 114,
+          "hikersContacted": 91,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-03-07",
+          "memberName": "Alex M.",
+          "hikersSeen": 55,
+          "hikersContacted": 44,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-28",
+          "memberName": "Tom R.",
+          "hikersSeen": 48,
+          "hikersContacted": 38,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-02-21",
+          "memberName": "Sarah K.",
+          "hikersSeen": 148,
+          "hikersContacted": 118,
+          "durationHours": 3.5
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 3,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 8
+        },
+        {
+          "category": "Group size exceeded",
+          "count": 2
+        },
+        {
+          "category": "Shortcutting / trail damage",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-21",
+          "workType": "Brushing",
+          "quantity": 40,
+          "unit": "linear feet",
+          "notes": "Cleared encroaching brush on upper switchbacks"
+        },
+        {
+          "date": "2026-02-28",
+          "workType": "Drainage",
+          "quantity": 3,
+          "unit": "drain dips",
+          "notes": "Cleared 3 blocked drain dips near summit approach"
+        }
+      ],
+      "hikersSeen": 515,
+      "hikersContacted": 412
+    },
+    {
+      "id": "hewlett-gulch",
+      "name": "Hewlett Gulch",
+      "trailNumber": 954,
+      "lengthMiles": 7.9,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 11,
+      "patrolFrequency": 2.75,
+      "efficiencyScore": 74,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-26",
+          "memberName": "Maria L.",
+          "hikersSeen": 40,
+          "hikersContacted": 32,
+          "durationHours": 5
+        },
+        {
+          "date": "2026-03-19",
+          "memberName": "Dave S.",
+          "hikersSeen": 51,
+          "hikersContacted": 41,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-03-12",
+          "memberName": "Maria L.",
+          "hikersSeen": 35,
+          "hikersContacted": 28,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2026-03-05",
+          "memberName": "Chris P.",
+          "hikersSeen": 69,
+          "hikersContacted": 55,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-02-26",
+          "memberName": "Dave S.",
+          "hikersSeen": 29,
+          "hikersContacted": 23,
+          "durationHours": 5
+        }
+      ],
+      "treesDown": {
+        "small": 5,
+        "medium": 3,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 5,
+        "medium": 3,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 5
+        },
+        {
+          "category": "Camping outside designated site",
+          "count": 3
+        },
+        {
+          "category": "Fire in restricted area",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-19",
+          "workType": "Limbing",
+          "quantity": 120,
+          "unit": "linear feet",
+          "notes": "Limbed overhanging branches on lower segment"
+        },
+        {
+          "date": "2026-03-05",
+          "workType": "Tread repair",
+          "quantity": 15,
+          "unit": "linear feet",
+          "notes": "Repaired eroded tread at creek crossing"
+        },
+        {
+          "date": "2026-02-26",
+          "workType": "Drainage",
+          "quantity": 2,
+          "unit": "drain dips",
+          "notes": ""
+        }
+      ],
+      "hikersSeen": 359,
+      "hikersContacted": 287
+    },
+    {
+      "id": "young-gulch",
+      "name": "Young Gulch",
+      "trailNumber": 999,
+      "lengthMiles": 4.9,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 4,
+      "patrolFrequency": 1,
+      "efficiencyScore": 38,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-03-22",
+          "memberName": "Alex M.",
+          "hikersSeen": 34,
+          "hikersContacted": 27,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-15",
+          "memberName": "Tom R.",
+          "hikersSeen": 43,
+          "hikersContacted": 34,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-01-18",
+          "memberName": "Alex M.",
+          "hikersSeen": 23,
+          "hikersContacted": 18,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2025-12-14",
+          "memberName": "Sarah K.",
+          "hikersSeen": 13,
+          "hikersContacted": 10,
+          "durationHours": 3
+        }
+      ],
+      "treesDown": {
+        "small": 7,
+        "medium": 4,
+        "large": 2,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 5,
+        "medium": 2,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 4
+        },
+        {
+          "category": "Prohibited equipment (e-bike)",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 111,
+      "hikersContacted": 89
+    },
+    {
+      "id": "big-south",
+      "name": "Big South",
+      "trailNumber": 960,
+      "lengthMiles": 8.2,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 6,
+      "patrolFrequency": 1.5,
+      "efficiencyScore": 62,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-22",
+          "memberName": "Dave S.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 5
+        },
+        {
+          "date": "2026-03-01",
+          "memberName": "Chris P.",
+          "hikersSeen": 35,
+          "hikersContacted": 28,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2026-02-08",
+          "memberName": "Dave S.",
+          "hikersSeen": 30,
+          "hikersContacted": 24,
+          "durationHours": 5
+        }
+      ],
+      "treesDown": {
+        "small": 4,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 4,
+        "medium": 2,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 3
+        },
+        {
+          "category": "Camping outside designated site",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-01",
+          "workType": "Drainage",
+          "quantity": 2,
+          "unit": "drain dips",
+          "notes": "Cleared debris from two drain crossings"
+        }
+      ],
+      "hikersSeen": 168,
+      "hikersContacted": 134
+    },
+    {
+      "id": "poudre-river",
+      "name": "Poudre River",
+      "trailNumber": 963,
+      "lengthMiles": 5.1,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 9,
+      "patrolFrequency": 2.25,
+      "efficiencyScore": 71,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-27",
+          "memberName": "Sarah K.",
+          "hikersSeen": 60,
+          "hikersContacted": 48,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-03-13",
+          "memberName": "Maria L.",
+          "hikersSeen": 76,
+          "hikersContacted": 61,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-27",
+          "memberName": "Sarah K.",
+          "hikersSeen": 49,
+          "hikersContacted": 39,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-02-13",
+          "memberName": "Tom R.",
+          "hikersSeen": 65,
+          "hikersContacted": 52,
+          "durationHours": 3.5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 9
+        },
+        {
+          "category": "Prohibited equipment (e-bike)",
+          "count": 4
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-13",
+          "workType": "Sign work",
+          "quantity": 1,
+          "unit": "sign",
+          "notes": "Replaced damaged mileage marker at trailhead"
+        }
+      ],
+      "hikersSeen": 334,
+      "hikersContacted": 267
+    },
+    {
+      "id": "blue-lake",
+      "name": "Blue Lake",
+      "trailNumber": 950,
+      "lengthMiles": 3.5,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": false,
+      "patrolCount": 5,
+      "patrolFrequency": 1.25,
+      "efficiencyScore": 68,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-18",
+          "memberName": "Alex M.",
+          "hikersSeen": 33,
+          "hikersContacted": 26,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-02-22",
+          "memberName": "Tom R.",
+          "hikersSeen": 24,
+          "hikersContacted": 19,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-01-25",
+          "memberName": "Alex M.",
+          "hikersSeen": 18,
+          "hikersContacted": 14,
+          "durationHours": 4
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 3,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 123,
+      "hikersContacted": 98
+    },
+    {
+      "id": "south-fork",
+      "name": "South Fork",
+      "trailNumber": 961,
+      "lengthMiles": 5.7,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 42,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-14",
+          "memberName": "Chris P.",
+          "hikersSeen": 23,
+          "hikersContacted": 18,
+          "durationHours": 4
+        },
+        {
+          "date": "2025-12-20",
+          "memberName": "Dave S.",
+          "hikersSeen": 14,
+          "hikersContacted": 11,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2025-10-18",
+          "memberName": "Chris P.",
+          "hikersSeen": 20,
+          "hikersContacted": 16,
+          "durationHours": 4
+        }
+      ],
+      "treesDown": {
+        "small": 5,
+        "medium": 3,
+        "large": 2,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 3,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Camping outside designated site",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 56,
+      "hikersContacted": 45
+    },
+    {
+      "id": "killpecker",
+      "name": "Killpecker",
+      "trailNumber": 952,
+      "lengthMiles": 4.1,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 4,
+      "patrolFrequency": 1,
+      "efficiencyScore": 55,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-10",
+          "memberName": "Maria L.",
+          "hikersSeen": 28,
+          "hikersContacted": 22,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-10",
+          "memberName": "Dave S.",
+          "hikersSeen": 21,
+          "hikersContacted": 17,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-01-12",
+          "memberName": "Maria L.",
+          "hikersSeen": 15,
+          "hikersContacted": 12,
+          "durationHours": 4
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 3
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-02-10",
+          "workType": "Brushing",
+          "quantity": 60,
+          "unit": "linear feet",
+          "notes": "Cleared overgrown section near lower trailhead"
+        }
+      ],
+      "hikersSeen": 76,
+      "hikersContacted": 61
+    },
+    {
+      "id": "hankins-pass",
+      "name": "Hankins Pass",
+      "trailNumber": 975,
+      "lengthMiles": 6.8,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": false,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 39,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-08",
+          "memberName": "Tom R.",
+          "hikersSeen": 15,
+          "hikersContacted": 12,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2025-11-09",
+          "memberName": "Alex M.",
+          "hikersSeen": 13,
+          "hikersContacted": 10,
+          "durationHours": 6
+        }
+      ],
+      "treesDown": {
+        "small": 4,
+        "medium": 3,
+        "large": 2,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 28,
+      "hikersContacted": 22
+    },
+    {
+      "id": "box-prairie",
+      "name": "Box Prairie",
+      "trailNumber": 947,
+      "lengthMiles": 2.9,
+      "area": "Lower Poudre Canyon",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 7,
+      "patrolFrequency": 1.75,
+      "efficiencyScore": 79,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-29",
+          "memberName": "Sarah K.",
+          "hikersSeen": 55,
+          "hikersContacted": 44,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-03-15",
+          "memberName": "Maria L.",
+          "hikersSeen": 48,
+          "hikersContacted": 38,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-03-01",
+          "memberName": "Sarah K.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-02-15",
+          "memberName": "Tom R.",
+          "hikersSeen": 34,
+          "hikersContacted": 27,
+          "durationHours": 2
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 6
+        },
+        {
+          "category": "Prohibited equipment (e-bike)",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-15",
+          "workType": "Sign work",
+          "quantity": 2,
+          "unit": "signs",
+          "notes": "Installed new directional signs at trail junction"
+        }
+      ],
+      "hikersSeen": 236,
+      "hikersContacted": 189
+    },
+    {
+      "id": "beaver-creek",
+      "name": "Beaver Creek",
+      "trailNumber": 942,
+      "lengthMiles": 6.6,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 5,
+      "patrolFrequency": 1.25,
+      "efficiencyScore": 71,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-20",
+          "memberName": "Pat N.",
+          "hikersSeen": 11,
+          "hikersContacted": 9,
+          "durationHours": 6
+        },
+        {
+          "date": "2026-02-20",
+          "memberName": "Sam T.",
+          "hikersSeen": 18,
+          "hikersContacted": 14,
+          "durationHours": 6.5
+        },
+        {
+          "date": "2026-01-23",
+          "memberName": "Pat N.",
+          "hikersSeen": 10,
+          "hikersContacted": 8,
+          "durationHours": 6
+        },
+        {
+          "date": "2025-12-19",
+          "memberName": "Sam T.",
+          "hikersSeen": 9,
+          "hikersContacted": 7,
+          "durationHours": 7
+        },
+        {
+          "date": "2025-11-21",
+          "memberName": "Pat N.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 5.5
+        }
+      ],
+      "treesDown": {
+        "small": 4,
+        "medium": 6,
+        "large": 3,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 4,
+        "medium": 4,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Camping outside designated site",
+          "count": 2
+        },
+        {
+          "category": "Fire in restricted area",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-02-20",
+          "workType": "Limbing",
+          "quantity": 80,
+          "unit": "linear feet",
+          "notes": "Cleared limbs downed by winter wind on ridge section"
+        },
+        {
+          "date": "2026-01-23",
+          "workType": "Weed management",
+          "quantity": 30,
+          "unit": "linear feet",
+          "notes": "Pulled invasive thistle along creek bank"
+        }
+      ],
+      "hikersSeen": 53,
+      "hikersContacted": 42
+    },
+    {
+      "id": "signal-mountain",
+      "name": "Signal Mountain",
+      "trailNumber": 928,
+      "lengthMiles": 5.9,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 33,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-03-14",
+          "memberName": "Rachel W.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 6.5
+        },
+        {
+          "date": "2025-12-06",
+          "memberName": "Pat N.",
+          "hikersSeen": 3,
+          "hikersContacted": 2,
+          "durationHours": 6
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 5,
+        "large": 4,
+        "xl": 2,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 2,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 8,
+      "hikersContacted": 6
+    },
+    {
+      "id": "trap-park",
+      "name": "Trap Park",
+      "trailNumber": 929,
+      "lengthMiles": 6.8,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 58,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-06",
+          "memberName": "Sam T.",
+          "hikersSeen": 9,
+          "hikersContacted": 7,
+          "durationHours": 6
+        },
+        {
+          "date": "2026-01-17",
+          "memberName": "Pat N.",
+          "hikersSeen": 8,
+          "hikersContacted": 6,
+          "durationHours": 6.5
+        },
+        {
+          "date": "2025-11-29",
+          "memberName": "Sam T.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 6
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 4,
+        "large": 2,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 3,
+        "medium": 3,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Camping outside designated site",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-01-17",
+          "workType": "Limbing",
+          "quantity": 50,
+          "unit": "linear feet",
+          "notes": "Cleared wind-downed branches on upper ridge"
+        }
+      ],
+      "hikersSeen": 23,
+      "hikersContacted": 18
+    },
+    {
+      "id": "flowers",
+      "name": "Flowers",
+      "trailNumber": 931,
+      "lengthMiles": 7.2,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "moderate",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 46,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-19",
+          "memberName": "Rachel W.",
+          "hikersSeen": 10,
+          "hikersContacted": 8,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2025-12-01",
+          "memberName": "Sam T.",
+          "hikersSeen": 8,
+          "hikersContacted": 6,
+          "durationHours": 6
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 3,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 18,
+      "hikersContacted": 14
+    },
+    {
+      "id": "comanche-peak",
+      "name": "Comanche Peak",
+      "trailNumber": 934,
+      "lengthMiles": 9.1,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 1,
+      "patrolFrequency": 0.25,
+      "efficiencyScore": 31,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-01-11",
+          "memberName": "Pat N.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 7.5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 4,
+        "large": 3,
+        "xl": 2,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 6,
+      "hikersContacted": 5
+    },
+    {
+      "id": "cirque-meadows",
+      "name": "Cirque Meadows",
+      "trailNumber": 935,
+      "lengthMiles": 5.3,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "moderate",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 49,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-27",
+          "memberName": "Sam T.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 5
+        },
+        {
+          "date": "2025-12-14",
+          "memberName": "Rachel W.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 5.5
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 11,
+      "hikersContacted": 9
+    },
+    {
+      "id": "stormy-peaks",
+      "name": "Stormy Peaks",
+      "trailNumber": 936,
+      "lengthMiles": 8.4,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 1,
+      "patrolFrequency": 0.25,
+      "efficiencyScore": 28,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2025-12-21",
+          "memberName": "Pat N.",
+          "hikersSeen": 4,
+          "hikersContacted": 3,
+          "durationHours": 7
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 5,
+        "large": 4,
+        "xl": 2,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 4,
+      "hikersContacted": 3
+    },
+    {
+      "id": "long-draw",
+      "name": "Long Draw",
+      "trailNumber": 930,
+      "lengthMiles": 4.5,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 5,
+      "patrolFrequency": 1.25,
+      "efficiencyScore": 65,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-14",
+          "memberName": "Rachel W.",
+          "hikersSeen": 26,
+          "hikersContacted": 21,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-02-16",
+          "memberName": "Sam T.",
+          "hikersSeen": 23,
+          "hikersContacted": 18,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-01-19",
+          "memberName": "Rachel W.",
+          "hikersSeen": 18,
+          "hikersContacted": 14,
+          "durationHours": 4.5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 1,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-02-16",
+          "workType": "Drainage",
+          "quantity": 1,
+          "unit": "drain dip",
+          "notes": "Cleared blocked drain dip mid-trail"
+        }
+      ],
+      "hikersSeen": 96,
+      "hikersContacted": 77
+    },
+    {
+      "id": "peterson-lake",
+      "name": "Peterson Lake",
+      "trailNumber": 932,
+      "lengthMiles": 5.9,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 44,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-01-29",
+          "memberName": "Sam T.",
+          "hikersSeen": 8,
+          "hikersContacted": 6,
+          "durationHours": 6.5
+        },
+        {
+          "date": "2025-11-16",
+          "memberName": "Pat N.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 7
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 3,
+        "large": 2,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 14,
+      "hikersContacted": 11
+    },
+    {
+      "id": "laramie-river",
+      "name": "Laramie River",
+      "trailNumber": 933,
+      "lengthMiles": 10.3,
+      "area": "Upper Poudre Canyon",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 1,
+      "patrolFrequency": 0.25,
+      "efficiencyScore": 35,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2025-12-07",
+          "memberName": "Rachel W.",
+          "hikersSeen": 8,
+          "hikersContacted": 6,
+          "durationHours": 8
+        }
+      ],
+      "treesDown": {
+        "small": 4,
+        "medium": 5,
+        "large": 3,
+        "xl": 2,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 8,
+      "hikersContacted": 6
+    },
+    {
+      "id": "lion-gulch",
+      "name": "Lion Gulch",
+      "trailNumber": 949,
+      "lengthMiles": 3.4,
+      "area": "Big Thompson/Estes Park",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 8,
+      "patrolFrequency": 2,
+      "efficiencyScore": 61,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-25",
+          "memberName": "Jordan B.",
+          "hikersSeen": 55,
+          "hikersContacted": 44,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-03-11",
+          "memberName": "Jordan B.",
+          "hikersSeen": 46,
+          "hikersContacted": 37,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-02-25",
+          "memberName": "Rachel W.",
+          "hikersSeen": 65,
+          "hikersContacted": 52,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-11",
+          "memberName": "Jordan B.",
+          "hikersSeen": 81,
+          "hikersContacted": 65,
+          "durationHours": 2.5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 11
+        },
+        {
+          "category": "Camping outside designated site",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-25",
+          "workType": "Sign work",
+          "quantity": 1,
+          "unit": "sign",
+          "notes": "Replaced missing trailhead marker at upper junction"
+        }
+      ],
+      "hikersSeen": 248,
+      "hikersContacted": 198
+    },
+    {
+      "id": "cow-creek",
+      "name": "Cow Creek",
+      "trailNumber": 923,
+      "lengthMiles": 5.2,
+      "area": "Big Thompson/Estes Park",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 7,
+      "patrolFrequency": 1.75,
+      "efficiencyScore": 73,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-24",
+          "memberName": "Jordan B.",
+          "hikersSeen": 43,
+          "hikersContacted": 34,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-03-10",
+          "memberName": "Rachel W.",
+          "hikersSeen": 36,
+          "hikersContacted": 29,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-02-24",
+          "memberName": "Jordan B.",
+          "hikersSeen": 51,
+          "hikersContacted": 41,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-10",
+          "memberName": "Rachel W.",
+          "hikersSeen": 28,
+          "hikersContacted": 22,
+          "durationHours": 4
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 7
+        },
+        {
+          "category": "Group size exceeded",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-10",
+          "workType": "Tread repair",
+          "quantity": 20,
+          "unit": "linear feet",
+          "notes": "Repaired eroded section near lower creek crossing"
+        }
+      ],
+      "hikersSeen": 195,
+      "hikersContacted": 156
+    },
+    {
+      "id": "dark-mountain",
+      "name": "Dark Mountain",
+      "trailNumber": 924,
+      "lengthMiles": 4.7,
+      "area": "Big Thompson/Estes Park",
+      "difficulty": "hard",
+      "wilderness": false,
+      "patrolCount": 4,
+      "patrolFrequency": 1,
+      "efficiencyScore": 60,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-17",
+          "memberName": "Rachel W.",
+          "hikersSeen": 36,
+          "hikersContacted": 29,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-02-17",
+          "memberName": "Jordan B.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-01-20",
+          "memberName": "Rachel W.",
+          "hikersSeen": 18,
+          "hikersContacted": 14,
+          "durationHours": 5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 3
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 109,
+      "hikersContacted": 87
+    },
+    {
+      "id": "rabbit-ears",
+      "name": "Rabbit Ears",
+      "trailNumber": 922,
+      "lengthMiles": 3.9,
+      "area": "Big Thompson/Estes Park",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 6,
+      "patrolFrequency": 1.5,
+      "efficiencyScore": 69,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-21",
+          "memberName": "Jordan B.",
+          "hikersSeen": 41,
+          "hikersContacted": 33,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-03-07",
+          "memberName": "Rachel W.",
+          "hikersSeen": 35,
+          "hikersContacted": 28,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-21",
+          "memberName": "Jordan B.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-07",
+          "memberName": "Rachel W.",
+          "hikersSeen": 24,
+          "hikersContacted": 19,
+          "durationHours": 4
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 5
+        },
+        {
+          "category": "Shortcutting / trail damage",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 160,
+      "hikersContacted": 128
+    },
+    {
+      "id": "homestead-meadows",
+      "name": "Homestead Meadows",
+      "trailNumber": 921,
+      "lengthMiles": 2.8,
+      "area": "Big Thompson/Estes Park",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 9,
+      "patrolFrequency": 2.25,
+      "efficiencyScore": 82,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-29",
+          "memberName": "Jordan B.",
+          "hikersSeen": 64,
+          "hikersContacted": 51,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-03-15",
+          "memberName": "Rachel W.",
+          "hikersSeen": 55,
+          "hikersContacted": 44,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-03-01",
+          "memberName": "Jordan B.",
+          "hikersSeen": 48,
+          "hikersContacted": 38,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-02-15",
+          "memberName": "Rachel W.",
+          "hikersSeen": 53,
+          "hikersContacted": 42,
+          "durationHours": 2.5
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 12
+        },
+        {
+          "category": "Prohibited equipment (e-bike)",
+          "count": 3
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-15",
+          "workType": "Sign work",
+          "quantity": 3,
+          "unit": "signs",
+          "notes": "Replaced faded interpretive signs along meadow loop"
+        }
+      ],
+      "hikersSeen": 301,
+      "hikersContacted": 241
+    },
+    {
+      "id": "bulwark-ridge",
+      "name": "Bulwark Ridge",
+      "trailNumber": 925,
+      "lengthMiles": 6.3,
+      "area": "Big Thompson/Estes Park",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 40,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-05",
+          "memberName": "Rachel W.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 6
+        },
+        {
+          "date": "2025-11-07",
+          "memberName": "Jordan B.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 6.5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 3,
+        "large": 2,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 10,
+      "hikersContacted": 8
+    },
+    {
+      "id": "dunraven-trail",
+      "name": "Dunraven Trail",
+      "trailNumber": 948,
+      "lengthMiles": 7.8,
+      "area": "Big Thompson/Estes Park",
+      "difficulty": "hard",
+      "wilderness": false,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 48,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-23",
+          "memberName": "Jordan B.",
+          "hikersSeen": 18,
+          "hikersContacted": 14,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2026-01-05",
+          "memberName": "Rachel W.",
+          "hikersSeen": 14,
+          "hikersContacted": 11,
+          "durationHours": 6
+        },
+        {
+          "date": "2025-11-17",
+          "memberName": "Jordan B.",
+          "hikersSeen": 11,
+          "hikersContacted": 9,
+          "durationHours": 5.5
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Camping outside designated site",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 43,
+      "hikersContacted": 34
+    },
+    {
+      "id": "south-lateral-moraine",
+      "name": "South Lateral Moraine",
+      "trailNumber": 920,
+      "lengthMiles": 3.3,
+      "area": "Big Thompson/Estes Park",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 5,
+      "patrolFrequency": 1.25,
+      "efficiencyScore": 67,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-16",
+          "memberName": "Rachel W.",
+          "hikersSeen": 49,
+          "hikersContacted": 39,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-02-16",
+          "memberName": "Jordan B.",
+          "hikersSeen": 41,
+          "hikersContacted": 33,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-01-19",
+          "memberName": "Rachel W.",
+          "hikersSeen": 35,
+          "hikersContacted": 28,
+          "durationHours": 3
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 4
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 178,
+      "hikersContacted": 142
+    },
+    {
+      "id": "emmaline-lake",
+      "name": "Emmaline Lake",
+      "trailNumber": 945,
+      "lengthMiles": 5.8,
+      "area": "Pingree Park",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 29,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-08",
+          "memberName": "Chris P.",
+          "hikersSeen": 14,
+          "hikersContacted": 11,
+          "durationHours": 7
+        },
+        {
+          "date": "2025-11-02",
+          "memberName": "Maria L.",
+          "hikersSeen": 10,
+          "hikersContacted": 8,
+          "durationHours": 7.5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 3,
+        "large": 2,
+        "xl": 2,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 24,
+      "hikersContacted": 19
+    },
+    {
+      "id": "mummy-pass",
+      "name": "Mummy Pass",
+      "trailNumber": 937,
+      "lengthMiles": 3.5,
+      "area": "Pingree Park",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 52,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-03-01",
+          "memberName": "Sam T.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2026-01-04",
+          "memberName": "Pat N.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 5
+        },
+        {
+          "date": "2025-11-09",
+          "memberName": "Sam T.",
+          "hikersSeen": 3,
+          "hikersContacted": 2,
+          "durationHours": 5.5
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Camping outside designated site",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-01",
+          "workType": "Drainage",
+          "quantity": 1,
+          "unit": "drain dip",
+          "notes": "Cleared blocked drain dip at switchback near treeline"
+        }
+      ],
+      "hikersSeen": 14,
+      "hikersContacted": 11
+    },
+    {
+      "id": "browns-lake",
+      "name": "Browns Lake",
+      "trailNumber": 939,
+      "lengthMiles": 4.2,
+      "area": "Pingree Park",
+      "difficulty": "moderate",
+      "wilderness": true,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 53,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-02",
+          "memberName": "Chris P.",
+          "hikersSeen": 11,
+          "hikersContacted": 9,
+          "durationHours": 5
+        },
+        {
+          "date": "2026-01-10",
+          "memberName": "Maria L.",
+          "hikersSeen": 9,
+          "hikersContacted": 7,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2025-11-23",
+          "memberName": "Chris P.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 5
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 26,
+      "hikersContacted": 21
+    },
+    {
+      "id": "fall-mountain",
+      "name": "Fall Mountain",
+      "trailNumber": 940,
+      "lengthMiles": 6.9,
+      "area": "Pingree Park",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 1,
+      "patrolFrequency": 0.25,
+      "efficiencyScore": 26,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2025-11-15",
+          "memberName": "Sam T.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 7
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 5,
+        "large": 4,
+        "xl": 2,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 5,
+      "hikersContacted": 4
+    },
+    {
+      "id": "crown-point",
+      "name": "Crown Point",
+      "trailNumber": 941,
+      "lengthMiles": 3.6,
+      "area": "Pingree Park",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 4,
+      "patrolFrequency": 1,
+      "efficiencyScore": 61,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-08",
+          "memberName": "Chris P.",
+          "hikersSeen": 26,
+          "hikersContacted": 21,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-02-08",
+          "memberName": "Maria L.",
+          "hikersSeen": 23,
+          "hikersContacted": 18,
+          "durationHours": 4
+        },
+        {
+          "date": "2026-01-11",
+          "memberName": "Chris P.",
+          "hikersSeen": 19,
+          "hikersContacted": 15,
+          "durationHours": 4
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 84,
+      "hikersContacted": 67
+    },
+    {
+      "id": "cirque-lake",
+      "name": "Cirque Lake",
+      "trailNumber": 943,
+      "lengthMiles": 5.1,
+      "area": "Pingree Park",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 45,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-01",
+          "memberName": "Pat N.",
+          "hikersSeen": 9,
+          "hikersContacted": 7,
+          "durationHours": 6
+        },
+        {
+          "date": "2025-11-30",
+          "memberName": "Sam T.",
+          "hikersSeen": 8,
+          "hikersContacted": 6,
+          "durationHours": 6.5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 3,
+        "large": 2,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 16,
+      "hikersContacted": 13
+    },
+    {
+      "id": "mirror-lake",
+      "name": "Mirror Lake",
+      "trailNumber": 944,
+      "lengthMiles": 4.8,
+      "area": "Pingree Park",
+      "difficulty": "moderate",
+      "wilderness": true,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 57,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-03",
+          "memberName": "Maria L.",
+          "hikersSeen": 13,
+          "hikersContacted": 10,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2026-01-13",
+          "memberName": "Chris P.",
+          "hikersSeen": 11,
+          "hikersContacted": 9,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2025-11-24",
+          "memberName": "Maria L.",
+          "hikersSeen": 10,
+          "hikersContacted": 8,
+          "durationHours": 6
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [
+        {
+          "date": "2026-01-13",
+          "workType": "Weed management",
+          "quantity": 20,
+          "unit": "linear feet",
+          "notes": "Pulled thistle along lakeshore approach"
+        }
+      ],
+      "hikersSeen": 34,
+      "hikersContacted": 27
+    },
+    {
+      "id": "dunraven-glade",
+      "name": "Dunraven Glade",
+      "trailNumber": 938,
+      "lengthMiles": 2.4,
+      "area": "Pingree Park",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 5,
+      "patrolFrequency": 1.25,
+      "efficiencyScore": 72,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-19",
+          "memberName": "Chris P.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-03-05",
+          "memberName": "Maria L.",
+          "hikersSeen": 34,
+          "hikersContacted": 27,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-02-19",
+          "memberName": "Chris P.",
+          "hikersSeen": 30,
+          "hikersContacted": 24,
+          "durationHours": 2.5
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 3
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 135,
+      "hikersContacted": 108
+    },
+    {
+      "id": "killpecker-creek",
+      "name": "Killpecker Creek",
+      "trailNumber": 970,
+      "lengthMiles": 5.8,
+      "area": "Red Feather Lakes",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 4,
+      "patrolFrequency": 1,
+      "efficiencyScore": 57,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-12",
+          "memberName": "Alex M.",
+          "hikersSeen": 24,
+          "hikersContacted": 19,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-02-12",
+          "memberName": "Tom R.",
+          "hikersSeen": 20,
+          "hikersContacted": 16,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-01-15",
+          "memberName": "Alex M.",
+          "hikersSeen": 16,
+          "hikersContacted": 13,
+          "durationHours": 5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 73,
+      "hikersContacted": 58
+    },
+    {
+      "id": "sawmill-creek",
+      "name": "Sawmill Creek",
+      "trailNumber": 971,
+      "lengthMiles": 4.2,
+      "area": "Red Feather Lakes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 6,
+      "patrolFrequency": 1.5,
+      "efficiencyScore": 71,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-25",
+          "memberName": "Tom R.",
+          "hikersSeen": 45,
+          "hikersContacted": 36,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-03-11",
+          "memberName": "Alex M.",
+          "hikersSeen": 36,
+          "hikersContacted": 29,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-25",
+          "memberName": "Tom R.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-11",
+          "memberName": "Alex M.",
+          "hikersSeen": 28,
+          "hikersContacted": 22,
+          "durationHours": 3.5
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 5
+        },
+        {
+          "category": "Prohibited equipment (e-bike)",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 168,
+      "hikersContacted": 134
+    },
+    {
+      "id": "east-shore",
+      "name": "East Shore",
+      "trailNumber": 972,
+      "lengthMiles": 6.1,
+      "area": "Red Feather Lakes",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 49,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-18",
+          "memberName": "Tom R.",
+          "hikersSeen": 20,
+          "hikersContacted": 16,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-01-07",
+          "memberName": "Alex M.",
+          "hikersSeen": 18,
+          "hikersContacted": 14,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2025-11-20",
+          "memberName": "Tom R.",
+          "hikersSeen": 15,
+          "hikersContacted": 12,
+          "durationHours": 5
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Camping outside designated site",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 53,
+      "hikersContacted": 42
+    },
+    {
+      "id": "beaver-meadows",
+      "name": "Beaver Meadows",
+      "trailNumber": 973,
+      "lengthMiles": 3.7,
+      "area": "Red Feather Lakes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 7,
+      "patrolFrequency": 1.75,
+      "efficiencyScore": 78,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-27",
+          "memberName": "Alex M.",
+          "hikersSeen": 55,
+          "hikersContacted": 44,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-03-13",
+          "memberName": "Tom R.",
+          "hikersSeen": 48,
+          "hikersContacted": 38,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-02-27",
+          "memberName": "Alex M.",
+          "hikersSeen": 44,
+          "hikersContacted": 35,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-02-13",
+          "memberName": "Tom R.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 3
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 8
+        },
+        {
+          "category": "Group size exceeded",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 234,
+      "hikersContacted": 187
+    },
+    {
+      "id": "deadman",
+      "name": "Deadman",
+      "trailNumber": 974,
+      "lengthMiles": 7.3,
+      "area": "Red Feather Lakes",
+      "difficulty": "hard",
+      "wilderness": false,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 37,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-01-24",
+          "memberName": "Tom R.",
+          "hikersSeen": 11,
+          "hikersContacted": 9,
+          "durationHours": 6
+        },
+        {
+          "date": "2025-11-01",
+          "memberName": "Alex M.",
+          "hikersSeen": 10,
+          "hikersContacted": 8,
+          "durationHours": 6.5
+        }
+      ],
+      "treesDown": {
+        "small": 4,
+        "medium": 3,
+        "large": 2,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 21,
+      "hikersContacted": 17
+    },
+    {
+      "id": "north-fork",
+      "name": "North Fork",
+      "trailNumber": 976,
+      "lengthMiles": 5.5,
+      "area": "Red Feather Lakes",
+      "difficulty": "moderate",
+      "wilderness": false,
+      "patrolCount": 4,
+      "patrolFrequency": 1,
+      "efficiencyScore": 59,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-08",
+          "memberName": "Alex M.",
+          "hikersSeen": 26,
+          "hikersContacted": 21,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-02-08",
+          "memberName": "Tom R.",
+          "hikersSeen": 23,
+          "hikersContacted": 18,
+          "durationHours": 4.5
+        },
+        {
+          "date": "2026-01-09",
+          "memberName": "Alex M.",
+          "hikersSeen": 18,
+          "hikersContacted": 14,
+          "durationHours": 5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 3
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-02-08",
+          "workType": "Brushing",
+          "quantity": 45,
+          "unit": "linear feet",
+          "notes": "Cleared encroaching willows along creek section"
+        }
+      ],
+      "hikersSeen": 79,
+      "hikersContacted": 63
+    },
+    {
+      "id": "crystal-lake",
+      "name": "Crystal Lake",
+      "trailNumber": 977,
+      "lengthMiles": 4.9,
+      "area": "Red Feather Lakes",
+      "difficulty": "hard",
+      "wilderness": false,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 47,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-16",
+          "memberName": "Tom R.",
+          "hikersSeen": 15,
+          "hikersContacted": 12,
+          "durationHours": 5
+        },
+        {
+          "date": "2026-01-03",
+          "memberName": "Alex M.",
+          "hikersSeen": 13,
+          "hikersContacted": 10,
+          "durationHours": 5.5
+        },
+        {
+          "date": "2025-11-29",
+          "memberName": "Tom R.",
+          "hikersSeen": 11,
+          "hikersContacted": 9,
+          "durationHours": 5
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 2,
+        "large": 1,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 39,
+      "hikersContacted": 31
+    },
+    {
+      "id": "south-fork-red-feather",
+      "name": "South Fork Red Feather",
+      "trailNumber": 978,
+      "lengthMiles": 8.1,
+      "area": "Red Feather Lakes",
+      "difficulty": "hard",
+      "wilderness": false,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 34,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-01-19",
+          "memberName": "Alex M.",
+          "hikersSeen": 9,
+          "hikersContacted": 7,
+          "durationHours": 6.5
+        },
+        {
+          "date": "2025-11-03",
+          "memberName": "Tom R.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 7
+        }
+      ],
+      "treesDown": {
+        "small": 4,
+        "medium": 4,
+        "large": 2,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 15,
+      "hikersContacted": 12
+    },
+    {
+      "id": "mcintyre-creek",
+      "name": "McIntyre Creek",
+      "trailNumber": 979,
+      "lengthMiles": 3.4,
+      "area": "Red Feather Lakes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 5,
+      "patrolFrequency": 1.25,
+      "efficiencyScore": 66,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-20",
+          "memberName": "Tom R.",
+          "hikersSeen": 35,
+          "hikersContacted": 28,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-03-06",
+          "memberName": "Alex M.",
+          "hikersSeen": 30,
+          "hikersContacted": 24,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-02-20",
+          "memberName": "Tom R.",
+          "hikersSeen": 26,
+          "hikersContacted": 21,
+          "durationHours": 3
+        }
+      ],
+      "treesDown": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 4
+        },
+        {
+          "category": "Prohibited equipment (e-bike)",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 123,
+      "hikersContacted": 98
+    },
+    {
+      "id": "seaman-reservoir",
+      "name": "Seaman Reservoir",
+      "trailNumber": 980,
+      "lengthMiles": 2.8,
+      "area": "Red Feather Lakes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 6,
+      "patrolFrequency": 1.5,
+      "efficiencyScore": 74,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-23",
+          "memberName": "Alex M.",
+          "hikersSeen": 49,
+          "hikersContacted": 39,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-03-09",
+          "memberName": "Tom R.",
+          "hikersSeen": 43,
+          "hikersContacted": 34,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-02-23",
+          "memberName": "Alex M.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-02-09",
+          "memberName": "Tom R.",
+          "hikersSeen": 34,
+          "hikersContacted": 27,
+          "durationHours": 2.5
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 6
+        },
+        {
+          "category": "Prohibited equipment (e-bike)",
+          "count": 3
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 190,
+      "hikersContacted": 152
+    },
+    {
+      "id": "west-branch",
+      "name": "West Branch",
+      "trailNumber": 910,
+      "lengthMiles": 12.3,
+      "area": "Rawah Wilderness",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 1,
+      "patrolFrequency": 0.25,
+      "efficiencyScore": 41,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-11",
+          "memberName": "Pat N.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 9
+        }
+      ],
+      "treesDown": {
+        "small": 5,
+        "medium": 7,
+        "large": 5,
+        "xl": 3,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 2,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 5,
+      "hikersContacted": 4
+    },
+    {
+      "id": "rawah-lakes",
+      "name": "Rawah Lakes",
+      "trailNumber": 911,
+      "lengthMiles": 9.4,
+      "area": "Rawah Wilderness",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 48,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-01-16",
+          "memberName": "Sam T.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 8
+        },
+        {
+          "date": "2025-11-08",
+          "memberName": "Pat N.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 8.5
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 5,
+        "large": 4,
+        "xl": 2,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Fire in restricted area",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 11,
+      "hikersContacted": 9
+    },
+    {
+      "id": "twin-crater-lakes",
+      "name": "Twin Crater Lakes",
+      "trailNumber": 912,
+      "lengthMiles": 8.7,
+      "area": "Rawah Wilderness",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 1,
+      "patrolFrequency": 0.25,
+      "efficiencyScore": 35,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2025-12-13",
+          "memberName": "Rachel W.",
+          "hikersSeen": 4,
+          "hikersContacted": 3,
+          "durationHours": 8.5
+        }
+      ],
+      "treesDown": {
+        "small": 4,
+        "medium": 6,
+        "large": 4,
+        "xl": 2,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 4,
+      "hikersContacted": 3
+    },
+    {
+      "id": "mccreery-lake",
+      "name": "McCreery Lake",
+      "trailNumber": 913,
+      "lengthMiles": 7.8,
+      "area": "Rawah Wilderness",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 44,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-01-31",
+          "memberName": "Pat N.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 7.5
+        },
+        {
+          "date": "2025-11-22",
+          "memberName": "Sam T.",
+          "hikersSeen": 4,
+          "hikersContacted": 3,
+          "durationHours": 8
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 4,
+        "large": 3,
+        "xl": 1,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 9,
+      "hikersContacted": 7
+    },
+    {
+      "id": "link-trail",
+      "name": "Link Trail",
+      "trailNumber": 914,
+      "lengthMiles": 6.2,
+      "area": "Rawah Wilderness",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 1,
+      "patrolFrequency": 0.25,
+      "efficiencyScore": 38,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2025-12-28",
+          "memberName": "Sam T.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 7
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 4,
+        "large": 3,
+        "xl": 2,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 6,
+      "hikersContacted": 5
+    },
+    {
+      "id": "camp-lake",
+      "name": "Camp Lake",
+      "trailNumber": 915,
+      "lengthMiles": 8.9,
+      "area": "Rawah Wilderness",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 46,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-02-04",
+          "memberName": "Rachel W.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 8
+        },
+        {
+          "date": "2025-11-27",
+          "memberName": "Pat N.",
+          "hikersSeen": 5,
+          "hikersContacted": 4,
+          "durationHours": 8.5
+        }
+      ],
+      "treesDown": {
+        "small": 3,
+        "medium": 5,
+        "large": 3,
+        "xl": 1,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 10,
+      "hikersContacted": 8
+    },
+    {
+      "id": "seven-lakes",
+      "name": "Seven Lakes",
+      "trailNumber": 916,
+      "lengthMiles": 10.1,
+      "area": "Rawah Wilderness",
+      "difficulty": "hard",
+      "wilderness": true,
+      "patrolCount": 1,
+      "patrolFrequency": 0.25,
+      "efficiencyScore": 30,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2025-11-22",
+          "memberName": "Sam T.",
+          "hikersSeen": 3,
+          "hikersContacted": 2,
+          "durationHours": 9.5
+        }
+      ],
+      "treesDown": {
+        "small": 5,
+        "medium": 7,
+        "large": 6,
+        "xl": 3,
+        "xxl": 2
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [],
+      "maintenanceWork": [],
+      "hikersSeen": 3,
+      "hikersContacted": 2
+    },
+    {
+      "id": "south-rawah",
+      "name": "South Rawah",
+      "trailNumber": 917,
+      "lengthMiles": 7.3,
+      "area": "Rawah Wilderness",
+      "difficulty": "moderate",
+      "wilderness": true,
+      "patrolCount": 2,
+      "patrolFrequency": 0.5,
+      "efficiencyScore": 43,
+      "underPatrolled": true,
+      "patrolHistory": [
+        {
+          "date": "2026-01-07",
+          "memberName": "Pat N.",
+          "hikersSeen": 8,
+          "hikersContacted": 6,
+          "durationHours": 7.5
+        },
+        {
+          "date": "2025-11-12",
+          "memberName": "Rachel W.",
+          "hikersSeen": 6,
+          "hikersContacted": 5,
+          "durationHours": 7
+        }
+      ],
+      "treesDown": {
+        "small": 2,
+        "medium": 4,
+        "large": 3,
+        "xl": 2,
+        "xxl": 1
+      },
+      "treesCleared": {
+        "small": 1,
+        "medium": 1,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Camping outside designated site",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 14,
+      "hikersContacted": 11
+    },
+    {
+      "id": "pawnee-buttes",
+      "name": "Pawnee Buttes",
+      "trailNumber": 900,
+      "lengthMiles": 3.5,
+      "area": "Pawnee Buttes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 8,
+      "patrolFrequency": 2,
+      "efficiencyScore": 84,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-30",
+          "memberName": "Maria L.",
+          "hikersSeen": 78,
+          "hikersContacted": 62,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-03-16",
+          "memberName": "Dave S.",
+          "hikersSeen": 68,
+          "hikersContacted": 54,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-03-02",
+          "memberName": "Maria L.",
+          "hikersSeen": 61,
+          "hikersContacted": 49,
+          "durationHours": 3
+        },
+        {
+          "date": "2026-02-16",
+          "memberName": "Dave S.",
+          "hikersSeen": 51,
+          "hikersContacted": 41,
+          "durationHours": 3
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 14
+        },
+        {
+          "category": "Shortcutting / trail damage",
+          "count": 3
+        },
+        {
+          "category": "Group size exceeded",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [
+        {
+          "date": "2026-03-16",
+          "workType": "Sign work",
+          "quantity": 2,
+          "unit": "signs",
+          "notes": "Replaced faded boundary markers at east trailhead"
+        },
+        {
+          "date": "2026-03-02",
+          "workType": "Tread repair",
+          "quantity": 25,
+          "unit": "linear feet",
+          "notes": "Repaired social trail damage near east butte base"
+        }
+      ],
+      "hikersSeen": 390,
+      "hikersContacted": 312
+    },
+    {
+      "id": "east-butte",
+      "name": "East Butte",
+      "trailNumber": 901,
+      "lengthMiles": 1.8,
+      "area": "Pawnee Buttes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 6,
+      "patrolFrequency": 1.5,
+      "efficiencyScore": 77,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-28",
+          "memberName": "Dave S.",
+          "hikersSeen": 60,
+          "hikersContacted": 48,
+          "durationHours": 2
+        },
+        {
+          "date": "2026-03-14",
+          "memberName": "Maria L.",
+          "hikersSeen": 51,
+          "hikersContacted": 41,
+          "durationHours": 2
+        },
+        {
+          "date": "2026-02-28",
+          "memberName": "Dave S.",
+          "hikersSeen": 45,
+          "hikersContacted": 36,
+          "durationHours": 2
+        },
+        {
+          "date": "2026-02-14",
+          "memberName": "Maria L.",
+          "hikersSeen": 41,
+          "hikersContacted": 33,
+          "durationHours": 2
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 9
+        },
+        {
+          "category": "Shortcutting / trail damage",
+          "count": 2
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 236,
+      "hikersContacted": 189
+    },
+    {
+      "id": "grassland-loop",
+      "name": "Grassland Loop",
+      "trailNumber": 902,
+      "lengthMiles": 5.2,
+      "area": "Pawnee Buttes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 4,
+      "patrolFrequency": 1,
+      "efficiencyScore": 63,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-15",
+          "memberName": "Maria L.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-02-15",
+          "memberName": "Dave S.",
+          "hikersSeen": 34,
+          "hikersContacted": 27,
+          "durationHours": 3.5
+        },
+        {
+          "date": "2026-01-18",
+          "memberName": "Maria L.",
+          "hikersSeen": 24,
+          "hikersContacted": 19,
+          "durationHours": 3.5
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 4
+        },
+        {
+          "category": "Prohibited equipment (e-bike)",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 118,
+      "hikersContacted": 94
+    },
+    {
+      "id": "prairie-dog-colony",
+      "name": "Prairie Dog Colony",
+      "trailNumber": 903,
+      "lengthMiles": 2.7,
+      "area": "Pawnee Buttes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 5,
+      "patrolFrequency": 1.25,
+      "efficiencyScore": 71,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-03-22",
+          "memberName": "Dave S.",
+          "hikersSeen": 48,
+          "hikersContacted": 38,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-03-08",
+          "memberName": "Maria L.",
+          "hikersSeen": 43,
+          "hikersContacted": 34,
+          "durationHours": 2.5
+        },
+        {
+          "date": "2026-02-22",
+          "memberName": "Dave S.",
+          "hikersSeen": 36,
+          "hikersContacted": 29,
+          "durationHours": 2.5
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 7
+        },
+        {
+          "category": "Shortcutting / trail damage",
+          "count": 1
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 181,
+      "hikersContacted": 145
+    },
+    {
+      "id": "overlook",
+      "name": "Overlook",
+      "trailNumber": 904,
+      "lengthMiles": 2.1,
+      "area": "Pawnee Buttes",
+      "difficulty": "easy",
+      "wilderness": false,
+      "patrolCount": 3,
+      "patrolFrequency": 0.75,
+      "efficiencyScore": 56,
+      "underPatrolled": false,
+      "patrolHistory": [
+        {
+          "date": "2026-02-28",
+          "memberName": "Maria L.",
+          "hikersSeen": 39,
+          "hikersContacted": 31,
+          "durationHours": 2
+        },
+        {
+          "date": "2026-01-25",
+          "memberName": "Dave S.",
+          "hikersSeen": 33,
+          "hikersContacted": 26,
+          "durationHours": 2
+        },
+        {
+          "date": "2025-12-27",
+          "memberName": "Maria L.",
+          "hikersSeen": 26,
+          "hikersContacted": 21,
+          "durationHours": 2
+        }
+      ],
+      "treesDown": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "treesCleared": {
+        "small": 0,
+        "medium": 0,
+        "large": 0,
+        "xl": 0,
+        "xxl": 0
+      },
+      "violationsByCategory": [
+        {
+          "category": "Off-leash dog",
+          "count": 3
+        }
+      ],
+      "maintenanceWork": [],
+      "hikersSeen": 98,
+      "hikersContacted": 78
+    }
+  ]
+}
