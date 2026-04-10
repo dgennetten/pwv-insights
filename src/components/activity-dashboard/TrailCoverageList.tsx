@@ -46,8 +46,7 @@ export function TrailCoverageList({
       switch (sort.key) {
         case 'trailName':       aVal = a.trailName; bVal = b.trailName; break
         case 'patrols':         aVal = a.patrols; bVal = b.patrols; break
-        case 'hikersContacted': aVal = a.hikersContacted; bVal = b.hikersContacted; break
-        case 'area':            aVal = a.area; bVal = b.area; break
+        case 'hikersSeen': aVal = a.hikersSeen; bVal = b.hikersSeen; break
       }
       const cmp = typeof aVal === 'string'
         ? aVal.localeCompare(bVal as string)
@@ -115,19 +114,14 @@ export function TrailCoverageList({
                   Trail <SortIcon col="trailName" sort={sort} />
                 </button>
               </th>
-              <th className="text-left pb-2 pt-2 px-1 hidden sm:table-cell">
-                <button type="button" onClick={() => handleSort('area')} className="flex items-center gap-1 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
-                  Area <SortIcon col="area" sort={sort} />
-                </button>
-              </th>
               <th className="text-right pb-2 pt-2 px-1">
                 <button type="button" onClick={() => handleSort('patrols')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
                   Patrols <SortIcon col="patrols" sort={sort} />
                 </button>
               </th>
               <th className="text-right pb-2 pt-2 px-1 hidden md:table-cell">
-                <button type="button" onClick={() => handleSort('hikersContacted')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
-                  Contacted <SortIcon col="hikersContacted" sort={sort} />
+                <button type="button" onClick={() => handleSort('hikersSeen')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
+                  Seen <SortIcon col="hikersSeen" sort={sort} />
                 </button>
               </th>
             </tr>
@@ -152,22 +146,19 @@ export function TrailCoverageList({
                   </div>
                   <div className="text-stone-400 dark:text-stone-500 mt-0.5">#{trail.trailNumber} · {trail.lengthMiles} mi</div>
                 </td>
-                <td className="py-2 px-1 text-stone-500 dark:text-stone-400 hidden sm:table-cell">
-                  <span className="truncate block max-w-[120px]" title={trail.area}>{trail.area}</span>
-                </td>
                 <td className="py-2 px-1 text-right">
                   <span className={`font-semibold tabular-nums ${trail.patrols > 0 ? 'text-stone-800 dark:text-stone-200' : 'text-stone-400 dark:text-stone-600'}`}>
                     {trail.patrols}
                   </span>
                 </td>
                 <td className="py-2 px-1 text-right hidden md:table-cell">
-                  <span className="tabular-nums text-stone-600 dark:text-stone-400">{trail.hikersContacted}</span>
+                  <span className="tabular-nums text-stone-600 dark:text-stone-400">{trail.hikersSeen}</span>
                 </td>
               </tr>
             ))}
             {hasMore && (
               <tr aria-hidden>
-                <td colSpan={4} className="p-0 border-0">
+                <td colSpan={3} className="p-0 border-0">
                   <div ref={sentinelRef} className="h-1 w-full" />
                 </td>
               </tr>

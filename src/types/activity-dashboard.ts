@@ -21,8 +21,8 @@ export interface ActivitySummary {
   trailsCoveredDelta: number
   treesCleared: number
   treesClearedDelta: number
-  hikersContacted: number
-  hikersContactedDelta: number
+  hikersSeen: number
+  hikersSeenDelta: number
   volunteerHours: number
   totalActiveMembers: number
   /** Human-readable date range label, e.g. "Mar 23 – Mar 30, 2026" */
@@ -53,7 +53,7 @@ export interface TrailCoverageRow {
   lastPatrolDate: string | null  // ISO 8601 date; null if no patrols in period
 }
 
-export type TrailCoverageSortKey = 'trailName' | 'patrols' | 'hikersContacted' | 'area'
+export type TrailCoverageSortKey = 'trailName' | 'patrols' | 'hikersSeen'
 
 /** A single patrol row for the trail coverage drill-down (scoped to the dashboard time range and member). */
 export interface CoveragePatrolRow {

@@ -15,6 +15,33 @@ export interface VerifyResult {
   name: string
   role: string
   personId: number
+  /** Server session expiry, milliseconds since epoch */
+  expiresAt?: number
+}
+
+export interface SessionResult {
+  success: boolean
+  token?: string
+  email?: string
+  name?: string
+  role?: string
+  personId?: number
+  expiresAt?: number
+  error?: string
+}
+
+/** Validate a stored session token (Remember this device) without OTP. */
+export async function validateStoredSession(token: string): Promise<SessionResult | null> {
+  try {
+    const res = await fetch(`${AUTH_BASE}/session.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+    return (await res.json()) as SessionResult
+  } catch {
+    return null
+  }
 }
 
 export async function verifyOtp(email: string, code: string, remember: boolean): Promise<VerifyResult> {

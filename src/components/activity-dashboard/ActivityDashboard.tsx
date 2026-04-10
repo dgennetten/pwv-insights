@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ChevronDown,
   Users,
   Footprints,
   Map,
   TreePine,
-  PersonStanding,
+  Eye,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -126,13 +127,16 @@ function MemberSelector({ members, scope, currentUserId, onMemberChange }: Membe
     return () => document.removeEventListener('mousedown', handler)
   }, [dropdownOpen])
 
+  const uid = currentUserId != null ? Math.trunc(Number(currentUserId)) : undefined
+  const ctxId = scope.memberContext === 'all' ? undefined : Math.trunc(Number(scope.memberContext))
+
   const isAll = scope.memberContext === 'all'
-  const isMe = currentUserId !== undefined && scope.memberContext === currentUserId
+  const isMe = uid !== undefined && uid >= 1 && ctxId === uid
   const isOther = !isAll && !isMe
 
-  const currentMember = members.find(m => m.personId === scope.memberContext)
+  const currentMember = members.find(m => m.personId === ctxId)
   const filtered = members
-    .filter(m => m.personId !== currentUserId)
+    .filter(m => m.personId !== uid)
     .filter(m => search === '' || m.fullName.toLowerCase().includes(search.toLowerCase()))
 
   const handleSelect = (ctx: MemberContext) => {
@@ -151,8 +155,8 @@ function MemberSelector({ members, scope, currentUserId, onMemberChange }: Membe
         <button onClick={() => handleSelect('all')} className={`${segmentBase} ${isAll ? segmentActive : segmentInactive}`}>
           All Members
         </button>
-        {currentUserId !== undefined && (
-          <button onClick={() => handleSelect(currentUserId)} className={`${segmentBase} ${isMe ? segmentActive : segmentInactive}`}>
+        {uid !== undefined && uid >= 1 && (
+          <button type="button" onClick={() => handleSelect(uid)} className={`${segmentBase} ${isMe ? segmentActive : segmentInactive}`}>
             Me
           </button>
         )}
@@ -187,7 +191,7 @@ function MemberSelector({ members, scope, currentUserId, onMemberChange }: Membe
                 key={m.personId}
                 onClick={() => handleSelect(m.personId)}
                 className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm transition-colors ${
-                  scope.memberContext === m.personId
+                  ctxId === m.personId
                     ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
                     : 'text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'
                 }`}
@@ -219,6 +223,20 @@ function ChartCard({ title, children, className = '' }: { title: string; childre
   )
 }
 
+function scopedPersonId(ctx: MemberContext): number | undefined {
+  if (ctx === 'all') return undefined
+  const n = Math.trunc(Number(ctx))
+  if (!Number.isFinite(n) || n < 1) return undefined
+  return n
+}
+
+function parseTrailIdParam(raw: string | null): number | null {
+  if (raw == null || raw === '') return null
+  const n = Math.trunc(Number(raw))
+  if (!Number.isFinite(n) || n < 1) return null
+  return n
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export function ActivityDashboard({
@@ -239,26 +257,55 @@ export function ActivityDashboard({
   onTrailCoverageSortChange,
   trailCoveragePageSize,
 }: ActivityDashboardProps) {
-  const [selectedTrailId, setSelectedTrailId] = useState<number | null>(null)
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedTrailId = parseTrailIdParam(searchParams.get('trail'))
 
-  useEffect(() => { setSelectedTrailId(null) }, [scope.timeRange, scope.memberContext])
+  const scopeEpochKey = `${scope.timeRange}/${scope.memberContext === 'all' ? 'all' : String(scope.memberContext)}`
+  const prevScopeEpochRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (prevScopeEpochRef.current === null) {
+      prevScopeEpochRef.current = scopeEpochKey
+      return
+    }
+    if (prevScopeEpochRef.current === scopeEpochKey) return
+    prevScopeEpochRef.current = scopeEpochKey
+    if (!searchParams.get('trail')) return
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev)
+      p.delete('trail')
+      return p
+    }, { replace: true })
+  }, [scopeEpochKey, searchParams, setSearchParams])
 
   useEffect(() => {
-    if (selectedTrailId !== null && !trailCoverage.some(t => t.trailId === selectedTrailId)) {
-      setSelectedTrailId(null)
+    if (selectedTrailId == null) return
+    if (!trailCoverage.some(t => t.trailId === selectedTrailId)) {
+      setSearchParams(prev => {
+        const p = new URLSearchParams(prev)
+        p.delete('trail')
+        return p
+      }, { replace: true })
     }
-  }, [trailCoverage, selectedTrailId])
+  }, [trailCoverage, selectedTrailId, setSearchParams])
 
   const selectedTrail =
     selectedTrailId != null ? trailCoverage.find(t => t.trailId === selectedTrailId) ?? null : null
 
+  const scopePid = scopedPersonId(scope.memberContext)
+  const scopeMemberName = scopePid != null ? members.find(m => m.personId === scopePid)?.fullName : undefined
+
   const handleTrailRowSelect = (trailId: number) => {
-    setSelectedTrailId(trailId)
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev)
+      p.set('trail', String(trailId))
+      return p
+    }, { replace: false })
     onTrailSelect?.(trailId)
   }
 
   const handleTrailCoverageBack = () => {
-    setSelectedTrailId(null)
+    navigate(-1)
     onTrailCoverageBack?.()
   }
 
@@ -267,7 +314,7 @@ export function ActivityDashboard({
     const memberScopeLabel =
       scope.memberContext === 'all'
         ? 'All members'
-        : members.find(m => m.personId === scope.memberContext)?.fullName ?? 'Selected member'
+        : scopeMemberName ?? 'Selected member'
     return (
       <MemberGate onBack={handleTrailCoverageBack}>
         <TrailCoveragePatrolDetail
@@ -290,8 +337,8 @@ export function ActivityDashboard({
           <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Activity Dashboard</h2>
           <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
             {summary.periodLabel}
-            {scope.memberContext !== 'all' && (
-              <> · {members.find(m => m.personId === scope.memberContext)?.fullName}</>
+            {scope.memberContext !== 'all' && scopeMemberName != null && (
+              <> · {scopeMemberName}</>
             )}
           </p>
         </div>
@@ -331,7 +378,7 @@ export function ActivityDashboard({
         <KpiCard label="Patrols" value={summary.patrols} delta={summary.patrolsDelta} icon={<Footprints className="w-4 h-4" strokeWidth={1.5} />} accent />
         <KpiCard label="Trails Covered" value={summary.trailsCovered} delta={summary.trailsCoveredDelta} icon={<Map className="w-4 h-4" strokeWidth={1.5} />} />
         <KpiCard label="Trees Cleared" value={summary.treesCleared} delta={summary.treesClearedDelta} icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />} />
-        <KpiCard label="Contacted" value={summary.hikersContacted} delta={summary.hikersContactedDelta} icon={<PersonStanding className="w-4 h-4" strokeWidth={1.5} />} />
+        <KpiCard label="Hikers seen" value={summary.hikersSeen} delta={summary.hikersSeenDelta} icon={<Eye className="w-4 h-4" strokeWidth={1.5} />} />
       </div>
 
       {/* ── Patrol Activity ────────────────────────────────────────── */}

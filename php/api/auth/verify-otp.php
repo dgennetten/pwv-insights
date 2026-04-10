@@ -58,11 +58,17 @@ if (random_int(1, 20) === 1) {
 
 $role = (strtolower($email) === strtolower(ADMIN_EMAIL)) ? 'admin' : 'member';
 
+$expiresTs = strtotime($expiresAt);
+if ($expiresTs === false) {
+  $expiresTs = time() + ($remember ? 365 * 86400 : 86400);
+}
+
 jsonOut([
-  'success'  => true,
-  'token'    => $token,
-  'email'    => $email,
-  'name'     => trim($member['FirstName'] . ' ' . $member['LastName']),
-  'role'     => $role,
-  'personId' => (int) $member['PersonID'],
+  'success'   => true,
+  'token'     => $token,
+  'email'     => $email,
+  'name'      => trim($member['FirstName'] . ' ' . $member['LastName']),
+  'role'      => $role,
+  'personId'  => (int) $member['PersonID'],
+  'expiresAt' => $expiresTs * 1000,
 ]);

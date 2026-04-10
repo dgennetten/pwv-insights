@@ -2,7 +2,15 @@
 define('DB_HOST', 'mysql.gennetten.com');
 define('DB_NAME', 'pwvinsights');
 
-$secrets = include __DIR__ . '/config.secret.php';
+function getSecrets(): array {
+  static $cache = null;
+  if ($cache === null) {
+    $cache = include __DIR__ . '/config.secret.php';
+  }
+  return $cache;
+}
+
+$secrets = getSecrets();
 define('DB_USER', $secrets['db_user']);
 define('DB_PASS', $secrets['db_pass']);
 

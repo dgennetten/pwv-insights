@@ -4,7 +4,15 @@ import { requestOtp, verifyOtp } from '../../services/authService'
 
 interface LoginModalProps {
   onClose: () => void
-  onLoginSuccess: (token: string, email: string, name: string, role: string, personId: number, remember: boolean) => void
+  onLoginSuccess: (
+    token: string,
+    email: string,
+    name: string,
+    role: string,
+    personId: number,
+    remember: boolean,
+    expiresAtMs?: number,
+  ) => void
 }
 
 type Step = 'email' | 'code'
@@ -40,7 +48,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
     setLoading(true)
     try {
       const result = await verifyOtp(email, code, remember)
-      onLoginSuccess(result.token, result.email, result.name, result.role, result.personId, remember)
+      onLoginSuccess(result.token, result.email, result.name, result.role, result.personId, remember, result.expiresAt)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed')
     } finally {
@@ -49,7 +57,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="w-full max-w-sm bg-white dark:bg-stone-900 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-stone-100 dark:border-stone-800">

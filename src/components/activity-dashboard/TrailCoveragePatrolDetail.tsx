@@ -61,10 +61,6 @@ export function TrailCoveragePatrolDetail({
               <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">Seen</div>
               <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{trail.hikersSeen}</div>
             </div>
-            <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-center min-w-[5rem]">
-              <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">Contacted</div>
-              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{trail.hikersContacted}</div>
-            </div>
           </div>
         </div>
       </div>
@@ -93,7 +89,6 @@ export function TrailCoveragePatrolDetail({
                     <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Member</th>
                     <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Duration</th>
                     <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Seen</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Contacted</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
@@ -103,7 +98,6 @@ export function TrailCoveragePatrolDetail({
                       <td className="px-4 py-3 font-medium text-stone-800 dark:text-stone-200">{row.memberName}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-stone-600 dark:text-stone-400">{row.durationHours}h</td>
                       <td className="px-4 py-3 text-right tabular-nums text-stone-600 dark:text-stone-400">{row.hikersSeen}</td>
-                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-stone-700 dark:text-stone-300">{row.hikersContacted}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -119,7 +113,7 @@ export function TrailCoveragePatrolDetail({
                       <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">{formatDate(row.date)}</div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-200">{row.hikersSeen} seen · {row.hikersContacted} contacted</div>
+                      <div className="text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-200">{row.hikersSeen} seen</div>
                       <div className="text-xs text-stone-400 dark:text-stone-500">{row.durationHours}h</div>
                     </div>
                   </div>

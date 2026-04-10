@@ -13,7 +13,7 @@ $timeRange = $_GET['timeRange'] ?? '7d';
 if (!in_array($timeRange, ['7d','1m','3m','1y','all'], true)) $timeRange = '7d';
 
 $memberRaw = $_GET['memberContext'] ?? 'all';
-$memberCtx = ($memberRaw === 'all') ? 'all' : (int)$memberRaw;
+$memberCtx = resolveMemberContext($memberRaw);
 
 $db = getDb();
 
@@ -24,6 +24,12 @@ $db = getDb();
 $cur  = summary($db, $start, $end, $memberCtx);
 $prev = $prevStart ? summary($db, $prevStart, $prevEnd, $memberCtx) : null;
 
+// KPI "hikers seen" = sum of per-trail Seen column (same source as Trail Coverage table)
+$trailCoverage   = trailCoverage($db, $start, $end, $memberCtx);
+$hikersSeenCur   = sumTrailHikersSeen($trailCoverage);
+$prevTrailCov    = $prevStart ? trailCoverage($db, $prevStart, $prevEnd, $memberCtx) : [];
+$hikersSeenPrev  = $prevStart ? sumTrailHikersSeen($prevTrailCov) : 0;
+
 jsonOut([
   'summary'              => [
     'patrols'              => $cur['patrols'],
@@ -32,14 +38,14 @@ jsonOut([
     'trailsCoveredDelta'   => $prev ? $cur['trailsCovered']   - $prev['trailsCovered']   : 0,
     'treesCleared'         => $cur['treesCleared'],
     'treesClearedDelta'    => $prev ? $cur['treesCleared']    - $prev['treesCleared']    : 0,
-    'hikersContacted'      => $cur['hikersContacted'],
-    'hikersContactedDelta' => $prev ? $cur['hikersContacted'] - $prev['hikersContacted'] : 0,
+    'hikersSeen'           => $hikersSeenCur,
+    'hikersSeenDelta'      => $prevStart ? ($hikersSeenCur - $hikersSeenPrev) : 0,
     'volunteerHours'       => $cur['volunteerHours'],
     'totalActiveMembers'   => $cur['totalActiveMembers'],
     'periodLabel'          => periodLabel($start, $end),
   ],
   'patrolActivity'       => patrolActivity($db, $start, $end, $memberCtx, $timeRange),
-  'trailCoverage'        => trailCoverage($db, $start, $end, $memberCtx),
+  'trailCoverage'        => $trailCoverage,
   'patrolsByTrailId'     => patrolsByTrail($db, $start, $end, $memberCtx),
   'violationsByCategory' => violations($db, $start, $end, $memberCtx),
   'treesCleared'         => treesCleared($db, $start, $end, $memberCtx),
@@ -48,6 +54,25 @@ jsonOut([
 ]);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Valid positive t_member.PersonID only. Rejects "undefined", "", floats, 0 — those
+ * would cast to PersonID 0 and make member-scoped KPIs (trees, patrols) nearly empty.
+ */
+function resolveMemberContext($raw) {
+  if ($raw === null || $raw === false) {
+    return 'all';
+  }
+  $s = trim((string)$raw);
+  if ($s === '' || strcasecmp($s, 'all') === 0) {
+    return 'all';
+  }
+  if (!preg_match('/^\d+$/', $s)) {
+    return 'all';
+  }
+  $id = (int)$s;
+  return $id > 0 ? $id : 'all';
+}
 
 function dateRange(string $r): array {
   $today = date('Y-m-d');
@@ -80,29 +105,207 @@ function periodLabel(?string $s, ?string $e): string {
   return $sd->format('M j, Y') . ' – ' . $ed->format('M j, Y');
 }
 
-// Build WHERE clause parts + params array for t_report aliased as 'r'
-function scopeWhere(?string $s, ?string $e, $memberCtx): array {
+/** True if SELECT on identifier succeeds (handles hosts where SHOW COLUMNS is denied). */
+function tableHasColumn(PDO $db, string $table, string $col): bool {
+  static $cache = [];
+  if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $table) || !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $col)) {
+    return false;
+  }
+  $key = $table . '.' . $col;
+  if (array_key_exists($key, $cache)) {
+    return $cache[$key];
+  }
+  try {
+    $db->query('SELECT `' . $col . '` FROM `' . $table . '` LIMIT 0');
+    $cache[$key] = true;
+    return true;
+  } catch (Throwable $e) {
+    $cache[$key] = false;
+    return false;
+  }
+}
+
+/** @return list<string> PersonID-style columns on t_report to OR with roster (empty = roster only). */
+function detectReportPersonColumns(PDO $db): array {
+  static $resolved = false;
+  static $cols = null;
+  if ($resolved) {
+    return $cols;
+  }
+  $resolved = true;
+  $secrets = getSecrets();
+  if (array_key_exists('t_report_person_column', $secrets) && $secrets['t_report_person_column'] === false) {
+    $cols = [];
+    return $cols;
+  }
+  if (!empty($secrets['t_report_person_column']) && is_string($secrets['t_report_person_column'])) {
+    $c = $secrets['t_report_person_column'];
+    if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $c) && tableHasColumn($db, 't_report', $c)) {
+      $cols = [$c];
+      return $cols;
+    }
+    $cols = [];
+    return $cols;
+  }
+  $candidates = [
+    'ReportWriterID', // Canyon Lakes / PWV — filer not always in t_report_member
+    'SubmittedByPersonID',
+    'EnteredByPersonID',
+    'CreatedByPersonID',
+    'ReportingPersonID',
+    'PrimaryReporterPersonID',
+    'ReportPersonID',
+  ];
+  $fields = [];
+  try {
+    $stmt = $db->query('SHOW COLUMNS FROM t_report');
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+      $fields[$row['Field']] = true;
+    }
+  } catch (Throwable $e) {
+    $fields = null;
+  }
+  $cols = [];
+  if ($fields !== null) {
+    foreach ($candidates as $c) {
+      if (!empty($fields[$c])) {
+        $cols[] = $c;
+      }
+    }
+  } else {
+    foreach ($candidates as $c) {
+      if (tableHasColumn($db, 't_report', $c)) {
+        $cols[] = $c;
+      }
+    }
+  }
+  return $cols;
+}
+
+/**
+ * Optional t_rpt_tree_down column = PersonID for who logged the tree.
+ * Many schemas (e.g. PWV) have no such column — only ReportID, TreeSize, etc.; then trees follow report scope only.
+ * Secret t_tree_down_person_column: string or false to disable.
+ */
+function detectTreeDownPersonColumn(PDO $db): ?string {
+  static $resolved = false;
+  static $col = null;
+  if ($resolved) {
+    return $col;
+  }
+  $resolved = true;
+  $secrets = getSecrets();
+  if (array_key_exists('t_tree_down_person_column', $secrets) && $secrets['t_tree_down_person_column'] === false) {
+    return null;
+  }
+  if (!empty($secrets['t_tree_down_person_column']) && is_string($secrets['t_tree_down_person_column'])) {
+    $c = $secrets['t_tree_down_person_column'];
+    if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $c) && tableHasColumn($db, 't_rpt_tree_down', $c)) {
+      $col = $c;
+      return $col;
+    }
+  }
+  $candidates = [
+    'PersonID',
+    'MemberPersonID',
+    'ClearedByPersonID',
+    'LoggedByPersonID',
+    'ReporterPersonID',
+  ];
+  try {
+    $stmt = $db->query('SHOW COLUMNS FROM t_rpt_tree_down');
+    $fields = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+      $fields[$row['Field']] = true;
+    }
+    foreach ($candidates as $c) {
+      if (!empty($fields[$c])) {
+        $col = $c;
+        return $col;
+      }
+    }
+  } catch (Throwable $e) {
+    /* probe below */
+  }
+  foreach ($candidates as $c) {
+    if (tableHasColumn($db, 't_rpt_tree_down', $c)) {
+      $col = $c;
+      return $col;
+    }
+  }
+  return null;
+}
+
+/** Member scoped to patrol roster and/or any detected PersonID column on t_report (OR all that exist). */
+function memberReportClause(PDO $db, int $personId): array {
+  $optCols = detectReportPersonColumns($db);
+  $base = 'EXISTS (SELECT 1 FROM t_report_member rmf WHERE rmf.ReportID = r.ReportID AND rmf.PersonID = ?)';
+  if ($optCols === []) {
+    return [$base, [$personId]];
+  }
+  $parts = [$base];
+  $params = [$personId];
+  foreach ($optCols as $c) {
+    $parts[] = '(r.' . $c . ' IS NOT NULL AND r.' . $c . ' = ?)';
+    $params[] = $personId;
+  }
+  return ['(' . implode(' OR ', $parts) . ')', $params];
+}
+
+/**
+ * Broader scope for tree rows: roster OR report writer OR per-tree person column (when present).
+ */
+function memberTreesClause(PDO $db, int $personId): array {
+  [$frag, $params] = memberReportClause($db, $personId);
+  $tdCol = detectTreeDownPersonColumn($db);
+  if ($tdCol === null) {
+    return [$frag, $params];
+  }
+  return [
+    '(' . $frag . ' OR (td.' . $tdCol . ' IS NOT NULL AND td.' . $tdCol . ' = ?))',
+    array_merge($params, [$personId]),
+  ];
+}
+
+function scopeWhereBase(?string $s, ?string $e): array {
   $w = ['r.GroupID = ' . PWV_GROUP,
         '(r.IsDraft IS NULL OR r.IsDraft = 0)',
         '(r.IsUnofficial IS NULL OR r.IsUnofficial = 0)'];
   $p = [];
   if ($s) { $w[] = 'r.ActivityDate >= ?'; $p[] = $s; }
   if ($e) { $w[] = 'r.ActivityDate <= ?'; $p[] = $e; }
+  return [$w, $p];
+}
+
+// Build WHERE clause parts + params array for t_report aliased as 'r'
+function scopeWhere(PDO $db, ?string $s, ?string $e, $memberCtx): array {
+  [$w, $p] = scopeWhereBase($s, $e);
   if ($memberCtx !== 'all') {
-    $w[] = 'EXISTS (SELECT 1 FROM t_report_member rmf WHERE rmf.ReportID = r.ReportID AND rmf.PersonID = ?)';
-    $p[] = (int)$memberCtx;
+    [$frag, $mp] = memberReportClause($db, (int)$memberCtx);
+    $w[] = $frag;
+    $p = array_merge($p, $mp);
+  }
+  return [implode(' AND ', $w), $p];
+}
+
+/** Same as scopeWhere but member filter also matches t_rpt_tree_down person column when defined. */
+function scopeWhereTrees(PDO $db, ?string $s, ?string $e, $memberCtx): array {
+  [$w, $p] = scopeWhereBase($s, $e);
+  if ($memberCtx !== 'all') {
+    [$frag, $mp] = memberTreesClause($db, (int)$memberCtx);
+    $w[] = $frag;
+    $p = array_merge($p, $mp);
   }
   return [implode(' AND ', $w), $p];
 }
 
 function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
-  [$w, $p] = scopeWhere($s, $e, $ctx);
+  [$w, $p] = scopeWhere($db, $s, $e, $ctx);
 
   $row = $db->prepare("
     SELECT
       COUNT(DISTINCT r.ReportID) AS patrols,
       COUNT(DISTINCT wt.TrailID) AS trailsCovered,
-      COALESCE(SUM(r.NumContacted), 0) AS hikersContacted,
       COUNT(DISTINCT rm.PersonID) AS totalActiveMembers,
       ROUND(SUM(
         CASE WHEN r.TimeStarted IS NOT NULL AND r.TimeEnded IS NOT NULL
@@ -118,7 +321,7 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
   $d = $row->fetch(PDO::FETCH_ASSOC);
 
   // trees cleared separately to avoid JOIN multiplication (exclude null TreeSize to match chart)
-  [$w2, $p2] = scopeWhere($s, $e, $ctx);
+  [$w2, $p2] = scopeWhereTrees($db, $s, $e, $ctx);
   $trees = $db->prepare("
     SELECT COUNT(*) AS n
     FROM t_rpt_tree_down td
@@ -129,17 +332,25 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
   $tc = (int)$trees->fetchColumn();
 
   return [
-    'patrols'          => (int)$d['patrols'],
-    'trailsCovered'    => (int)$d['trailsCovered'],
-    'hikersContacted'  => (int)$d['hikersContacted'],
+    'patrols'            => (int)$d['patrols'],
+    'trailsCovered'      => (int)$d['trailsCovered'],
     'totalActiveMembers' => (int)$d['totalActiveMembers'],
-    'volunteerHours'   => (float)($d['volunteerHours'] ?? 0),
-    'treesCleared'     => $tc,
+    'volunteerHours'     => (float)($d['volunteerHours'] ?? 0),
+    'treesCleared'       => $tc,
   ];
 }
 
+/** Sum hikersSeen from trailCoverage rows (matches Trail Coverage "Seen" column total). */
+function sumTrailHikersSeen(array $rows): int {
+  $s = 0;
+  foreach ($rows as $r) {
+    $s += (int)($r['hikersSeen'] ?? 0);
+  }
+  return $s;
+}
+
 function patrolActivity(PDO $db, ?string $s, ?string $e, $ctx, string $range): array {
-  [$w, $p] = scopeWhere($s, $e, $ctx);
+  [$w, $p] = scopeWhere($db, $s, $e, $ctx);
 
   if ($range === '7d') {
     // Daily — fill gaps
@@ -222,7 +433,7 @@ function patrolActivity(PDO $db, ?string $s, ?string $e, $ctx, string $range): a
 }
 
 function trailCoverage(PDO $db, ?string $s, ?string $e, $ctx): array {
-  [$w, $p] = scopeWhere($s, $e, $ctx);
+  [$w, $p] = scopeWhere($db, $s, $e, $ctx);
 
   // Patrol stats per trail
   $stmt = $db->prepare("
@@ -249,7 +460,7 @@ function trailCoverage(PDO $db, ?string $s, ?string $e, $ctx): array {
   $ids = implode(',', array_keys($stats));
 
   // Hikers seen per trail (via observation table)
-  [$w2, $p2] = scopeWhere($s, $e, $ctx);
+  [$w2, $p2] = scopeWhere($db, $s, $e, $ctx);
   $seenStmt = $db->prepare("
     SELECT wt.TrailID, COALESCE(SUM(o.NumSeen), 0) AS hikersSeen
     FROM t_rpt_observation o
@@ -307,7 +518,7 @@ function trailCoverage(PDO $db, ?string $s, ?string $e, $ctx): array {
 }
 
 function patrolsByTrail(PDO $db, ?string $s, ?string $e, $ctx): array {
-  [$w, $p] = scopeWhere($s, $e, $ctx);
+  [$w, $p] = scopeWhere($db, $s, $e, $ctx);
 
   $stmt = $db->prepare("
     SELECT
@@ -355,7 +566,7 @@ function patrolsByTrail(PDO $db, ?string $s, ?string $e, $ctx): array {
 }
 
 function violations(PDO $db, ?string $s, ?string $e, $ctx): array {
-  [$w, $p] = scopeWhere($s, $e, $ctx);
+  [$w, $p] = scopeWhere($db, $s, $e, $ctx);
   $stmt = $db->prepare("
     SELECT vt.ViolTypeName AS category, SUM(rv.NumSeen) AS cnt
     FROM t_rpt_violation rv
@@ -369,7 +580,13 @@ function violations(PDO $db, ?string $s, ?string $e, $ctx): array {
   $stmt->execute($p);
   $result = [];
   foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    $result[] = ['category' => $row['category'], 'count' => (int)$row['cnt'], 'color' => 'amber'];
+    $cat = (string)$row['category'];
+    // Omit littering-along-trail variants from dashboard (e.g. "…Trail or in Campsite")
+    $catNorm = strtolower(trim($cat));
+    if (stripos($catNorm, 'littering along trail') !== false) {
+      continue;
+    }
+    $result[] = ['category' => $cat, 'count' => (int)$row['cnt'], 'color' => 'amber'];
   }
   return $result;
 }
@@ -391,7 +608,7 @@ function treesCleared(PDO $db, ?string $s, ?string $e, $ctx): array {
   }
   $selectCols = implode(', ', $caseCols);
 
-  [$w, $p] = scopeWhere($s, $e, $ctx);
+  [$w, $p] = scopeWhereTrees($db, $s, $e, $ctx);
   $stmt = $db->prepare("
     SELECT $selectCols
     FROM t_rpt_tree_down td
@@ -407,7 +624,7 @@ function treesCleared(PDO $db, ?string $s, ?string $e, $ctx): array {
   }
 
   // By trail — same conditional aggregation grouped per trail
-  [$w2, $p2] = scopeWhere($s, $e, $ctx);
+  [$w2, $p2] = scopeWhereTrees($db, $s, $e, $ctx);
   $byTrailStmt = $db->prepare("
     SELECT t.TrailName, t.TrailNumber,
            SUM(CASE WHEN td.TreeSize < 8 THEN 1 ELSE 0 END) AS s0,

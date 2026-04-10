@@ -15,6 +15,19 @@ const SIZE_CLASS_COLORS: Record<TreeSizeClass, { bar: string; label: string; dot
   '> 36"':    { bar: 'bg-emerald-800 dark:bg-emerald-300', label: 'text-emerald-800 dark:text-emerald-200', dot: 'bg-emerald-800' },
 }
 
+/** Matches dashboard API (t_rpt_tree_down.TreeSize in inches). Shown on bar hover. */
+const SIZE_CLASS_RANGE: Record<TreeSizeClass, string> = {
+  '< 8"':     'Size range: under 8″ diameter',
+  '8" – 15"': 'Size range: 8″ through 15″ diameter',
+  '16" – 23"': 'Size range: 16″ through 23″ diameter',
+  '24" – 36"': 'Size range: 24″ through 36″ diameter',
+  '> 36"':    'Size range: over 36″ diameter',
+}
+
+function sizeClassTooltip(sizeClass: TreeSizeClass, count: number): string {
+  return `${SIZE_CLASS_RANGE[sizeClass]} · ${count} tree${count === 1 ? '' : 's'}`
+}
+
 const CHART_HEIGHT = 120
 
 export function TreesClearedChart({ data }: TreesClearedChartProps) {
@@ -57,12 +70,16 @@ export function TreesClearedChart({ data }: TreesClearedChartProps) {
               const maxCount = Math.max(...data.aggregate.map(a => a.count), 1)
               const heightPct = item.count === 0 ? 0 : Math.max((item.count / maxCount) * 100, 4)
               return (
-                <div key={item.sizeClass} className="flex-1 flex flex-col items-center justify-end gap-1.5 group h-full">
+                <div
+                  key={item.sizeClass}
+                  className="flex-1 flex flex-col items-center justify-end gap-1.5 group h-full min-w-0"
+                  title={sizeClassTooltip(item.sizeClass as TreeSizeClass, item.count)}
+                >
                   <span className={`text-xs font-medium tabular-nums ${item.count > 0 ? colors.label : 'opacity-0'}`}>
                     {item.count}
                   </span>
                   <div
-                    className={`w-full rounded-t-sm ${colors.bar} transition-opacity group-hover:opacity-80`}
+                    className={`w-full rounded-t-sm ${colors.bar} transition-opacity group-hover:opacity-80 cursor-default`}
                     style={{ height: `${heightPct}%` }}
                   />
                 </div>
@@ -107,9 +124,9 @@ export function TreesClearedChart({ data }: TreesClearedChartProps) {
                         return (
                           <div
                             key={t.sizeClass}
-                            className={`${colors.bar} transition-opacity group-hover:opacity-90`}
+                            className={`${colors.bar} transition-opacity group-hover:opacity-90 cursor-default min-w-0`}
                             style={{ width: `${widthPct}%` }}
-                            title={`${t.sizeClass}: ${t.count}`}
+                            title={sizeClassTooltip(t.sizeClass as TreeSizeClass, t.count)}
                           />
                         )
                       })}
