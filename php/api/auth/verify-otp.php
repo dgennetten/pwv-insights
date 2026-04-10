@@ -44,9 +44,10 @@ if (!$member) {
   jsonOut(['success' => false, 'error' => 'Member not found']);
 }
 
-// Create session token (expires in 30 days)
+// Create session token — long-lived if "remember this device" was checked
+$remember  = !empty($body['remember']);
 $token     = bin2hex(random_bytes(32));
-$expiresAt = date('Y-m-d H:i:s', strtotime('+30 days'));
+$expiresAt = date('Y-m-d H:i:s', strtotime($remember ? '+365 days' : '+1 day'));
 $db->prepare('INSERT INTO auth_sessions (person_id, token, expires_at) VALUES (?, ?, ?)')
    ->execute([$member['PersonID'], $token, $expiresAt]);
 

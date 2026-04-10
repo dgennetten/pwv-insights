@@ -17,11 +17,11 @@ export interface VerifyResult {
   personId: number
 }
 
-export async function verifyOtp(email: string, code: string): Promise<VerifyResult> {
+export async function verifyOtp(email: string, code: string, remember: boolean): Promise<VerifyResult> {
   const res = await fetch(`${AUTH_BASE}/verify-otp.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, code }),
+    body: JSON.stringify({ email, code, remember }),
   })
   const data = await res.json()
   if (!data.success) throw new Error(data.error ?? 'Verification failed')

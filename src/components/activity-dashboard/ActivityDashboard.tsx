@@ -21,6 +21,7 @@ import { ViolationsChart } from './ViolationsChart'
 import { TreesClearedChart } from './TreesClearedChart'
 import { MembersByAgeChart } from './MembersByAgeChart'
 import { TrailCoveragePatrolDetail } from './TrailCoveragePatrolDetail'
+import { MemberGate } from '../MemberGate'
 
 // ─── Time range config ──────────────────────────────────────────────────────
 
@@ -268,13 +269,15 @@ export function ActivityDashboard({
         ? 'All members'
         : members.find(m => m.personId === scope.memberContext)?.fullName ?? 'Selected member'
     return (
-      <TrailCoveragePatrolDetail
-        trail={selectedTrail}
-        patrols={patrols}
-        periodLabel={summary.periodLabel}
-        memberScopeLabel={memberScopeLabel}
-        onBack={handleTrailCoverageBack}
-      />
+      <MemberGate onBack={handleTrailCoverageBack}>
+        <TrailCoveragePatrolDetail
+          trail={selectedTrail}
+          patrols={patrols}
+          periodLabel={summary.periodLabel}
+          memberScopeLabel={memberScopeLabel}
+          onBack={handleTrailCoverageBack}
+        />
+      </MemberGate>
     )
   }
 

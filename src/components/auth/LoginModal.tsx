@@ -39,7 +39,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
     setError('')
     setLoading(true)
     try {
-      const result = await verifyOtp(email, code)
+      const result = await verifyOtp(email, code, remember)
       onLoginSuccess(result.token, result.email, result.name, result.role, result.personId, remember)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed')
