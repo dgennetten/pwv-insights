@@ -44,6 +44,22 @@ export async function validateStoredSession(token: string): Promise<SessionResul
   }
 }
 
+/** Local dev only — see php/api/auth/dev-auto-login.php */
+export async function devAutoLogin(): Promise<VerifyResult | null> {
+  try {
+    const res = await fetch(`${AUTH_BASE}/dev-auto-login.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+    const data = (await res.json()) as { success?: boolean } & Partial<VerifyResult>
+    if (!data.success || data.token == null || data.personId == null) return null
+    return data as VerifyResult
+  } catch {
+    return null
+  }
+}
+
 export async function verifyOtp(email: string, code: string, remember: boolean): Promise<VerifyResult> {
   const res = await fetch(`${AUTH_BASE}/verify-otp.php`, {
     method: 'POST',

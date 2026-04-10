@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useCallback, useLayoutEffect, type ReactNode } from 'react'
-import { validateStoredSession } from '../services/authService'
+import { devAutoLogin, validateStoredSession } from '../services/authService'
+
+function isLocalhostHostname(): boolean {
+  const h = window.location.hostname
+  return h === 'localhost' || h === '127.0.0.1'
+}
 
 interface AuthUser {
   personId: number
@@ -111,27 +116,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useLayoutEffect(() => {
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (raw) {
-      try {
-        const u = JSON.parse(raw) as Record<string, unknown>
-        const pid = Math.trunc(Number(u.personId))
-        if (Number.isFinite(pid) && pid >= 1) return
-      } catch {
-        /* try token restore */
+    let cancelled = false
+
+    void (async () => {
+      const raw = localStorage.getItem(SESSION_KEY)
+      if (raw) {
+        try {
+          const u = JSON.parse(raw) as Record<string, unknown>
+          const pid = Math.trunc(Number(u.personId))
+          if (Number.isFinite(pid) && pid >= 1) return
+        } catch {
+          /* try token restore */
+        }
       }
-    }
 
-    const token = localStorage.getItem(TOKEN_KEY)
-    if (!token || localStorage.getItem(REMEMBER_KEY) !== '1') return
-
-    void validateStoredSession(token).then((r) => {
-      if (!r?.success || r.personId == null || r.token == null) {
+      const token = localStorage.getItem(TOKEN_KEY)
+      if (token && localStorage.getItem(REMEMBER_KEY) === '1') {
+        const r = await validateStoredSession(token)
+        if (cancelled) return
+        if (r?.success && r.personId != null && r.token != null) {
+          login(r.token, r.email ?? '', r.name ?? '', r.role ?? 'member', r.personId, true, r.expiresAt)
+          return
+        }
         clearRememberedCredentials()
-        return
       }
-      login(r.token, r.email ?? '', r.name ?? '', r.role ?? 'member', r.personId, true, r.expiresAt)
-    })
+
+      if (import.meta.env.DEV && isLocalhostHostname()) {
+        const d = await devAutoLogin()
+        if (cancelled || !d) return
+        login(d.token, d.email ?? '', d.name ?? '', d.role ?? 'member', d.personId, true, d.expiresAt)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [login])
 
   const openLogin = useCallback(() => {

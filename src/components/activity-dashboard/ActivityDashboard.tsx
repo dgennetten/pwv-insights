@@ -389,7 +389,10 @@ export function ActivityDashboard({
       {/* ── Trees Cleared + Members by Age ─────────────────────────── */}
       <div className={`grid grid-cols-1 gap-4 mb-4 ${scope.memberContext === 'all' ? 'lg:grid-cols-2' : ''}`}>
         <ChartCard title="Trees Cleared by Size Class">
-          <TreesClearedChart data={treesCleared} />
+          <TreesClearedChart
+            data={treesCleared}
+            memberScoped={scope.memberContext !== 'all'}
+          />
         </ChartCard>
         {scope.memberContext === 'all' && (
           <ChartCard title="Members by Age">

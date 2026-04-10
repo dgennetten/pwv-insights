@@ -6,10 +6,12 @@ header('Content-Type: application/json');
 $db = getDb();
 
 $sizes = $db->query("
-    SELECT TreeSize, COUNT(*) AS cnt
-    FROM t_rpt_tree_down
-    GROUP BY TreeSize
-    ORDER BY TreeSize
+    SELECT TrailClearingID,
+           COUNT(*) AS row_count,
+           COALESCE(SUM(NumCleared), 0) AS sum_qty
+    FROM t_rpt_trail_clearing
+    GROUP BY TrailClearingID
+    ORDER BY TrailClearingID
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 echo json_encode($sizes, JSON_PRETTY_PRINT);

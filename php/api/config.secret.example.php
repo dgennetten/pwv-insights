@@ -13,8 +13,20 @@ return [
   // 't_report_person_column' => 'ReportWriterID',
 
   /**
-   * Optional: column on t_rpt_tree_down for who cleared that row. If your tree table only has
-   * ReportID / TreeSize (no PersonID), leave unset; tree counts follow the parent report only.
+   * Optional: quantity column on t_rpt_trail_clearing. Tree-size lines use tree count; brushing/limbing lines use feet.
+   * If unset, auto-detects NumCleared, Qty, or Quantity.
    */
-  // 't_tree_down_person_column' => 'PersonID',
+  // 't_trail_clearing_qty_column' => 'NumCleared',
+
+  /**
+   * Optional: TrailClearingID values that mean brushing/limbing (feet), excluded from “trees cleared.”
+   * Default [6, 7, 8]. Tree totals include NULL/0 IDs and any ID not in this list.
+   */
+  // 'trail_clearing_brush_ids' => [6, 7, 8],
+
+  /**
+   * Optional: PersonID column on t_rpt_trail_clearing for member-scoped tree counts. Set false to disable.
+   * Legacy: t_tree_down_person_column is still read as a fallback column name on t_rpt_trail_clearing.
+   */
+  // 't_trail_clearing_person_column' => 'PersonID',
 ];

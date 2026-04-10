@@ -2,7 +2,7 @@
 -- Run in MySQL while connected to pwvinsights (or change SCHEMA below).
 --
 -- Your API already uses child tables of t_report:
---   t_rpt_tree_down, t_rpt_observation, t_rpt_violation
+--   t_rpt_tree_down (hazards), t_rpt_trail_clearing (cleared), t_rpt_observation, t_rpt_violation
 -- Maintenance is likely another t_rpt_* row keyed by ReportID, plus a lu_* type table.
 
 USE pwvinsights;

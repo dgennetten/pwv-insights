@@ -80,47 +80,44 @@ export function TrailCoveragePatrolDetail({
             <p className="text-sm text-stone-500 dark:text-stone-400">No patrols match this time range and member scope for this trail.</p>
           </div>
         ) : (
-          <>
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/50">
-                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Date</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Member</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Duration</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Seen</th>
+          <div className="overflow-x-auto -mx-px">
+            <table className="w-full min-w-[20rem] text-sm">
+              <thead>
+                <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/50">
+                  <th className="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                    Date
+                  </th>
+                  <th className="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[6rem]">
+                    Member
+                  </th>
+                  <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                    Trees cleared
+                  </th>
+                  <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                    Seen
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
+                {sorted.map((row, i) => (
+                  <tr key={`${row.date}-${i}`} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs text-stone-500 dark:text-stone-400 whitespace-nowrap align-top">
+                      {formatDate(row.date)}
+                    </td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-stone-800 dark:text-stone-200 break-words max-w-[11rem] sm:max-w-none align-top">
+                      {row.memberName}
+                    </td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
+                      {row.treesCleared ?? 0}
+                    </td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
+                      {row.hikersSeen}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-                  {sorted.map((row, i) => (
-                    <tr key={`${row.date}-${i}`} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
-                      <td className="px-4 py-3 text-xs text-stone-500 dark:text-stone-400 whitespace-nowrap">{formatDate(row.date)}</td>
-                      <td className="px-4 py-3 font-medium text-stone-800 dark:text-stone-200">{row.memberName}</td>
-                      <td className="px-4 py-3 text-right tabular-nums text-stone-600 dark:text-stone-400">{row.durationHours}h</td>
-                      <td className="px-4 py-3 text-right tabular-nums text-stone-600 dark:text-stone-400">{row.hikersSeen}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="sm:hidden divide-y divide-stone-100 dark:divide-stone-800">
-              {sorted.map((row, i) => (
-                <div key={`${row.date}-${i}`} className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-medium text-stone-800 dark:text-stone-200">{row.memberName}</div>
-                      <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">{formatDate(row.date)}</div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-200">{row.hikersSeen} seen</div>
-                      <div className="text-xs text-stone-400 dark:text-stone-500">{row.durationHours}h</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

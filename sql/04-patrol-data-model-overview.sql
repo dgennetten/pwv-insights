@@ -1,0 +1,65 @@
+-- Patrol / trail data model (PWV Insights dashboard) — how lu_* and t_* tables connect.
+-- Run in MySQL against your patrol database (often same server as pwvinsights app DB).
+--
+-- CORE HUB
+--   t_report        One patrol outing (ActivityDate, WksiteID, GroupID, draft flags, …).
+--   t_report_member Optional roster: who was on the patrol (PersonID per ReportID).
+--
+-- TRAIL / AREA LOOKUPS
+--   lu_trail              Trail identity (TrailID, TrailName, TrailNumber, Length, …).
+--   lu_wksite_trail       Links a patrol “worksite” to a trail: WksiteID → TrailID.
+--                         Dashboard trail coverage uses: t_report.WksiteID → lu_wksite_trail → TrailID.
+--   lu_wksite_area / lu_area  Optional area labels for display.
+--
+-- LINE ITEMS (children of t_report via ReportID)
+--   t_rpt_observation   Hikers seen, etc. (ObsTypeID → lu_obs_type; CanContact drives “contactable” seen).
+--   t_rpt_violation     Violations (ViolTypeID → lu_viol_type).
+--   t_rpt_trail_clearing  Clearing work: TrailClearingID → lu_trail_clearing (type of line).
+--                         Quantity column is usually NumCleared (tree count OR feet for brushing lines).
+--   t_rpt_tree_down     Fallen-tree / hazard reporting (separate from “cleared” counts in the dashboard).
+--
+-- TREES CLEARED (dashboard / API)
+--   Counts sum t_rpt_trail_clearing for each ReportID, excluding brushing/limbing IDs (default 6,7,8 = feet).
+--   Rows with NULL TrailClearingID are treated as tree counts (legacy / uncategorized).
+--
+-- McIntyre #966 — if patrol list shows 0 trees but you logged work, run the diagnostics below
+-- (adjust dates / trail number as needed).
+
+-- SET @trail_no = '966';
+-- SET @d0 = '2025-08-15';
+-- SET @d1 = '2025-08-18';
+
+-- TrailID for McIntyre
+-- SELECT TrailID, TrailName, TrailNumber FROM lu_trail WHERE TrailNumber = @trail_no;
+
+-- Patrols on that trail in the date window (via WksiteID)
+-- SELECT r.ReportID, r.ActivityDate, r.WksiteID, wt.TrailID
+-- FROM t_report r
+-- JOIN lu_wksite_trail wt ON wt.WksiteID = r.WksiteID
+-- JOIN lu_trail t ON t.TrailID = wt.TrailID
+-- WHERE t.TrailNumber = @trail_no
+--   AND r.ActivityDate BETWEEN @d0 AND @d1
+--   AND (r.IsDraft IS NULL OR r.IsDraft = 0)
+--   AND (r.IsUnofficial IS NULL OR r.IsUnofficial = 0)
+-- ORDER BY r.ActivityDate;
+
+-- Clearing rows for those reports (see TrailClearingID and quantities)
+-- SELECT tc.ReportID, tc.TrailClearingID, tc.NumCleared,
+--        (SELECT TrailClearingName FROM lu_trail_clearing lu WHERE lu.TrailClearingID = tc.TrailClearingID) AS type_name
+-- FROM t_rpt_trail_clearing tc
+-- WHERE tc.ReportID IN (
+--   SELECT r.ReportID
+--   FROM t_report r
+--   JOIN lu_wksite_trail wt ON wt.WksiteID = r.WksiteID
+--   JOIN lu_trail t ON t.TrailID = wt.TrailID
+--   WHERE t.TrailNumber = @trail_no
+--     AND r.ActivityDate BETWEEN @d0 AND @d1
+-- );
+
+-- If lu_trail_clearing column name differs, use: SHOW COLUMNS FROM lu_trail_clearing;
+
+-- Compare: tree-down (hazards) vs trail clearing (often where “cleared” is logged)
+-- SELECT 'tree_down' AS src, COUNT(*) FROM t_rpt_tree_down td
+-- WHERE td.ReportID IN (/* same subquery as above */);
+-- SELECT 'trail_clearing' AS src, COUNT(*) FROM t_rpt_trail_clearing tc
+-- WHERE tc.ReportID IN (/* same subquery as above */);

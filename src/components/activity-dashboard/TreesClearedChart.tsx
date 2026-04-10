@@ -3,6 +3,8 @@ import type { TreesCleared, TreeSizeClass } from '../../types/activity-dashboard
 
 interface TreesClearedChartProps {
   data: TreesCleared
+  /** When true (member scope), counts may be fractional — format labels and tooltips accordingly. */
+  memberScoped?: boolean
 }
 
 type TreeView = 'aggregate' | 'byTrail'
@@ -13,25 +15,50 @@ const SIZE_CLASS_COLORS: Record<TreeSizeClass, { bar: string; label: string; dot
   '16" – 23"':{ bar: 'bg-emerald-500 dark:bg-emerald-500', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
   '24" – 36"':{ bar: 'bg-emerald-600 dark:bg-emerald-400', label: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-600' },
   '> 36"':    { bar: 'bg-emerald-800 dark:bg-emerald-300', label: 'text-emerald-800 dark:text-emerald-200', dot: 'bg-emerald-800' },
+  Other:      { bar: 'bg-amber-400 dark:bg-amber-700',     label: 'text-amber-700 dark:text-amber-300',   dot: 'bg-amber-400' },
 }
 
-/** Matches dashboard API (t_rpt_tree_down.TreeSize in inches). Shown on bar hover. */
+/** lu_trail_clearing tree lines (TrailClearingID 1–5) mapped to diameter-class labels; counts are NumCleared trees. */
 const SIZE_CLASS_RANGE: Record<TreeSizeClass, string> = {
-  '< 8"':     'Size range: under 8″ diameter',
-  '8" – 15"': 'Size range: 8″ through 15″ diameter',
-  '16" – 23"': 'Size range: 16″ through 23″ diameter',
-  '24" – 36"': 'Size range: 24″ through 36″ diameter',
-  '> 36"':    'Size range: over 36″ diameter',
+  '< 8"':     'Category: small (under 8″ class)',
+  '8" – 15"': 'Category: medium (8–15″ class)',
+  '16" – 23"': 'Category: large (16–23″ class)',
+  '24" – 36"': 'Category: XL (24–36″ class)',
+  '> 36"':    'Category: XXL (over 36″ class)',
+  Other:      'Uncategorized tree clearing (missing or nonstandard TrailClearingID)',
 }
 
-function sizeClassTooltip(sizeClass: TreeSizeClass, count: number): string {
-  return `${SIZE_CLASS_RANGE[sizeClass]} · ${count} tree${count === 1 ? '' : 's'}`
+function formatTreeCount(count: number): string {
+  const n = Number(count)
+  if (!Number.isFinite(n) || n <= 0) return '0'
+  if (Number.isInteger(n)) return String(n)
+  const t = n >= 10 ? n.toFixed(0) : n.toFixed(1)
+  return t.replace(/\.0$/, '')
+}
+
+function sizeClassTooltip(sizeClass: TreeSizeClass, count: number, memberScoped: boolean): string {
+  const label = formatTreeCount(count)
+  const unit = Math.abs(Number(count) - 1) < 1e-6 ? 'tree' : 'trees'
+  const share = memberScoped ? ' (your share)' : ''
+  return `${SIZE_CLASS_RANGE[sizeClass]} · ${label} ${unit}${share}`
+}
+
+const EPS = 1e-9
+
+function colorForSizeClass(sizeClass: string): (typeof SIZE_CLASS_COLORS)[TreeSizeClass] {
+  return SIZE_CLASS_COLORS[sizeClass as TreeSizeClass] ?? SIZE_CLASS_COLORS['< 8"']
 }
 
 const CHART_HEIGHT = 120
 
-export function TreesClearedChart({ data }: TreesClearedChartProps) {
+export function TreesClearedChart({ data, memberScoped = false }: TreesClearedChartProps) {
   const [view, setView] = useState<TreeView>('aggregate')
+
+  const aggNumeric = data.aggregate.map(a => {
+    const n = Number(a.count)
+    return Number.isFinite(n) ? n : 0
+  })
+  const maxAgg = Math.max(...aggNumeric, 1)
 
   return (
     <div className="space-y-4">
@@ -65,18 +92,19 @@ export function TreesClearedChart({ data }: TreesClearedChartProps) {
         <>
           {/* Aggregate bar chart */}
           <div className="flex items-end gap-4" style={{ height: CHART_HEIGHT + 'px' }}>
-            {data.aggregate.map(item => {
-              const colors = SIZE_CLASS_COLORS[item.sizeClass as TreeSizeClass]
-              const maxCount = Math.max(...data.aggregate.map(a => a.count), 1)
-              const heightPct = item.count === 0 ? 0 : Math.max((item.count / maxCount) * 100, 4)
+            {data.aggregate.map((item, i) => {
+              const c = aggNumeric[i] ?? 0
+              const colors = colorForSizeClass(item.sizeClass)
+              const heightPct = c <= EPS ? 0 : Math.max((c / maxAgg) * 100, 4)
+              const label = formatTreeCount(c)
               return (
                 <div
                   key={item.sizeClass}
                   className="flex-1 flex flex-col items-center justify-end gap-1.5 group h-full min-w-0"
-                  title={sizeClassTooltip(item.sizeClass as TreeSizeClass, item.count)}
+                  title={sizeClassTooltip(item.sizeClass as TreeSizeClass, c, memberScoped)}
                 >
-                  <span className={`text-xs font-medium tabular-nums ${item.count > 0 ? colors.label : 'opacity-0'}`}>
-                    {item.count}
+                  <span className={`text-xs font-medium tabular-nums ${c > EPS ? colors.label : 'opacity-0'}`}>
+                    {label}
                   </span>
                   <div
                     className={`w-full rounded-t-sm ${colors.bar} transition-opacity group-hover:opacity-80 cursor-default`}
@@ -90,7 +118,7 @@ export function TreesClearedChart({ data }: TreesClearedChartProps) {
           {/* Size class labels */}
           <div className="flex gap-4">
             {data.aggregate.map(item => {
-              const colors = SIZE_CLASS_COLORS[item.sizeClass as TreeSizeClass]
+              const colors = colorForSizeClass(item.sizeClass)
               const shortLabel = item.label.split('\n')[0]
               return (
                 <div key={item.sizeClass} className="flex-1 text-center">
@@ -107,33 +135,38 @@ export function TreesClearedChart({ data }: TreesClearedChartProps) {
             <p className="text-xs text-stone-400 dark:text-stone-500 text-center py-4">No trees cleared in this scope</p>
           ) : (
             <>
-              {data.byTrail.map(trail => {
-                const totalMax = Math.max(...data.byTrail.map(t => t.total), 1)
+              {data.byTrail.map((trail, idx) => {
+                const rowTotal = Number(trail.total)
+                const denom = Number.isFinite(rowTotal) && rowTotal > EPS ? rowTotal : EPS
+                const rowKey = `${trail.trailName}\0${trail.trailNumber}\0${idx}`
                 return (
-                  <div key={trail.trailName} className="flex items-center gap-3 group">
+                  <div key={rowKey} className="flex items-center gap-3 group">
                     <div className="w-32 shrink-0">
                       <div className="text-xs font-medium text-stone-700 dark:text-stone-300 truncate">{trail.trailName}</div>
                       <div className="text-[10px] text-stone-400 dark:text-stone-500">#{trail.trailNumber}</div>
                     </div>
 
-                    {/* Segmented bar */}
+                    {/* Segmented bar — widths are shares of this trail's total (full bar = 100% mix). */}
                     <div className="flex-1 h-5 flex rounded-sm overflow-hidden bg-stone-100 dark:bg-stone-800">
-                      {trail.trees.filter(t => t.count > 0).map(t => {
-                        const colors = SIZE_CLASS_COLORS[t.sizeClass as TreeSizeClass]
-                        const widthPct = (t.count / totalMax) * 100
-                        return (
-                          <div
-                            key={t.sizeClass}
-                            className={`${colors.bar} transition-opacity group-hover:opacity-90 cursor-default min-w-0`}
-                            style={{ width: `${widthPct}%` }}
-                            title={sizeClassTooltip(t.sizeClass as TreeSizeClass, t.count)}
-                          />
-                        )
-                      })}
+                      {trail.trees
+                        .map(t => ({ ...t, n: Number(t.count) }))
+                        .filter(t => Number.isFinite(t.n) && t.n > EPS)
+                        .map(t => {
+                          const colors = colorForSizeClass(t.sizeClass)
+                          const widthPct = (t.n / denom) * 100
+                          return (
+                            <div
+                              key={t.sizeClass}
+                              className={`${colors.bar} transition-opacity group-hover:opacity-90 cursor-default min-w-0`}
+                              style={{ width: `${widthPct}%` }}
+                              title={sizeClassTooltip(t.sizeClass as TreeSizeClass, t.n, memberScoped)}
+                            />
+                          )
+                        })}
                     </div>
 
-                    <span className="text-xs font-medium tabular-nums text-stone-600 dark:text-stone-400 w-8 text-right shrink-0">
-                      {trail.total}
+                    <span className="text-xs font-medium tabular-nums text-stone-600 dark:text-stone-400 min-w-[2.25rem] text-right shrink-0">
+                      {formatTreeCount(Number(trail.total) || 0)}
                     </span>
                   </div>
                 )
