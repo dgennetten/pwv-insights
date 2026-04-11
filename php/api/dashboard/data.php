@@ -389,8 +389,6 @@ function reportMemberPartySubquerySql(PDO $db): string {
   ';
 }
 
-/** Rows with NULL/0 TrailClearingID are treated as tree counts (legacy / uncategorized clears). */
-
 /** @return list<int> sorted unique positive IDs */
 function trailClearingBrushIds(): array {
   static $ids = null;
@@ -421,10 +419,17 @@ function trailClearingBrushIdsSql(): string {
   return implode(', ', trailClearingBrushIds());
 }
 
-/** Tree/limb work: not a brushing-feet line. Matches patrol subquery + KPI + charts. */
+/** Non-brushing clearing lines (includes NULL / legacy IDs). Used where a broader row set is needed. */
 function trailClearingTreeRowsFilterSql(): string {
   $brush = trailClearingBrushIdsSql();
   return '(tc.TrailClearingID IS NULL OR tc.TrailClearingID NOT IN (' . $brush . '))';
+}
+
+/** Tree *counts* (KPI, patrol detail, charts): only diameter-class IDs 1–5 on `tc`. Excludes brushing, NULL, and other IDs. */
+function trailClearingTreeCountIdsFilterSql(): string {
+  $lo = (int) TRAIL_CLEARING_TREE_ID_MIN;
+  $hi = (int) TRAIL_CLEARING_TREE_ID_MAX;
+  return "tc.TrailClearingID BETWEEN $lo AND $hi";
 }
 
 /** Quantity column: tree count for IDs 1–5, feet for 6–8. */
@@ -459,9 +464,9 @@ function trailClearingQtyExpr(PDO $db): string {
 
 /**
  * Chart buckets: TrailClearingID 1–5 ↔ inch-class labels (lu order: small → XXL).
- * Last bucket: NULL / 0 / unknown ID (still tree work, not brushing IDs).
+ * Clearing rows outside 1–5 are omitted from this chart (not brushing IDs).
  *
- * @return list<array{sizeClass: string, label: string, clearingId: int|null}>
+ * @return list<array{sizeClass: string, label: string, clearingId: int}>
  */
 function treesClearedTreeBuckets(): array {
   return [
@@ -470,7 +475,6 @@ function treesClearedTreeBuckets(): array {
     ['sizeClass' => '16" – 23"', 'label' => "Large\n(16–23\")",  'clearingId' => 3],
     ['sizeClass' => '24" – 36"', 'label' => "XL\n(24–36\")",     'clearingId' => 4],
     ['sizeClass' => '> 36"',     'label' => "XXL\n(> 36\")",     'clearingId' => 5],
-    ['sizeClass' => 'Other',      'label' => "Other\n(unsized)",  'clearingId' => null],
   ];
 }
 
@@ -494,14 +498,12 @@ function treesClearedBucketSumCaseSql(string $qtyExpr, string $idPrefix, int $i,
  * (Some drivers return odd associative keys for aliased columns; numeric order matches SELECT list exactly.)
  *
  * @param list<array<int, mixed>> $rows
- * @param list<array{sizeClass: string, label: string, clearingId: int|null}> $buckets
+ * @param list<array{sizeClass: string, label: string, clearingId: int}> $buckets
  * @return list<float>
  */
 function treesClearedMemberBucketSumsFromRows(array $rows, array $buckets): array {
   $n = count($buckets);
   $sums = array_fill(0, $n, 0.0);
-  $lo = TRAIL_CLEARING_TREE_ID_MIN;
-  $hi = TRAIL_CLEARING_TREE_ID_MAX;
   foreach ($rows as $row) {
     if (!is_array($row) || !array_key_exists(2, $row)) {
       continue;
@@ -517,9 +519,6 @@ function treesClearedMemberBucketSumsFromRows(array $rows, array $buckets): arra
     $placed = false;
     foreach ($buckets as $i => $b) {
       $cid = $b['clearingId'];
-      if ($cid === null) {
-        continue;
-      }
       if ($tidStr !== null && $tidStr !== '') {
         if ((int)$tidStr === (int)$cid) {
           $sums[$i] += $contrib;
@@ -531,10 +530,7 @@ function treesClearedMemberBucketSumsFromRows(array $rows, array $buckets): arra
     if ($placed) {
       continue;
     }
-    $tint = ($tidStr === null || $tidStr === '') ? null : (int)$tidStr;
-    if ($tint === null || $tint === 0 || $tint < $lo || $tint > $hi) {
-      $sums[$n - 1] += $contrib;
-    }
+    // TrailClearingID outside 1–5: omit from size-class chart (no "Other" bucket).
   }
   return $sums;
 }
@@ -707,7 +703,7 @@ function treesClearedMemberTotalQuery(PDO $db, ?string $s, ?string $e, int $pers
   $wExpr = implode(' AND ', $w);
   [$writerSql, $nw] = treesClearedWriterMatchSql($db);
   $tcf = treesClearedTableRef();
-  $rowF = trailClearingTreeRowsFilterSql();
+  $treeIds = trailClearingTreeCountIdsFilterSql();
   $qty = trailClearingQtyExpr($db);
   $onRoster = reportMemberOnRosterExistsSql($db, 'rm_e');
   $partySql = reportMemberPartySubquerySql($db);
@@ -723,7 +719,7 @@ SELECT COALESCE(SUM(
 FROM (
   SELECT tc.ReportID, SUM($qty) AS tree_qty
   FROM $tcf tc
-  WHERE ($rowF)
+  WHERE ($treeIds)
   GROUP BY tc.ReportID
 ) rt
 JOIN t_report r ON r.ReportID = rt.ReportID
@@ -751,7 +747,7 @@ function treesClearedMemberScopedQuery(PDO $db, ?string $s, ?string $e, int $per
   $wExpr = implode(' AND ', $w);
   [$writerSql, $nw] = treesClearedWriterMatchSql($db);
   $bindParams = treesClearedMemberBindParams($db, $personId, $nw, $pBase);
-  $rowF = trailClearingTreeRowsFilterSql();
+  $treeIds = trailClearingTreeCountIdsFilterSql();
   $tcf = treesClearedTableRef();
   $buckets = treesClearedTreeBuckets();
   $qtyCol = trailClearingQtyColumn($db);
@@ -772,7 +768,7 @@ SELECT tc.TrailClearingID, $innerQty AS numCleared, $weightCase AS w
 FROM $tcf tc
 JOIN t_report r ON r.ReportID = tc.ReportID
 LEFT JOIN ($partySql) party ON party.ReportID = r.ReportID
-WHERE $wExpr AND ($rowF)
+WHERE $wExpr AND ($treeIds)
 AND (
   (COALESCE(party.party_n, 0) > 0 AND $onRoster)
   OR (COALESCE(party.party_n, 0) = 0 AND ($writerSql))
@@ -816,7 +812,7 @@ FROM (
   JOIN lu_wksite_trail wt ON wt.WksiteID = r.WksiteID
   JOIN lu_trail t ON t.TrailID = wt.TrailID
   LEFT JOIN ($partySql) party ON party.ReportID = r.ReportID
-  WHERE $wExpr AND ($rowF)
+  WHERE $wExpr AND ($treeIds)
   AND (
     (COALESCE(party.party_n, 0) > 0 AND $onRoster)
     OR (COALESCE(party.party_n, 0) = 0 AND ($writerSql))
@@ -878,17 +874,17 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
   $row->execute($p);
   $d = $row->fetch(PDO::FETCH_ASSOC);
 
-  // trees cleared: all t_rpt_trail_clearing rows except brushing IDs (feet); includes NULL/unsized IDs
+  // trees cleared: diameter-class lines only (TrailClearingID 1–5)
   if ($ctx === 'all') {
     [$w2, $p2] = scopeWhereTrees($db, $s, $e, $ctx);
-    $rowF = trailClearingTreeRowsFilterSql();
+    $treeIds = trailClearingTreeCountIdsFilterSql();
     $tcf = treesClearedTableRef();
     $qty = trailClearingQtyExpr($db);
     $trees = $db->prepare("
       SELECT COALESCE(SUM($qty), 0) AS n
       FROM $tcf tc
       JOIN t_report r ON r.ReportID = tc.ReportID
-      WHERE $w2 AND ($rowF)
+      WHERE $w2 AND ($treeIds)
     ");
     $trees->execute($p2);
     $tc = round((float)$trees->fetchColumn(), 2);
@@ -1088,7 +1084,7 @@ function patrolsByTrail(PDO $db, ?string $s, ?string $e, $ctx): array {
   $rmPid = reportMemberPersonIdColumn($db);
   $tcf = treesClearedTableRef();
   $qtySub = 'COALESCE(tc.' . trailClearingQtyColumn($db) . ', 0)';
-  $treeRowFilter = trailClearingTreeRowsFilterSql();
+  $treeIdFilter = trailClearingTreeCountIdsFilterSql();
 
   $stmt = $db->prepare("
     SELECT
@@ -1102,7 +1098,7 @@ function patrolsByTrail(PDO $db, ?string $s, ?string $e, $ctx): array {
       (
         SELECT COALESCE(SUM($qtySub), 0)
         FROM $tcf tc
-        WHERE tc.ReportID = r.ReportID AND ($treeRowFilter)
+        WHERE tc.ReportID = r.ReportID AND ($treeIdFilter)
       ) AS treesCleared
     FROM t_report r
     JOIN lu_wksite_trail wt ON wt.WksiteID = r.WksiteID
@@ -1176,7 +1172,7 @@ function treesClearedSafeEmpty(): array {
 
 function treesCleared(PDO $db, ?string $s, ?string $e, $ctx): array {
   $buckets = treesClearedTreeBuckets();
-  $rowF = trailClearingTreeRowsFilterSql();
+  $treeIds = trailClearingTreeCountIdsFilterSql();
   $tcf = treesClearedTableRef();
   $qty = trailClearingQtyExpr($db);
 
@@ -1195,7 +1191,7 @@ function treesCleared(PDO $db, ?string $s, ?string $e, $ctx): array {
     SELECT $selectCols
     FROM $tcf tc
     JOIN t_report r ON r.ReportID = tc.ReportID
-    WHERE $w AND ($rowF)
+    WHERE $w AND ($treeIds)
   ");
   $stmt->execute($p);
   $aggRow = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1220,7 +1216,7 @@ function treesCleared(PDO $db, ?string $s, ?string $e, $ctx): array {
     JOIN t_report r ON r.ReportID = tc.ReportID
     JOIN lu_wksite_trail wt ON wt.WksiteID = r.WksiteID
     JOIN lu_trail t ON t.TrailID = wt.TrailID
-    WHERE $w2 AND ($rowF)
+    WHERE $w2 AND ($treeIds)
     GROUP BY t.TrailID, t.TrailName, t.TrailNumber
     ORDER BY total DESC
   ");

@@ -75,7 +75,7 @@ export interface ViolationCategory {
 
 // ─── Trees cleared ────────────────────────────────────────────────────────────
 
-export type TreeSizeClass = '< 8"' | '8" – 15"' | '16" – 23"' | '24" – 36"' | '> 36"' | 'Other'
+export type TreeSizeClass = '< 8"' | '8" – 15"' | '16" – 23"' | '24" – 36"' | '> 36"'
 
 export interface TreeSizeCount {
   sizeClass: TreeSizeClass

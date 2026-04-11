@@ -49,6 +49,7 @@ $expiresAt = date('Y-m-d H:i:s', strtotime('+365 days'));
 $db->prepare('INSERT INTO auth_sessions (person_id, token, expires_at) VALUES (?, ?, ?)')
    ->execute([$member['PersonID'], $token, $expiresAt]);
 
+authLoginLogEnsureTable($db);
 try {
   $db->prepare('INSERT INTO auth_login_log (person_id) VALUES (?)')
     ->execute([(int) $member['PersonID']]);

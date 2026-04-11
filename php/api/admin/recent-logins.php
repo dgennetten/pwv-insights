@@ -49,6 +49,8 @@ if ($email !== strtolower(ADMIN_EMAIL)) {
   jsonOut(['success' => false, 'error' => 'Forbidden'], 403);
 }
 
+authLoginLogEnsureTable($db);
+
 try {
   $q = $db->query(
     'SELECT l.person_id AS memberId, m.LastName AS lastName, m.FirstName AS firstName,

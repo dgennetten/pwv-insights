@@ -26,6 +26,25 @@ const pool = mysql.createPool({
   connectionLimit: 5,
 })
 
+/** Matches sql/03-auth-login-log.sql — self-heal when migration was not applied. */
+const AUTH_LOGIN_LOG_DDL = `CREATE TABLE IF NOT EXISTS auth_login_log (
+  id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  person_id     INT UNSIGNED NOT NULL,
+  logged_in_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_logged_in (logged_in_at),
+  INDEX idx_person_time (person_id, logged_in_at),
+  CONSTRAINT fk_auth_login_person
+    FOREIGN KEY (person_id) REFERENCES t_member(PersonID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+
+async function ensureAuthLoginLogTable() {
+  try {
+    await pool.query(AUTH_LOGIN_LOG_DDL)
+  } catch (e) {
+    console.warn('[auth] auth_login_log ensure table:', e.message)
+  }
+}
+
 async function readJson(req) {
   return new Promise((resolve) => {
     let body = ''
@@ -163,6 +182,7 @@ const routes = {
       [member.PersonID, token, expiry]
     )
 
+    await ensureAuthLoginLogTable()
     try {
       await pool.query('INSERT INTO auth_login_log (person_id) VALUES (?)', [member.PersonID])
     } catch (e) {
@@ -208,6 +228,7 @@ const routes = {
       return send(res, { success: false, error: 'Forbidden' }, 403)
     }
 
+    await ensureAuthLoginLogTable()
     try {
       const [rows] = await pool.query(
         `SELECT l.person_id AS memberId, m.LastName AS lastName, m.FirstName AS firstName,

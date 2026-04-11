@@ -21,7 +21,6 @@ const SIZE_CLASS_COLORS: Record<TreeSizeClass, { bar: string; label: string; dot
   '16" – 23"':{ bar: 'bg-emerald-500 dark:bg-emerald-500', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
   '24" – 36"':{ bar: 'bg-emerald-600 dark:bg-emerald-400', label: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-600' },
   '> 36"':    { bar: 'bg-emerald-800 dark:bg-emerald-300', label: 'text-emerald-800 dark:text-emerald-200', dot: 'bg-emerald-800' },
-  Other:      { bar: 'bg-amber-400 dark:bg-amber-700',     label: 'text-amber-700 dark:text-amber-300',   dot: 'bg-amber-400' },
 }
 
 /** lu_trail_clearing tree lines (TrailClearingID 1–5) mapped to diameter-class labels; counts are NumCleared trees. */
@@ -31,7 +30,6 @@ const SIZE_CLASS_RANGE: Record<TreeSizeClass, string> = {
   '16" – 23"': 'Category: large (16–23″ class)',
   '24" – 36"': 'Category: XL (24–36″ class)',
   '> 36"':    'Category: XXL (over 36″ class)',
-  Other:      'Uncategorized tree clearing (missing or nonstandard TrailClearingID)',
 }
 
 function formatTreeCount(count: number, memberScoped: boolean): string {

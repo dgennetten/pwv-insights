@@ -34,7 +34,6 @@ const EMPTY_TREES: TreesCleared = {
     { sizeClass: '16" – 23"',label: "Large\n(16–23\")",  count: 0 },
     { sizeClass: '24" – 36"',label: "XL\n(24–36\")",     count: 0 },
     { sizeClass: '> 36"',    label: "XXL\n(> 36\")",     count: 0 },
-    { sizeClass: 'Other',    label: "Other\n(unsized)",   count: 0 },
   ],
   byTrail: [],
 }
