@@ -155,13 +155,19 @@ const routes = {
 
     const member = memberRows[0]
     const token  = crypto.randomBytes(32).toString('hex')
-    const expiry = new Date(Date.now() + 30 * 24 * 60 * 60_000)
-      .toISOString().slice(0, 19).replace('T', ' ')
+    const expiresAtMs = Date.now() + 30 * 24 * 60 * 60 * 1000
+    const expiry = new Date(expiresAtMs).toISOString().slice(0, 19).replace('T', ' ')
 
     await pool.query(
       'INSERT INTO auth_sessions (person_id, token, expires_at) VALUES (?, ?, ?)',
       [member.PersonID, token, expiry]
     )
+
+    try {
+      await pool.query('INSERT INTO auth_login_log (person_id) VALUES (?)', [member.PersonID])
+    } catch (e) {
+      console.warn('[auth] auth_login_log insert skipped:', e.message)
+    }
 
     const role = normalised === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'member'
 
@@ -171,7 +177,61 @@ const routes = {
       email:   normalised,
       name:    `${member.FirstName} ${member.LastName}`.trim(),
       role,
+      personId: member.PersonID,
+      expiresAt: expiresAtMs,
     })
+  },
+
+  async 'POST /api/admin/recent-logins.php'(req, res) {
+    const body = await readJson(req)
+    const token = String(body.token ?? '').trim()
+    if (!token || token.length !== 64 || !/^[a-f0-9]+$/i.test(token)) {
+      return send(res, { success: false, error: 'Invalid token' }, 401)
+    }
+
+    const [sess] = await pool.query(
+      `SELECT s.person_id, s.expires_at, m.EmailAddress
+       FROM auth_sessions s
+       JOIN t_member m ON m.PersonID = s.person_id
+       WHERE s.token = ? LIMIT 1`,
+      [token]
+    )
+    if (!sess.length) return send(res, { success: false, error: 'Unknown session' }, 401)
+
+    const exp = new Date(sess[0].expires_at).getTime()
+    if (!Number.isFinite(exp) || exp < Date.now()) {
+      return send(res, { success: false, error: 'Session expired' }, 401)
+    }
+
+    const email = String(sess[0].EmailAddress ?? '').trim().toLowerCase()
+    if (email !== ADMIN_EMAIL.toLowerCase()) {
+      return send(res, { success: false, error: 'Forbidden' }, 403)
+    }
+
+    try {
+      const [rows] = await pool.query(
+        `SELECT l.person_id AS memberId, m.LastName AS lastName, m.FirstName AS firstName,
+                UNIX_TIMESTAMP(l.logged_in_at) * 1000 AS loggedInAtMs
+         FROM auth_login_log l
+         INNER JOIN t_member m ON m.PersonID = l.person_id
+         ORDER BY l.logged_in_at DESC, l.id DESC
+         LIMIT 500`
+      )
+      const logins = rows.map((r) => ({
+        memberId: Number(r.memberId),
+        lastName: String(r.lastName ?? ''),
+        firstName: String(r.firstName ?? ''),
+        loggedInAtMs: Number(r.loggedInAtMs) || 0,
+      }))
+      return send(res, { success: true, logins })
+    } catch (e) {
+      console.error('[admin/recent-logins]', e)
+      return send(res, {
+        success: false,
+        error: 'Could not load login history',
+        hint: 'Run sql/03-auth-login-log.sql on the database.',
+      }, 500)
+    }
   },
 }
 

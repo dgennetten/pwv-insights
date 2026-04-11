@@ -42,7 +42,7 @@ export function AppShell({
         `}
       >
         <div className="flex flex-col h-full overflow-y-auto">
-          <MainNav activeHref={activeHref} onNavigate={onNavigate} collapsed={false} />
+          <MainNav activeHref={activeHref} onNavigate={onNavigate} collapsed={false} userEmail={user?.email} />
           <UserMenu user={user} onLogout={onLogout} onSignIn={onSignIn} collapsed={false} />
         </div>
       </aside>
@@ -70,6 +70,7 @@ export function AppShell({
                 activeHref={activeHref}
                 onNavigate={(href) => { onNavigate?.(href); setMobileOpen(false) }}
                 collapsed={false}
+                userEmail={user?.email}
               />
             </div>
             <UserMenu user={user} onLogout={onLogout} onSignIn={onSignIn} collapsed={false} />

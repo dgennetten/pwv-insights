@@ -47,7 +47,14 @@ if (!$member) {
 $token     = bin2hex(random_bytes(32));
 $expiresAt = date('Y-m-d H:i:s', strtotime('+365 days'));
 $db->prepare('INSERT INTO auth_sessions (person_id, token, expires_at) VALUES (?, ?, ?)')
-  ->execute([$member['PersonID'], $token, $expiresAt]);
+   ->execute([$member['PersonID'], $token, $expiresAt]);
+
+try {
+  $db->prepare('INSERT INTO auth_login_log (person_id) VALUES (?)')
+    ->execute([(int) $member['PersonID']]);
+} catch (Throwable $e) {
+  error_log('auth_login_log insert (dev-auto-login): ' . $e->getMessage());
+}
 
 $role = (strtolower($email) === strtolower(ADMIN_EMAIL)) ? 'admin' : 'member';
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useLayoutEffect, type ReactNode } from 'react'
-import { devAutoLogin, validateStoredSession } from '../services/authService'
+import { AUTH_TOKEN_STORAGE_KEY, devAutoLogin, validateStoredSession } from '../services/authService'
 
 function isLocalhostHostname(): boolean {
   const h = window.location.hostname
@@ -33,7 +33,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 const SESSION_KEY  = 'pwv_auth'
-const TOKEN_KEY    = 'pwv_auth_token'
+const TOKEN_KEY    = AUTH_TOKEN_STORAGE_KEY
 const EXPIRES_KEY  = 'pwv_auth_expires'
 const REMEMBER_KEY = 'pwv_auth_remember'
 

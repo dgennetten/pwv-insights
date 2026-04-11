@@ -1,4 +1,5 @@
 import { LayoutDashboard, Map, Trophy, BarChart3, Settings, HelpCircle, Mountain } from 'lucide-react'
+import { canAccessAdminPage } from '../../lib/adminAccess'
 
 export interface NavItem {
   label: string
@@ -12,6 +13,8 @@ interface MainNavProps {
   activeHref?: string
   onNavigate?: (href: string) => void
   collapsed?: boolean
+  /** Signed-in email; Admin nav item only when this matches `canAccessAdminPage`. */
+  userEmail?: string
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -54,9 +57,9 @@ function NavLink({
   )
 }
 
-export function MainNav({ activeHref = '/dashboard', onNavigate, collapsed = false }: MainNavProps) {
+export function MainNav({ activeHref = '/dashboard', onNavigate, collapsed = false, userEmail }: MainNavProps) {
   const mainItems = NAV_ITEMS.filter(i => i.group === 'main')
-  const adminItems = NAV_ITEMS.filter(i => i.group === 'admin')
+  const adminItems = NAV_ITEMS.filter(i => i.group === 'admin').filter(() => canAccessAdminPage(userEmail))
   const utilityItems = NAV_ITEMS.filter(i => i.group === 'utility')
 
   return (
@@ -90,17 +93,20 @@ export function MainNav({ activeHref = '/dashboard', onNavigate, collapsed = fal
           />
         ))}
 
-        {/* Admin divider */}
-        <div className={`my-2 border-t border-stone-200 dark:border-stone-800 ${collapsed ? 'mx-1' : 'mx-1'}`} />
-        {adminItems.map(item => (
-          <NavLink
-            key={item.href}
-            item={item}
-            isActive={activeHref === item.href}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-          />
-        ))}
+        {adminItems.length > 0 && (
+          <>
+            <div className={`my-2 border-t border-stone-200 dark:border-stone-800 ${collapsed ? 'mx-1' : 'mx-1'}`} />
+            {adminItems.map(item => (
+              <NavLink
+                key={item.href}
+                item={item}
+                isActive={activeHref === item.href}
+                collapsed={collapsed}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </>
+        )}
       </nav>
 
       {/* Utility nav at bottom */}
