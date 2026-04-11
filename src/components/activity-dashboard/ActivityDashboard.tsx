@@ -21,6 +21,7 @@ import { TrailCoverageList } from './TrailCoverageList'
 import { ViolationsChart } from './ViolationsChart'
 import { TreesClearedChart } from './TreesClearedChart'
 import { MembersByAgeChart } from './MembersByAgeChart'
+import { formatTreesCleared } from './formatTreesCleared'
 import { TrailCoveragePatrolDetail } from './TrailCoveragePatrolDetail'
 import { MemberGate } from '../MemberGate'
 
@@ -50,9 +51,11 @@ interface KpiCardProps {
   delta: number
   icon: React.ReactNode
   accent?: boolean
+  /** When set, formats the delta line (e.g. trees cleared to two decimals). */
+  deltaFormatter?: (n: number) => string
 }
 
-function DeltaBadge({ delta }: { delta: number }) {
+function DeltaBadge({ delta, deltaFormatter }: { delta: number; deltaFormatter?: (n: number) => string }) {
   if (delta === 0) return (
     <span className="inline-flex items-center gap-0.5 text-[10px] text-stone-400 dark:text-stone-500">
       <Minus className="w-2.5 h-2.5" strokeWidth={2} />
@@ -60,18 +63,19 @@ function DeltaBadge({ delta }: { delta: number }) {
     </span>
   )
   const positive = delta > 0
+  const deltaText = deltaFormatter ? deltaFormatter(delta) : String(delta)
   return (
     <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
       {positive
         ? <TrendingUp className="w-2.5 h-2.5" strokeWidth={2} />
         : <TrendingDown className="w-2.5 h-2.5" strokeWidth={2} />
       }
-      {positive ? '+' : ''}{delta} vs prior
+      {positive ? '+' : ''}{deltaText} vs prior
     </span>
   )
 }
 
-function KpiCard({ label, value, delta, icon, accent = false }: KpiCardProps) {
+function KpiCard({ label, value, delta, icon, accent = false, deltaFormatter }: KpiCardProps) {
   return (
     <div className={`
       rounded-xl border px-4 py-4 flex flex-col gap-3
@@ -97,7 +101,7 @@ function KpiCard({ label, value, delta, icon, accent = false }: KpiCardProps) {
           {value}
         </div>
         <div className="mt-1">
-          <DeltaBadge delta={delta} />
+          <DeltaBadge delta={delta} deltaFormatter={deltaFormatter} />
         </div>
       </div>
     </div>
@@ -377,7 +381,13 @@ export function ActivityDashboard({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <KpiCard label="Patrols" value={summary.patrols} delta={summary.patrolsDelta} icon={<Footprints className="w-4 h-4" strokeWidth={1.5} />} accent />
         <KpiCard label="Trails Covered" value={summary.trailsCovered} delta={summary.trailsCoveredDelta} icon={<Map className="w-4 h-4" strokeWidth={1.5} />} />
-        <KpiCard label="Trees Cleared" value={summary.treesCleared} delta={summary.treesClearedDelta} icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />} />
+        <KpiCard
+          label="Trees Cleared"
+          value={formatTreesCleared(Number(summary.treesCleared))}
+          delta={summary.treesClearedDelta}
+          deltaFormatter={formatTreesCleared}
+          icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
+        />
         <KpiCard label="Hikers seen" value={summary.hikersSeen} delta={summary.hikersSeenDelta} icon={<Eye className="w-4 h-4" strokeWidth={1.5} />} />
       </div>
 

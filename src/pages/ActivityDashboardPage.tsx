@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { ActivityDashboard } from '../components/activity-dashboard/ActivityDashboard'
+import { roundTreesCleared } from '../components/activity-dashboard/formatTreesCleared'
 import type {
   DashboardScope,
   TimeRange,
@@ -62,6 +63,23 @@ function initialMemberContext(personId: number | undefined): MemberContext {
   return n
 }
 
+function normalizeTreesClearedPayload(tc: TreesCleared): TreesCleared {
+  return {
+    aggregate: tc.aggregate.map(a => ({
+      ...a,
+      count: roundTreesCleared(Number(a.count)),
+    })),
+    byTrail: tc.byTrail.map(tr => ({
+      ...tr,
+      total: roundTreesCleared(Number(tr.total)),
+      trees: tr.trees.map(t => ({
+        ...t,
+        count: roundTreesCleared(Number(t.count)),
+      })),
+    })),
+  }
+}
+
 /** Ensures summary.hikersSeen is a number; if API omits it, sum Trail Coverage "Seen" column. */
 function normalizeDashData(raw: Record<string, unknown>): DashData {
   const trailCoverage = (Array.isArray(raw.trailCoverage) ? raw.trailCoverage : []) as TrailCoverageRow[]
@@ -80,12 +98,24 @@ function normalizeDashData(raw: Record<string, unknown>): DashData {
   const hikersSeenDeltaRaw = numOrNull(rawSummary?.hikersSeenDelta)
   const hikersSeenDelta = hikersSeenDeltaRaw !== null ? hikersSeenDeltaRaw : 0
 
-  const summary: ActivitySummary = {
+  const summaryBase: ActivitySummary = {
     ...EMPTY_SUMMARY,
     ...rawSummary,
     hikersSeen,
     hikersSeenDelta,
   }
+
+  const treesClearedRounded = roundTreesCleared(Number(summaryBase.treesCleared))
+  const treesClearedDeltaRounded = roundTreesCleared(Number(summaryBase.treesClearedDelta))
+  const summary: ActivitySummary = {
+    ...summaryBase,
+    treesCleared: treesClearedRounded,
+    treesClearedDelta: treesClearedDeltaRounded,
+  }
+
+  const treesPayload = (raw.treesCleared && typeof raw.treesCleared === 'object'
+    ? raw.treesCleared
+    : EMPTY_TREES) as TreesCleared
 
   return {
     summary,
@@ -95,9 +125,7 @@ function normalizeDashData(raw: Record<string, unknown>): DashData {
       ? raw.patrolsByTrailId
       : {}) as Record<number, CoveragePatrolRow[]>,
     violationsByCategory: (Array.isArray(raw.violationsByCategory) ? raw.violationsByCategory : []) as ViolationCategory[],
-    treesCleared: (raw.treesCleared && typeof raw.treesCleared === 'object'
-      ? raw.treesCleared
-      : EMPTY_TREES) as TreesCleared,
+    treesCleared: normalizeTreesClearedPayload(treesPayload),
     membersByAge: (Array.isArray(raw.membersByAge) ? raw.membersByAge : []) as MemberAgeGroup[],
     members: (Array.isArray(raw.members) ? raw.members : []) as MemberOption[],
   }

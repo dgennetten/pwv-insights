@@ -1,5 +1,6 @@
 import { ArrowLeft, Footprints, Leaf, TreePine } from 'lucide-react'
 import type { TrailCoveragePatrolDetailProps } from '../../types/activity-dashboard'
+import { formatTreesCleared } from './formatTreesCleared'
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
@@ -108,7 +109,7 @@ export function TrailCoveragePatrolDetail({
                       {row.memberName}
                     </td>
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
-                      {row.treesCleared ?? 0}
+                      {formatTreesCleared(Number(row.treesCleared ?? 0))}
                     </td>
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
                       {row.hikersSeen}
