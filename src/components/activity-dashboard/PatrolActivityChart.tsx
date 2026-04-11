@@ -1,4 +1,5 @@
 import type { PatrolActivityDay } from '../../types/activity-dashboard'
+import { formatInteger } from '../../lib/formatNumber'
 
 interface PatrolActivityChartProps {
   data: PatrolActivityDay[]
@@ -30,7 +31,7 @@ export function PatrolActivityChart({ data }: PatrolActivityChartProps) {
               <div key={day.date} className="flex-1 flex flex-col items-center justify-end gap-1 group h-full">
                 {/* Count label above bar */}
                 <span className={`text-[10px] font-medium tabular-nums transition-opacity text-stone-500 dark:text-stone-400 ${day.patrols > 0 ? 'opacity-100' : 'opacity-0'}`}>
-                  {day.patrols > 0 ? day.patrols : ''}
+                  {day.patrols > 0 ? formatInteger(day.patrols) : ''}
                 </span>
                 {/* Bar */}
                 <div

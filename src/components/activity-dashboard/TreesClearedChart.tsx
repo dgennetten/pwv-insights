@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import type { TreesCleared, TreeSizeClass } from '../../types/activity-dashboard'
-import { formatTreesCleared, roundTreesCleared } from './formatTreesCleared'
+import {
+  formatTreesCleared,
+  formatTreesClearedWhole,
+  roundTreesCleared,
+  roundWholeTreesCleared,
+} from './formatTreesCleared'
 
 interface TreesClearedChartProps {
   data: TreesCleared
@@ -29,13 +34,13 @@ const SIZE_CLASS_RANGE: Record<TreeSizeClass, string> = {
   Other:      'Uncategorized tree clearing (missing or nonstandard TrailClearingID)',
 }
 
-function formatTreeCount(count: number): string {
-  return formatTreesCleared(Number(count))
+function formatTreeCount(count: number, memberScoped: boolean): string {
+  return memberScoped ? formatTreesCleared(Number(count)) : formatTreesClearedWhole(Number(count))
 }
 
 function sizeClassTooltip(sizeClass: TreeSizeClass, count: number, memberScoped: boolean): string {
-  const label = formatTreeCount(count)
-  const rounded = roundTreesCleared(Number(count))
+  const label = formatTreeCount(count, memberScoped)
+  const rounded = memberScoped ? roundTreesCleared(Number(count)) : roundWholeTreesCleared(Number(count))
   const unit = Math.abs(rounded - 1) < 1e-6 ? 'tree' : 'trees'
   const share = memberScoped ? ' (your share)' : ''
   return `${SIZE_CLASS_RANGE[sizeClass]} · ${label} ${unit}${share}`
@@ -52,7 +57,9 @@ const CHART_HEIGHT = 120
 export function TreesClearedChart({ data, memberScoped = false }: TreesClearedChartProps) {
   const [view, setView] = useState<TreeView>('aggregate')
 
-  const aggNumeric = data.aggregate.map(a => roundTreesCleared(Number(a.count)))
+  const aggNumeric = data.aggregate.map(a =>
+    memberScoped ? roundTreesCleared(Number(a.count)) : roundWholeTreesCleared(Number(a.count))
+  )
   const maxAgg = Math.max(...aggNumeric, 1)
 
   return (
@@ -91,7 +98,7 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
               const c = aggNumeric[i] ?? 0
               const colors = colorForSizeClass(item.sizeClass)
               const heightPct = c <= EPS ? 0 : Math.max((c / maxAgg) * 100, 4)
-              const label = formatTreeCount(c)
+              const label = formatTreeCount(c, memberScoped)
               return (
                 <div
                   key={item.sizeClass}
@@ -131,7 +138,9 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
           ) : (
             <>
               {data.byTrail.map((trail, idx) => {
-                const rowTotal = roundTreesCleared(Number(trail.total))
+                const rowTotal = memberScoped
+                  ? roundTreesCleared(Number(trail.total))
+                  : roundWholeTreesCleared(Number(trail.total))
                 const denom = Number.isFinite(rowTotal) && rowTotal > EPS ? rowTotal : EPS
                 const rowKey = `${trail.trailName}\0${trail.trailNumber}\0${idx}`
                 return (
@@ -144,7 +153,12 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
                     {/* Segmented bar — widths are shares of this trail's total (full bar = 100% mix). */}
                     <div className="flex-1 h-5 flex rounded-sm overflow-hidden bg-stone-100 dark:bg-stone-800">
                       {trail.trees
-                        .map(t => ({ ...t, n: roundTreesCleared(Number(t.count)) }))
+                        .map(t => ({
+                          ...t,
+                          n: memberScoped
+                            ? roundTreesCleared(Number(t.count))
+                            : roundWholeTreesCleared(Number(t.count)),
+                        }))
                         .filter(t => Number.isFinite(t.n) && t.n > EPS)
                         .map(t => {
                           const colors = colorForSizeClass(t.sizeClass)
@@ -161,7 +175,7 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
                     </div>
 
                     <span className="text-xs font-medium tabular-nums text-stone-600 dark:text-stone-400 min-w-[2.25rem] text-right shrink-0">
-                      {formatTreeCount(rowTotal)}
+                      {formatTreeCount(rowTotal, memberScoped)}
                     </span>
                   </div>
                 )

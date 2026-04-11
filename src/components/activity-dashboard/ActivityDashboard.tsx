@@ -21,7 +21,8 @@ import { TrailCoverageList } from './TrailCoverageList'
 import { ViolationsChart } from './ViolationsChart'
 import { TreesClearedChart } from './TreesClearedChart'
 import { MembersByAgeChart } from './MembersByAgeChart'
-import { formatTreesCleared } from './formatTreesCleared'
+import { formatInteger } from '../../lib/formatNumber'
+import { formatTreesCleared, formatTreesClearedWhole } from './formatTreesCleared'
 import { TrailCoveragePatrolDetail } from './TrailCoveragePatrolDetail'
 import { MemberGate } from '../MemberGate'
 
@@ -63,7 +64,7 @@ function DeltaBadge({ delta, deltaFormatter }: { delta: number; deltaFormatter?:
     </span>
   )
   const positive = delta > 0
-  const deltaText = deltaFormatter ? deltaFormatter(delta) : String(delta)
+  const deltaText = deltaFormatter ? deltaFormatter(delta) : formatInteger(delta)
   return (
     <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
       {positive
@@ -98,7 +99,7 @@ function KpiCard({ label, value, delta, icon, accent = false, deltaFormatter }: 
         <div className={`text-3xl font-bold tabular-nums tracking-tight ${
           accent ? 'text-emerald-900 dark:text-emerald-100' : 'text-stone-900 dark:text-stone-100'
         }`}>
-          {value}
+          {typeof value === 'number' ? formatInteger(value) : value}
         </div>
         <div className="mt-1">
           <DeltaBadge delta={delta} deltaFormatter={deltaFormatter} />
@@ -201,7 +202,9 @@ function MemberSelector({ members, scope, currentUserId, onMemberChange }: Membe
                 }`}
               >
                 <span className="truncate">{m.fullName}</span>
-                <span className="text-[10px] tabular-nums text-stone-400 dark:text-stone-500 shrink-0">{m.patrols} patrols</span>
+                <span className="text-[10px] tabular-nums text-stone-400 dark:text-stone-500 shrink-0">
+                  {formatInteger(m.patrols)} patrols
+                </span>
               </button>
             ))}
             {filtered.length === 0 && (
@@ -216,7 +219,7 @@ function MemberSelector({ members, scope, currentUserId, onMemberChange }: Membe
 
 // ─── Chart card wrapper ──────────────────────────────────────────────────────
 
-function ChartCard({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+function ChartCard({ title, children, className = '' }: { title: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
     <div className={`bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 ${className}`}>
       <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-4">
@@ -383,9 +386,13 @@ export function ActivityDashboard({
         <KpiCard label="Trails Covered" value={summary.trailsCovered} delta={summary.trailsCoveredDelta} icon={<Map className="w-4 h-4" strokeWidth={1.5} />} />
         <KpiCard
           label="Trees Cleared"
-          value={formatTreesCleared(Number(summary.treesCleared))}
+          value={
+            scope.memberContext === 'all'
+              ? formatTreesClearedWhole(Number(summary.treesCleared))
+              : formatTreesCleared(Number(summary.treesCleared))
+          }
           delta={summary.treesClearedDelta}
-          deltaFormatter={formatTreesCleared}
+          deltaFormatter={scope.memberContext === 'all' ? formatTreesClearedWhole : formatTreesCleared}
           icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
         />
         <KpiCard label="Hikers seen" value={summary.hikersSeen} delta={summary.hikersSeenDelta} icon={<Eye className="w-4 h-4" strokeWidth={1.5} />} />
@@ -417,7 +424,14 @@ export function ActivityDashboard({
       </ChartCard>
 
       {/* ── Trail Coverage ──────────────────────────────────────────── */}
-      <ChartCard title="Trail Coverage">
+      <ChartCard
+        title={
+          <>
+            Trail Coverage
+            <span className="normal-case tracking-normal"> — Click for Detail</span>
+          </>
+        }
+      >
         <TrailCoverageList
           data={trailCoverage}
           pageSize={trailCoveragePageSize}

@@ -1,4 +1,5 @@
 import type { MemberAgeGroup } from '../../types/activity-dashboard'
+import { formatInteger } from '../../lib/formatNumber'
 
 interface MembersByAgeChartProps {
   data: MemberAgeGroup[]
@@ -34,7 +35,7 @@ export function MembersByAgeChart({ data, activeLabel }: MembersByAgeChartProps)
             return (
               <div key={bin.ageGroup} className="flex-1 flex flex-col items-center justify-end h-full group">
                 <span className="text-[10px] font-medium tabular-nums text-stone-500 dark:text-stone-400 mb-0.5">
-                  {total}
+                  {formatInteger(total)}
                 </span>
                 <div
                   className="w-full rounded-t-sm overflow-hidden flex flex-col"

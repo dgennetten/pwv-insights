@@ -1,4 +1,5 @@
 import type { ViolationCategory } from '../../types/activity-dashboard'
+import { formatInteger } from '../../lib/formatNumber'
 
 interface ViolationsChartProps {
   data: ViolationCategory[]
@@ -31,8 +32,8 @@ export function ViolationsChart({ data }: ViolationsChartProps) {
           </div>
 
           {/* Count */}
-          <span className="text-xs font-medium tabular-nums text-stone-700 dark:text-stone-300 w-4 text-right shrink-0">
-            {v.count}
+          <span className="text-xs font-medium tabular-nums text-stone-700 dark:text-stone-300 min-w-[2rem] text-right shrink-0">
+            {formatInteger(v.count)}
           </span>
         </div>
       ))}

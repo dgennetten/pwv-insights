@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { ChevronUp, ChevronDown, ChevronsUpDown, AlertTriangle, TreePine } from 'lucide-react'
 import type { TrailCoverageRow, TrailCoverageSortKey } from '../../types/activity-dashboard'
+import { formatInteger } from '../../lib/formatNumber'
 
 const DEFAULT_PAGE_SIZE = 50
 
@@ -99,7 +100,7 @@ export function TrailCoverageList({
       <p className="text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">
         {total === 0
           ? 'No trails in this scope'
-          : `Showing ${Math.min(loadedCount, total)} of ${total} trail${total === 1 ? '' : 's'}`}
+          : `Showing ${formatInteger(Math.min(loadedCount, total))} of ${formatInteger(total)} trail${total === 1 ? '' : 's'}`}
       </p>
 
       <div
@@ -148,11 +149,11 @@ export function TrailCoverageList({
                 </td>
                 <td className="py-2 px-1 text-right">
                   <span className={`font-semibold tabular-nums ${trail.patrols > 0 ? 'text-stone-800 dark:text-stone-200' : 'text-stone-400 dark:text-stone-600'}`}>
-                    {trail.patrols}
+                    {formatInteger(trail.patrols)}
                   </span>
                 </td>
                 <td className="py-2 px-1 text-right hidden md:table-cell">
-                  <span className="tabular-nums text-stone-600 dark:text-stone-400">{trail.hikersSeen}</span>
+                  <span className="tabular-nums text-stone-600 dark:text-stone-400">{formatInteger(trail.hikersSeen)}</span>
                 </td>
               </tr>
             ))}
@@ -170,10 +171,10 @@ export function TrailCoverageList({
       {showLoadMore && (
         <div className="flex flex-col items-center gap-1 pt-1">
           <button type="button" onClick={handleLoadMore} className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 underline-offset-2 hover:underline">
-            Load more ({Math.min(pageSize, total - loadedCount)} more)
+            Load more ({formatInteger(Math.min(pageSize, total - loadedCount))} more)
           </button>
           <span className="text-[10px] text-stone-400 dark:text-stone-500 tabular-nums">
-            {total - loadedCount} trail{(total - loadedCount) === 1 ? '' : 's'} not shown yet
+            {formatInteger(total - loadedCount)} trail{(total - loadedCount) === 1 ? '' : 's'} not shown yet
           </span>
         </div>
       )}

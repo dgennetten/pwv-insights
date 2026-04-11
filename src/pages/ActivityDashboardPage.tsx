@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { ActivityDashboard } from '../components/activity-dashboard/ActivityDashboard'
-import { roundTreesCleared } from '../components/activity-dashboard/formatTreesCleared'
+import { roundTreesClearedForScope } from '../components/activity-dashboard/formatTreesCleared'
 import type {
   DashboardScope,
   TimeRange,
@@ -63,25 +63,26 @@ function initialMemberContext(personId: number | undefined): MemberContext {
   return n
 }
 
-function normalizeTreesClearedPayload(tc: TreesCleared): TreesCleared {
+function normalizeTreesClearedPayload(tc: TreesCleared, memberScoped: boolean): TreesCleared {
   return {
     aggregate: tc.aggregate.map(a => ({
       ...a,
-      count: roundTreesCleared(Number(a.count)),
+      count: roundTreesClearedForScope(Number(a.count), memberScoped),
     })),
     byTrail: tc.byTrail.map(tr => ({
       ...tr,
-      total: roundTreesCleared(Number(tr.total)),
+      total: roundTreesClearedForScope(Number(tr.total), memberScoped),
       trees: tr.trees.map(t => ({
         ...t,
-        count: roundTreesCleared(Number(t.count)),
+        count: roundTreesClearedForScope(Number(t.count), memberScoped),
       })),
     })),
   }
 }
 
 /** Ensures summary.hikersSeen is a number; if API omits it, sum Trail Coverage "Seen" column. */
-function normalizeDashData(raw: Record<string, unknown>): DashData {
+function normalizeDashData(raw: Record<string, unknown>, memberContext: MemberContext): DashData {
+  const memberScoped = memberContext !== 'all'
   const trailCoverage = (Array.isArray(raw.trailCoverage) ? raw.trailCoverage : []) as TrailCoverageRow[]
   const sumSeenFromTrails = trailCoverage.reduce((acc, row) => acc + (Number(row.hikersSeen) || 0), 0)
   const rawSummary = raw.summary as Partial<ActivitySummary> | undefined
@@ -105,8 +106,8 @@ function normalizeDashData(raw: Record<string, unknown>): DashData {
     hikersSeenDelta,
   }
 
-  const treesClearedRounded = roundTreesCleared(Number(summaryBase.treesCleared))
-  const treesClearedDeltaRounded = roundTreesCleared(Number(summaryBase.treesClearedDelta))
+  const treesClearedRounded = roundTreesClearedForScope(Number(summaryBase.treesCleared), memberScoped)
+  const treesClearedDeltaRounded = roundTreesClearedForScope(Number(summaryBase.treesClearedDelta), memberScoped)
   const summary: ActivitySummary = {
     ...summaryBase,
     treesCleared: treesClearedRounded,
@@ -125,7 +126,7 @@ function normalizeDashData(raw: Record<string, unknown>): DashData {
       ? raw.patrolsByTrailId
       : {}) as Record<number, CoveragePatrolRow[]>,
     violationsByCategory: (Array.isArray(raw.violationsByCategory) ? raw.violationsByCategory : []) as ViolationCategory[],
-    treesCleared: normalizeTreesClearedPayload(treesPayload),
+    treesCleared: normalizeTreesClearedPayload(treesPayload, memberScoped),
     membersByAge: (Array.isArray(raw.membersByAge) ? raw.membersByAge : []) as MemberAgeGroup[],
     members: (Array.isArray(raw.members) ? raw.members : []) as MemberOption[],
   }
@@ -163,7 +164,7 @@ export function ActivityDashboardPage() {
             : ' For local dev, set PHP_API_UPSTREAM in .env.local (see server/dev-api.mjs) and restart npm run dev:api.'
         throw new Error(`Dashboard API returned no summary (check network tab and PHP).${hint}`)
       }
-      setData(normalizeDashData(json))
+      setData(normalizeDashData(json, s.memberContext))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load dashboard data')
     } finally {

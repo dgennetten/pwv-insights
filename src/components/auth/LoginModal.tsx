@@ -116,6 +116,10 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                 <p className="text-xs text-stone-500 dark:text-stone-400">
                   Enter the 6-digit code sent to <span className="font-medium text-stone-700 dark:text-stone-300">{email}</span>.
                 </p>
+                <p className="mt-2.5 text-xs leading-relaxed text-stone-600 dark:text-stone-400 rounded-md border border-amber-200/90 dark:border-amber-900/60 bg-amber-50/90 dark:bg-amber-950/35 px-2.5 py-2">
+                  <span className="font-medium text-stone-800 dark:text-stone-200">If it does not arrive in a minute or two,</span>{' '}
+                  check your <span className="font-semibold">Spam</span> or <span className="font-semibold">Junk</span> folder — one-time codes are often filtered there.
+                </p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1.5">

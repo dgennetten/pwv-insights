@@ -1,6 +1,7 @@
 import { ArrowLeft, Footprints, Leaf, TreePine } from 'lucide-react'
 import type { TrailCoveragePatrolDetailProps } from '../../types/activity-dashboard'
-import { formatTreesCleared } from './formatTreesCleared'
+import { formatInteger } from '../../lib/formatNumber'
+import { formatTreesClearedWhole } from './formatTreesCleared'
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
@@ -56,11 +57,15 @@ export function TrailCoveragePatrolDetail({
           <div className="flex gap-3 shrink-0">
             <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-center min-w-[5rem]">
               <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">In period</div>
-              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{patrols.length}</div>
+              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">
+                {formatInteger(patrols.length)}
+              </div>
             </div>
             <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-center min-w-[5rem]">
               <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">Seen</div>
-              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{trail.hikersSeen}</div>
+              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">
+                {formatInteger(trail.hikersSeen)}
+              </div>
             </div>
           </div>
         </div>
@@ -109,10 +114,10 @@ export function TrailCoveragePatrolDetail({
                       {row.memberName}
                     </td>
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
-                      {formatTreesCleared(Number(row.treesCleared ?? 0))}
+                      {formatTreesClearedWhole(Number(row.treesCleared ?? 0))}
                     </td>
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
-                      {row.hikersSeen}
+                      {formatInteger(row.hikersSeen)}
                     </td>
                   </tr>
                 ))}
