@@ -138,44 +138,61 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
           ) : (
             <>
               {data.byTrail.map((trail, idx) => {
-                const rowTotal = memberScoped
+                const rowTotalApi = memberScoped
                   ? roundTreesCleared(Number(trail.total))
                   : roundWholeTreesCleared(Number(trail.total))
-                const denom = Number.isFinite(rowTotal) && rowTotal > EPS ? rowTotal : EPS
+
+                const segments = trail.trees.map(t => ({
+                  sizeClass: t.sizeClass,
+                  n: memberScoped
+                    ? roundTreesCleared(Number(t.count))
+                    : roundWholeTreesCleared(Number(t.count)),
+                }))
+                const visible = segments.filter(t => Number.isFinite(t.n) && t.n > EPS)
+                const sumVisible = visible.reduce((a, t) => a + t.n, 0)
+
+                /** Bar uses sum of displayed buckets so widths total 100%; label matches the bar. */
+                const barBasis = sumVisible > EPS ? sumVisible : rowTotalApi
+                const denom = barBasis > EPS ? barBasis : EPS
+                const totalLabel = sumVisible > EPS ? sumVisible : rowTotalApi
+
                 const rowKey = `${trail.trailName}\0${trail.trailNumber}\0${idx}`
                 return (
-                  <div key={rowKey} className="flex items-center gap-3 group">
-                    <div className="w-32 shrink-0">
+                  <div key={rowKey} className="flex items-center gap-3 group min-w-0">
+                    <div className="w-32 shrink-0 min-w-0">
                       <div className="text-xs font-medium text-stone-700 dark:text-stone-300 truncate">{trail.trailName}</div>
                       <div className="text-[10px] text-stone-400 dark:text-stone-500">#{trail.trailNumber}</div>
                     </div>
 
-                    {/* Segmented bar — widths are shares of this trail's total (full bar = 100% mix). */}
-                    <div className="flex-1 h-5 flex rounded-sm overflow-hidden bg-stone-100 dark:bg-stone-800">
-                      {trail.trees
-                        .map(t => ({
-                          ...t,
-                          n: memberScoped
-                            ? roundTreesCleared(Number(t.count))
-                            : roundWholeTreesCleared(Number(t.count)),
-                        }))
-                        .filter(t => Number.isFinite(t.n) && t.n > EPS)
-                        .map(t => {
+                    {/* Segmented bar — mix among buckets with positive display counts (denom = their sum). */}
+                    <div className="flex-1 min-w-0 h-5 flex rounded-sm overflow-hidden bg-stone-100 dark:bg-stone-800">
+                      {visible.length > 0 ? (
+                        visible.map((t, segIdx) => {
                           const colors = colorForSizeClass(t.sizeClass)
                           const widthPct = (t.n / denom) * 100
                           return (
                             <div
-                              key={t.sizeClass}
+                              key={`${idx}-${segIdx}-${t.sizeClass}`}
                               className={`${colors.bar} transition-opacity group-hover:opacity-90 cursor-default min-w-0`}
                               style={{ width: `${widthPct}%` }}
                               title={sizeClassTooltip(t.sizeClass as TreeSizeClass, t.n, memberScoped)}
                             />
                           )
-                        })}
+                        })
+                      ) : rowTotalApi > EPS ? (
+                        <div
+                          className="w-full h-full bg-stone-300 dark:bg-stone-600 cursor-default"
+                          title={
+                            memberScoped
+                              ? `Total ${formatTreeCount(rowTotalApi, memberScoped)} trees (share); per–size-class values round to zero at this precision.`
+                              : `Total ${formatTreeCount(rowTotalApi, memberScoped)} trees; each size class rounds to zero for whole-tree display.`
+                          }
+                        />
+                      ) : null}
                     </div>
 
                     <span className="text-xs font-medium tabular-nums text-stone-600 dark:text-stone-400 min-w-[2.25rem] text-right shrink-0">
-                      {formatTreeCount(rowTotal, memberScoped)}
+                      {formatTreeCount(totalLabel, memberScoped)}
                     </span>
                   </div>
                 )
