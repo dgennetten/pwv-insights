@@ -41,4 +41,10 @@ return [
    * Legacy: t_tree_down_person_column is still read as a fallback column name on t_rpt_trail_clearing.
    */
   // 't_trail_clearing_person_column' => 'PersonID',
+
+  /**
+   * Optional: t_member column updated to CURRENT_TIMESTAMP when session.php validates a remembered token.
+   * Default last_login_at (add with sql/05-t-member-last-login-at.sql). Set to your legacy column name if needed.
+   */
+  // 't_member_last_login_column' => 'LastLogin',
 ];

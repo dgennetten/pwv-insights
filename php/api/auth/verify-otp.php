@@ -51,13 +51,7 @@ $expiresAt = date('Y-m-d H:i:s', strtotime($remember ? '+365 days' : '+1 day'));
 $db->prepare('INSERT INTO auth_sessions (person_id, token, expires_at) VALUES (?, ?, ?)')
    ->execute([$member['PersonID'], $token, $expiresAt]);
 
-authLoginLogEnsureTable($db);
-try {
-  $db->prepare('INSERT INTO auth_login_log (person_id) VALUES (?)')
-    ->execute([(int) $member['PersonID']]);
-} catch (Throwable $e) {
-  error_log('auth_login_log insert: ' . $e->getMessage());
-}
+authLoginLogRecord($db, (int) $member['PersonID']);
 
 // Occasional cleanup of expired / used OTP codes
 if (random_int(1, 20) === 1) {

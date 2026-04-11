@@ -1,5 +1,8 @@
--- Append-only audit of successful OTP logins (one row per sign-in).
+-- Append-only audit of successful auth (OTP verification and remembered-device session checks).
 -- Run on pwvinsights after 02-app-schema.sql if the table is missing.
+--
+-- If the web DB user created this table as another user, grant INSERT, e.g.:
+--   GRANT SELECT, INSERT ON pwvinsights.auth_login_log TO 'your_app_user'@'%';
 
 USE pwvinsights;
 

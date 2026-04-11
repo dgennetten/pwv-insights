@@ -45,6 +45,51 @@ async function ensureAuthLoginLogTable() {
   }
 }
 
+async function authLoginLogInsert(personId) {
+  const pid = Number(personId)
+  if (!Number.isFinite(pid) || pid < 1) return
+  await ensureAuthLoginLogTable()
+  try {
+    await pool.query('INSERT INTO auth_login_log (person_id) VALUES (?)', [pid])
+  } catch (e) {
+    console.warn('[auth] auth_login_log insert skipped:', e.message)
+  }
+}
+
+/** Matches php memberLastLoginTouch — T_MEMBER_LAST_LOGIN_COLUMN or default last_login_at. */
+let memberLastLoginColResolved = null
+async function memberLastLoginTouch(personId) {
+  const pid = Number(personId)
+  if (!Number.isFinite(pid) || pid < 1) return
+  if (memberLastLoginColResolved === false) return
+  if (memberLastLoginColResolved === null) {
+    const name = (process.env.T_MEMBER_LAST_LOGIN_COLUMN || 'last_login_at').trim()
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+      memberLastLoginColResolved = false
+      return
+    }
+    const [rows] = await pool.query(
+      `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_member' AND COLUMN_NAME = ?
+       LIMIT 1`,
+      [name]
+    )
+    if (!rows.length) {
+      memberLastLoginColResolved = false
+      return
+    }
+    memberLastLoginColResolved = name
+  }
+  try {
+    await pool.query(
+      `UPDATE t_member SET \`${memberLastLoginColResolved}\` = CURRENT_TIMESTAMP WHERE PersonID = ? LIMIT 1`,
+      [pid]
+    )
+  } catch (e) {
+    console.warn('[auth] t_member last login touch:', e.message)
+  }
+}
+
 async function readJson(req) {
   return new Promise((resolve) => {
     let body = ''
@@ -182,12 +227,7 @@ const routes = {
       [member.PersonID, token, expiry]
     )
 
-    await ensureAuthLoginLogTable()
-    try {
-      await pool.query('INSERT INTO auth_login_log (person_id) VALUES (?)', [member.PersonID])
-    } catch (e) {
-      console.warn('[auth] auth_login_log insert skipped:', e.message)
-    }
+    await authLoginLogInsert(member.PersonID)
 
     const role = normalised === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'member'
 
@@ -199,6 +239,46 @@ const routes = {
       role,
       personId: member.PersonID,
       expiresAt: expiresAtMs,
+    })
+  },
+
+  async 'POST /api/auth/session.php'(req, res) {
+    const body = await readJson(req)
+    const token = String(body.token ?? '').trim()
+    if (!token || token.length !== 64 || !/^[a-f0-9]+$/i.test(token)) {
+      return send(res, { success: false, error: 'Invalid token' }, 401)
+    }
+
+    const [rows] = await pool.query(
+      `SELECT s.person_id, s.expires_at, m.FirstName, m.LastName, m.EmailAddress
+       FROM auth_sessions s
+       JOIN t_member m ON m.PersonID = s.person_id
+       WHERE s.token = ? LIMIT 1`,
+      [token]
+    )
+    if (!rows.length) return send(res, { success: false, error: 'Unknown session' }, 401)
+
+    const row = rows[0]
+    const exp = new Date(row.expires_at).getTime()
+    if (!Number.isFinite(exp) || exp < Date.now()) {
+      await pool.query('DELETE FROM auth_sessions WHERE token = ?', [token])
+      return send(res, { success: false, error: 'Session expired' }, 401)
+    }
+
+    const email = String(row.EmailAddress ?? '').trim().toLowerCase()
+    const role = email === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'member'
+
+    await authLoginLogInsert(row.person_id)
+    await memberLastLoginTouch(row.person_id)
+
+    send(res, {
+      success: true,
+      token,
+      email,
+      name: `${row.FirstName ?? ''} ${row.LastName ?? ''}`.trim(),
+      role,
+      personId: row.person_id,
+      expiresAt: exp,
     })
   },
 

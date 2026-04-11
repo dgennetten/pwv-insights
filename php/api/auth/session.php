@@ -45,6 +45,10 @@ if ($expiresTs === false || $expiresTs < time()) {
 $email = strtolower(trim($row['EmailAddress']));
 $role  = (strtolower($email) === strtolower(ADMIN_EMAIL)) ? 'admin' : 'member';
 
+// Remember-this-device restores hit session.php, not verify-otp.php — log those too.
+authLoginLogRecord($db, (int) $row['person_id']);
+memberLastLoginTouch($db, (int) $row['person_id']);
+
 jsonOut([
   'success'   => true,
   'token'     => $token,

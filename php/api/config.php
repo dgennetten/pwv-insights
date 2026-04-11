@@ -36,13 +36,9 @@ function getDb(): PDO {
 
 /**
  * Ensures auth_login_log exists (matches sql/03-auth-login-log.sql).
- * Safe to call on every successful login; CREATE is skipped once the table exists.
+ * Idempotent; safe to call before SELECT or INSERT.
  */
 function authLoginLogEnsureTable(PDO $db): void {
-  static $ensured = false;
-  if ($ensured) {
-    return;
-  }
   try {
     $db->exec(
       'CREATE TABLE IF NOT EXISTS auth_login_log (
@@ -55,9 +51,73 @@ function authLoginLogEnsureTable(PDO $db): void {
           FOREIGN KEY (person_id) REFERENCES t_member(PersonID) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
     );
-    $ensured = true;
   } catch (Throwable $e) {
     error_log('auth_login_log ensure table: ' . $e->getMessage());
+  }
+}
+
+/**
+ * Records a successful auth (OTP verification or remembered-device session check).
+ */
+function authLoginLogRecord(PDO $db, int $personId): void {
+  if ($personId < 1) {
+    return;
+  }
+  authLoginLogEnsureTable($db);
+  try {
+    $db->prepare('INSERT INTO auth_login_log (person_id) VALUES (?)')->execute([$personId]);
+  } catch (PDOException $e) {
+    $driver = $e->errorInfo !== null ? json_encode($e->errorInfo) : '';
+    error_log('auth_login_log insert person_id=' . $personId . ': ' . $e->getMessage() . ' ' . $driver);
+  } catch (Throwable $e) {
+    error_log('auth_login_log insert person_id=' . $personId . ': ' . $e->getMessage());
+  }
+}
+
+/**
+ * Sets t_member "last login" when session.php validates a remembered-device token.
+ * Column name: optional secret t_member_last_login_column (identifier); default last_login_at.
+ * No-op if the column does not exist (run sql/05-t-member-last-login-at.sql or point the secret at your column).
+ */
+function memberLastLoginTouch(PDO $db, int $personId): void {
+  if ($personId < 1) {
+    return;
+  }
+  static $resolved = null;
+  if ($resolved === false) {
+    return;
+  }
+  if ($resolved === null) {
+    $secrets = getSecrets();
+    $name = isset($secrets['t_member_last_login_column'])
+      ? trim((string) $secrets['t_member_last_login_column'])
+      : 'last_login_at';
+    if ($name === '' || !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name)) {
+      $resolved = false;
+      return;
+    }
+    try {
+      $chk = $db->prepare(
+        'SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1'
+      );
+      $chk->execute(['t_member', $name]);
+      if (!$chk->fetchColumn()) {
+        $resolved = false;
+        return;
+      }
+    } catch (Throwable $e) {
+      error_log('memberLastLoginTouch column check: ' . $e->getMessage());
+      $resolved = false;
+      return;
+    }
+    $resolved = $name;
+  }
+  try {
+    $sql = 'UPDATE t_member SET `' . $resolved . '` = CURRENT_TIMESTAMP WHERE PersonID = ? LIMIT 1';
+    $db->prepare($sql)->execute([$personId]);
+  } catch (Throwable $e) {
+    error_log('memberLastLoginTouch update: ' . $e->getMessage());
   }
 }
 
