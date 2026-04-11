@@ -5,7 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const phpHost = env.VITE_PHP_HOST ?? 'http://localhost:3001';
+  const phpHost = env.VITE_PHP_HOST ?? 'http://127.0.0.1:3001';
 
   return {
     plugins: [react(), tailwindcss()],

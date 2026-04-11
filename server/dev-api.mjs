@@ -1,9 +1,9 @@
 /**
- * Local dev API server — mirrors the PHP endpoints for local development.
+ * Local dev API server — OTP auth + optional proxy to real PHP.
  * Run alongside Vite: npm run dev:api
  *
- * OTP codes are printed to this terminal instead of being emailed.
- * In production, the PHP files on DreamHost handle the same routes.
+ * Set PHP_API_UPSTREAM in .env.local (e.g. https://your-site.com) so GET /api/dashboard/data.php
+ * is forwarded to production. Without it, dashboard fetches return 404 JSON from this server.
  */
 
 import http from 'http'
@@ -42,6 +42,60 @@ function send(res, data, status = 200) {
     'Access-Control-Allow-Origin': '*',
   })
   res.end(JSON.stringify(data))
+}
+
+/** Read full request body (for proxying POST to PHP). */
+function readReqBuffer(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    req.on('data', (c) => chunks.push(c))
+    req.on('end', () => resolve(Buffer.concat(chunks)))
+    req.on('error', reject)
+  })
+}
+
+/**
+ * Forward /api/* (except built-in auth routes) to real PHP — e.g. DreamHost.
+ * Set PHP_API_UPSTREAM in .env.local (origin only, no trailing path), e.g. https://insights.example.com
+ */
+async function proxyPhpUpstream(req, res) {
+  const base = (process.env.PHP_API_UPSTREAM || '').trim().replace(/\/$/, '')
+  if (!base) {
+    res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
+    res.end(JSON.stringify({
+      error: 'Not found',
+      hint: 'Local dev: set PHP_API_UPSTREAM in .env.local to your deployed site origin (https://…) so /api/dashboard/data.php can be proxied. This server only implements auth OTP routes.',
+    }))
+    return
+  }
+  let targetUrl
+  try {
+    targetUrl = new URL(req.url || '/', base + '/')
+  } catch (e) {
+    return send(res, { error: 'Invalid PHP_API_UPSTREAM', detail: String(e) }, 500)
+  }
+  try {
+    const init = {
+      method: req.method,
+      headers: {
+        accept: req.headers.accept || '*/*',
+      },
+    }
+    if (req.headers['content-type']) {
+      init.headers['content-type'] = req.headers['content-type']
+    }
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      init.body = await readReqBuffer(req)
+    }
+    const r = await fetch(targetUrl, init)
+    const ct = r.headers.get('content-type') || 'application/octet-stream'
+    const out = Buffer.from(await r.arrayBuffer())
+    res.writeHead(r.status, { 'Content-Type': ct, 'Access-Control-Allow-Origin': '*' })
+    res.end(out)
+  } catch (e) {
+    console.error('[proxy]', String(targetUrl), e)
+    send(res, { error: 'Upstream request failed', detail: String(e.message) }, 502)
+  }
 }
 
 const routes = {
@@ -138,6 +192,8 @@ const server = http.createServer(async (req, res) => {
       console.error(`[api] ${key}:`, err)
       send(res, { error: 'Server error' }, 500)
     }
+  } else if (req.url?.startsWith('/api/')) {
+    await proxyPhpUpstream(req, res)
   } else {
     send(res, { error: 'Not found' }, 404)
   }
@@ -145,5 +201,11 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\x1b[32m  ✓ Dev API server running on http://localhost:${PORT}\x1b[0m`)
-  console.log(`    DB: ${process.env.DB_NAME}@${process.env.DB_HOST}\n`)
+  console.log(`    DB: ${process.env.DB_NAME}@${process.env.DB_HOST}`)
+  if (!process.env.PHP_API_UPSTREAM?.trim()) {
+    console.log(`\x1b[33m    ⚠ PHP_API_UPSTREAM not set — /api/dashboard/* will 404. Add to .env.local:\x1b[0m`)
+    console.log(`      PHP_API_UPSTREAM=https://your-production-site.com\n`)
+  } else {
+    console.log(`    PHP proxy → ${process.env.PHP_API_UPSTREAM.trim()}\n`)
+  }
 })

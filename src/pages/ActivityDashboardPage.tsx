@@ -124,6 +124,17 @@ export function ActivityDashboardPage() {
       )
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = (await res.json()) as Record<string, unknown>
+      if (json && json.ok === false && json.error) {
+        const detail = typeof json.detail === 'string' ? json.detail : String(json.error)
+        throw new Error(`Dashboard API: ${detail}`)
+      }
+      if (!json.summary || typeof json.summary !== 'object') {
+        const hint =
+          typeof json.hint === 'string'
+            ? ` ${json.hint}`
+            : ' For local dev, set PHP_API_UPSTREAM in .env.local (see server/dev-api.mjs) and restart npm run dev:api.'
+        throw new Error(`Dashboard API returned no summary (check network tab and PHP).${hint}`)
+      }
       setData(normalizeDashData(json))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load dashboard data')

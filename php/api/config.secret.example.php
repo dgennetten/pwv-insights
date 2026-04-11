@@ -7,10 +7,22 @@ return [
 
   /**
    * Optional: single column on t_report for filing PersonID when not in t_report_member.
-   * If unset, every known column that exists on t_report is OR’d (ReportWriterID, SubmittedByPersonID, …).
+   * If unset, every known column that exists on t_report is OR’d (ReporterID, ReportWriterID, SubmittedByPersonID, …).
    * Set to false for roster-only. PWV tree rows usually have no person column — attribution is the report.
    */
-  // 't_report_person_column' => 'ReportWriterID',
+  // 't_report_person_column' => 'ReporterID',
+
+  /**
+   * Optional: column on t_report_member that equals t_member.PersonID for each party row (roster).
+   * PWV: PersonID is correct (auto-detect uses it first). Set this only if auto-detect picks the wrong
+   * column—for example MemberPersonID first would inflate COUNT(DISTINCT …) to roster row count (e.g. 80)
+   * so each person’s share becomes 1/80 of trees (~1 tree when 80 trees were cleared on the report).
+   *
+   * If the table has both PersonID and MemberPersonID, the dashboard uses both: roster match is
+   * (PersonID = me OR MemberPersonID = me), and party size is LEAST(distinct PersonID count, distinct
+   * MemberPersonID count) when both are positive so row-level surrogates do not shrink your share.
+   */
+  // 't_report_member_person_column' => 'PersonID',
 
   /**
    * Optional: quantity column on t_rpt_trail_clearing. Tree-size lines use tree count; brushing/limbing lines use feet.
