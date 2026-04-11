@@ -6,6 +6,14 @@ define('PWV_GROUP', 10);
 /** Trees cleared (work done) — not t_rpt_tree_down (hazards / trees down). */
 define('TREES_CLEARED_TABLE', 't_rpt_trail_clearing');
 
+/**
+ * lu_trail_clearing: IDs 1–5 = tree size chart buckets (NumCleared = tree count).
+ * Brushing/limbing IDs (default 6–8) use feet — excluded from tree totals.
+ * Must load before the main request try block (functions use these during the request).
+ */
+define('TRAIL_CLEARING_TREE_ID_MIN', 1);
+define('TRAIL_CLEARING_TREE_ID_MAX', 5);
+
 /** Backtick-wrapped identifier for SQL (avoid breaking double-quoted PHP strings). */
 function treesClearedTableRef(): string {
   return '`' . TREES_CLEARED_TABLE . '`';
@@ -381,13 +389,7 @@ function reportMemberPartySubquerySql(PDO $db): string {
   ';
 }
 
-/**
- * lu_trail_clearing: IDs 1–5 = tree size lines (NumCleared = tree count).
- * Brushing/limbing IDs (default 6–8) use NumCleared = feet — excluded from tree totals.
- * Rows with NULL/0 TrailClearingID are treated as tree counts (legacy / uncategorized clears).
- */
-define('TRAIL_CLEARING_TREE_ID_MIN', 1);
-define('TRAIL_CLEARING_TREE_ID_MAX', 5);
+/** Rows with NULL/0 TrailClearingID are treated as tree counts (legacy / uncategorized clears). */
 
 /** @return list<int> sorted unique positive IDs */
 function trailClearingBrushIds(): array {
