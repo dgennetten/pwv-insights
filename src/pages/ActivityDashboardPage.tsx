@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { ActivityDashboard } from '../components/activity-dashboard/ActivityDashboard'
 import { roundTreesClearedForScope } from '../components/activity-dashboard/formatTreesCleared'
+import { getStoredAuthToken } from '../services/authService'
+import { fetchUserPreferences } from '../services/settingsService'
+import { DEFAULT_PREFERENCES, type UserPreferences } from '../types/settings'
 import type {
   DashboardScope,
   TimeRange,
@@ -141,6 +144,7 @@ export function ActivityDashboardPage() {
   const [data, setData]       = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
+  const [userPrefs, setUserPrefs] = useState<UserPreferences>(DEFAULT_PREFERENCES)
 
   const fetchData = useCallback(async (s: DashboardScope) => {
     setLoading(true)
@@ -172,6 +176,16 @@ export function ActivityDashboardPage() {
   }, [])
 
   useEffect(() => { fetchData(scope) }, [scope, fetchData])
+
+  useEffect(() => {
+    if (!user?.personId) {
+      setUserPrefs(DEFAULT_PREFERENCES)
+      return
+    }
+    const token = getStoredAuthToken()
+    if (!token) return
+    void fetchUserPreferences(token).then(prefs => setUserPrefs(prefs))
+  }, [user?.personId])
 
   // Repair scope if memberContext became invalid (e.g. String(undefined) → API PersonID 0)
   useEffect(() => {
@@ -233,6 +247,7 @@ export function ActivityDashboardPage() {
         membersByAge={d?.membersByAge ?? []}
         members={d?.members ?? []}
         currentUserId={user?.personId}
+        userPrefs={userPrefs}
         onTimeRangeChange={handleTimeRangeChange}
         onMemberChange={handleMemberChange}
       />

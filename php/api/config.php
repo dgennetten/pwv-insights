@@ -168,6 +168,25 @@ function syncRequestPullFromAwsIfStale(PDO $db): void {
   }
 }
 
+/**
+ * Ensures user_preferences exists (matches sql/07-user-preferences.sql). Idempotent.
+ */
+function userPrefsEnsureTable(PDO $db): void {
+  try {
+    $db->exec(
+      'CREATE TABLE IF NOT EXISTS user_preferences (
+        person_id   INT UNSIGNED NOT NULL PRIMARY KEY,
+        prefs       JSON         NOT NULL,
+        updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_user_prefs_person
+          FOREIGN KEY (person_id) REFERENCES t_member(PersonID) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+  } catch (Throwable $e) {
+    error_log('user_preferences ensure table: ' . $e->getMessage());
+  }
+}
+
 function jsonOut(array $data, int $status = 200): never {
   http_response_code($status);
   header('Content-Type: application/json');

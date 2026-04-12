@@ -1,5 +1,6 @@
 import { ArrowLeft, Footprints, Leaf, TreePine } from 'lucide-react'
 import type { TrailCoveragePatrolDetailProps } from '../../types/activity-dashboard'
+import { DEFAULT_PREFERENCES } from '../../types/settings'
 import { formatInteger } from '../../lib/formatNumber'
 import { formatTreesClearedWhole } from './formatTreesCleared'
 
@@ -17,7 +18,9 @@ export function TrailCoveragePatrolDetail({
   periodLabel,
   memberScopeLabel,
   onBack,
+  trailDetailPrefs,
 }: TrailCoveragePatrolDetailProps) {
+  const td = { ...DEFAULT_PREFERENCES.trailDetail, ...trailDetailPrefs }
   const sorted = [...patrols].sort((a, b) => b.date.localeCompare(a.date))
 
   return (
@@ -61,12 +64,22 @@ export function TrailCoveragePatrolDetail({
                 {formatInteger(patrols.length)}
               </div>
             </div>
-            <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-center min-w-[5rem]">
-              <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">Seen</div>
-              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">
-                {formatInteger(trail.hikersSeen)}
+            {td.hikersSeen && (
+              <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-center min-w-[5rem]">
+                <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">Seen</div>
+                <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">
+                  {formatInteger(trail.hikersSeen)}
+                </div>
               </div>
-            </div>
+            )}
+            {td.hikersContacted && (
+              <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-center min-w-[5rem]">
+                <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">Contacted</div>
+                <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">
+                  {formatInteger(trail.hikersContacted)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -96,12 +109,21 @@ export function TrailCoveragePatrolDetail({
                   <th className="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[6rem]">
                     Member
                   </th>
-                  <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
-                    Trees cleared
-                  </th>
-                  <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
-                    Seen
-                  </th>
+                  {td.treesCleared && (
+                    <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                      Trees cleared
+                    </th>
+                  )}
+                  {td.hikersSeen && (
+                    <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                      Seen
+                    </th>
+                  )}
+                  {td.hikersContacted && (
+                    <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                      Contacted
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
@@ -113,12 +135,21 @@ export function TrailCoveragePatrolDetail({
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-stone-800 dark:text-stone-200 break-words max-w-[11rem] sm:max-w-none align-top">
                       {row.memberName}
                     </td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
-                      {formatTreesClearedWhole(Number(row.treesCleared ?? 0))}
-                    </td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
-                      {formatInteger(row.hikersSeen)}
-                    </td>
+                    {td.treesCleared && (
+                      <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
+                        {formatTreesClearedWhole(Number(row.treesCleared ?? 0))}
+                      </td>
+                    )}
+                    {td.hikersSeen && (
+                      <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
+                        {formatInteger(row.hikersSeen)}
+                      </td>
+                    )}
+                    {td.hikersContacted && (
+                      <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
+                        {formatInteger(row.hikersContacted)}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

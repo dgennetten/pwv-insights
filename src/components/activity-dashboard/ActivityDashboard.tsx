@@ -1,21 +1,25 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  CalendarDays,
   ChevronDown,
-  Users,
+  Eye,
   Footprints,
   Map,
-  TreePine,
-  Eye,
-  TrendingUp,
-  TrendingDown,
+  MessageSquare,
   Minus,
+  Scissors,
+  TreePine,
+  TrendingDown,
+  TrendingUp,
+  Users,
 } from 'lucide-react'
 import type {
   ActivityDashboardProps,
   TimeRange,
   MemberContext,
 } from '../../types/activity-dashboard'
+import { DEFAULT_PREFERENCES } from '../../types/settings'
 import { PatrolActivityChart } from './PatrolActivityChart'
 import { TrailCoverageList } from './TrailCoverageList'
 import { ViolationsChart } from './ViolationsChart'
@@ -257,6 +261,7 @@ export function ActivityDashboard({
   members,
   patrolsByTrailId,
   currentUserId,
+  userPrefs,
   onTimeRangeChange,
   onMemberChange,
   onTrailSelect,
@@ -264,6 +269,8 @@ export function ActivityDashboard({
   onTrailCoverageSortChange,
   trailCoveragePageSize,
 }: ActivityDashboardProps) {
+  const kpi = { ...DEFAULT_PREFERENCES.dashboardKpi, ...userPrefs?.dashboardKpi }
+  const trailDetailPrefs = { ...DEFAULT_PREFERENCES.trailDetail, ...userPrefs?.trailDetail }
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedTrailId = parseTrailIdParam(searchParams.get('trail'))
@@ -330,6 +337,7 @@ export function ActivityDashboard({
           periodLabel={summary.periodLabel}
           memberScopeLabel={memberScopeLabel}
           onBack={handleTrailCoverageBack}
+          trailDetailPrefs={trailDetailPrefs}
         />
       </MemberGate>
     )
@@ -382,20 +390,37 @@ export function ActivityDashboard({
 
       {/* ── KPI Cards ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <KpiCard label="Patrols" value={summary.patrols} delta={summary.patrolsDelta} icon={<Footprints className="w-4 h-4" strokeWidth={1.5} />} accent />
-        <KpiCard label="Trails Covered" value={summary.trailsCovered} delta={summary.trailsCoveredDelta} icon={<Map className="w-4 h-4" strokeWidth={1.5} />} />
-        <KpiCard
-          label="Trees Cleared"
-          value={
-            scope.memberContext === 'all'
-              ? formatTreesClearedWhole(Number(summary.treesCleared))
-              : formatTreesCleared(Number(summary.treesCleared))
-          }
-          delta={summary.treesClearedDelta}
-          deltaFormatter={scope.memberContext === 'all' ? formatTreesClearedWhole : formatTreesCleared}
-          icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
-        />
-        <KpiCard label="Hikers seen" value={summary.hikersSeen} delta={summary.hikersSeenDelta} icon={<Eye className="w-4 h-4" strokeWidth={1.5} />} />
+        {kpi.patrols && (
+          <KpiCard label="Patrols" value={summary.patrols} delta={summary.patrolsDelta} icon={<Footprints className="w-4 h-4" strokeWidth={1.5} />} accent />
+        )}
+        {kpi.trailsCovered && (
+          <KpiCard label="Trails Covered" value={summary.trailsCovered} delta={summary.trailsCoveredDelta} icon={<Map className="w-4 h-4" strokeWidth={1.5} />} />
+        )}
+        {kpi.treesCleared && (
+          <KpiCard
+            label="Trees Cleared"
+            value={
+              scope.memberContext === 'all'
+                ? formatTreesClearedWhole(Number(summary.treesCleared))
+                : formatTreesCleared(Number(summary.treesCleared))
+            }
+            delta={summary.treesClearedDelta}
+            deltaFormatter={scope.memberContext === 'all' ? formatTreesClearedWhole : formatTreesCleared}
+            icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
+          />
+        )}
+        {kpi.hikersSeen && (
+          <KpiCard label="Hikers Seen" value={summary.hikersSeen} delta={summary.hikersSeenDelta} icon={<Eye className="w-4 h-4" strokeWidth={1.5} />} />
+        )}
+        {kpi.daysPatrolling && (
+          <KpiCard label="Days Patrolling" value={summary.daysPatrolling ?? 0} delta={summary.daysPatrollingDelta ?? 0} icon={<CalendarDays className="w-4 h-4" strokeWidth={1.5} />} />
+        )}
+        {kpi.daysWeeding && (
+          <KpiCard label="Days Weeding" value={summary.daysWeeding ?? 0} delta={summary.daysWeedingDelta ?? 0} icon={<Scissors className="w-4 h-4" strokeWidth={1.5} />} />
+        )}
+        {kpi.hikersContacted && (
+          <KpiCard label="Hikers Contacted" value={summary.hikersContacted ?? 0} delta={summary.hikersContactedDelta ?? 0} icon={<MessageSquare className="w-4 h-4" strokeWidth={1.5} />} />
+        )}
       </div>
 
       {/* ── Patrol Activity ────────────────────────────────────────── */}

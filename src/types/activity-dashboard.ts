@@ -27,6 +27,13 @@ export interface ActivitySummary {
   totalActiveMembers: number
   /** Human-readable date range label, e.g. "Mar 23 – Mar 30, 2026" */
   periodLabel: string
+  /** Optional — returned when backend supports it */
+  daysPatrolling?: number
+  daysPatrollingDelta?: number
+  daysWeeding?: number
+  daysWeedingDelta?: number
+  hikersContacted?: number
+  hikersContactedDelta?: number
 }
 
 // ─── Patrol activity chart ─────────────────────────────────────────────────────
@@ -117,6 +124,8 @@ export interface MemberOption {
 // ─── Component props ──────────────────────────────────────────────────────────
 
 export interface ActivityDashboardProps {
+  /** Per-user display preferences; falls back to defaults when omitted. */
+  userPrefs?: import('./settings').UserPreferences
   scope: DashboardScope
   summary: ActivitySummary
   patrolActivity: PatrolActivityDay[]
@@ -169,4 +178,6 @@ export interface TrailCoveragePatrolDetailProps {
   /** Member scope label, e.g. "All members" or a person's name when Me / other member is selected. */
   memberScopeLabel: string
   onBack: () => void
+  /** Per-user trail detail display preferences; falls back to defaults when omitted. */
+  trailDetailPrefs?: import('./settings').TrailDetailPrefs
 }
