@@ -121,6 +121,53 @@ function memberLastLoginTouch(PDO $db, int $personId): void {
   }
 }
 
+/**
+ * DreamHost-only: app_sync_meta (sql/06-app-sync-meta.sql). Used to nudge a cron worker to pull from AWS.
+ */
+function syncMetaEnsureTable(PDO $db): void {
+  try {
+    $db->exec(
+      'CREATE TABLE IF NOT EXISTS app_sync_meta (
+        id TINYINT UNSIGNED NOT NULL PRIMARY KEY COMMENT \'always 1\',
+        last_successful_pull_at DATETIME NULL,
+        last_pull_attempt_at DATETIME NULL,
+        last_pull_error VARCHAR(512) NULL,
+        pending_after_session_at DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+    $db->exec('INSERT IGNORE INTO app_sync_meta (id) VALUES (1)');
+  } catch (Throwable $e) {
+    error_log('app_sync_meta ensure: ' . $e->getMessage());
+  }
+}
+
+/**
+ * If aws_sync_session_nudge is true in secrets, marks sync as due when last success is older than the interval.
+ * Actual AWS pull must run in a separate cron/worker — see product-plan/aws-mysql-sync-plan.md.
+ */
+function syncRequestPullFromAwsIfStale(PDO $db): void {
+  $secrets = getSecrets();
+  if (empty($secrets['aws_sync_session_nudge'])) {
+    return;
+  }
+  $interval = isset($secrets['aws_sync_min_interval_seconds'])
+    ? max(300, (int) $secrets['aws_sync_min_interval_seconds'])
+    : 3600;
+  try {
+    syncMetaEnsureTable($db);
+    $db->prepare(
+      'UPDATE app_sync_meta SET pending_after_session_at = NOW()
+       WHERE id = 1
+         AND (
+           last_successful_pull_at IS NULL
+           OR last_successful_pull_at < DATE_SUB(NOW(), INTERVAL ? SECOND)
+         )'
+    )->execute([$interval]);
+  } catch (Throwable $e) {
+    error_log('aws sync nudge: ' . $e->getMessage());
+  }
+}
+
 function jsonOut(array $data, int $status = 200): never {
   http_response_code($status);
   header('Content-Type: application/json');

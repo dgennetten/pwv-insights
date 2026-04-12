@@ -52,6 +52,7 @@ $db->prepare('INSERT INTO auth_sessions (person_id, token, expires_at) VALUES (?
    ->execute([$member['PersonID'], $token, $expiresAt]);
 
 authLoginLogRecord($db, (int) $member['PersonID']);
+syncRequestPullFromAwsIfStale($db);
 
 // Occasional cleanup of expired / used OTP codes
 if (random_int(1, 20) === 1) {

@@ -47,4 +47,13 @@ return [
    * Default last_login_at (add with sql/05-t-member-last-login-at.sql). Set to your legacy column name if needed.
    */
   // 't_member_last_login_column' => 'LastLogin',
+
+  /**
+   * Optional: after session.php / verify-otp success, set app_sync_meta.pending_after_session_at when
+   * last_successful_pull_at is older than aws_sync_min_interval_seconds (default 3600, minimum 300).
+   * A cron job on DreamHost must read that flag and run your AWS→DreamHost sync script — see
+   * product-plan/aws-mysql-sync-plan.md and sql/06-app-sync-meta.sql.
+   */
+  // 'aws_sync_session_nudge' => true,
+  // 'aws_sync_min_interval_seconds' => 3600,
 ];

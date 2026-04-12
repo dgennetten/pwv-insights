@@ -9,6 +9,7 @@ This folder contains everything needed to implement **PWV Insights** — a data-
 - `prompts/section-prompt.md` — Prompt template for section-by-section implementation
 
 **Instructions:**
+- `aws-mysql-sync-plan.md` — AWS MariaDB → DreamHost incremental sync, catch-up, and session nudge contract
 - `product-overview.md` — Product summary (always provide alongside implementation instructions)
 - `instructions/one-shot-instructions.md` — All milestones combined for full implementation
 - `instructions/incremental/` — Milestone-by-milestone: `01-shell.md`, `02-activity-dashboard.md`, `03-trails.md`, `04-leaderboards-trends.md`

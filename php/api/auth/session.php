@@ -48,6 +48,7 @@ $role  = (strtolower($email) === strtolower(ADMIN_EMAIL)) ? 'admin' : 'member';
 // Remember-this-device restores hit session.php, not verify-otp.php — log those too.
 authLoginLogRecord($db, (int) $row['person_id']);
 memberLastLoginTouch($db, (int) $row['person_id']);
+syncRequestPullFromAwsIfStale($db);
 
 jsonOut([
   'success'   => true,
