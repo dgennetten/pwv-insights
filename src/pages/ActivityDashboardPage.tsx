@@ -101,11 +101,18 @@ function normalizeDashData(raw: Record<string, unknown>, memberContext: MemberCo
   const hikersSeenDeltaRaw = numOrNull(rawSummary?.hikersSeenDelta)
   const hikersSeenDelta = hikersSeenDeltaRaw !== null ? hikersSeenDeltaRaw : 0
 
+  const sumContactedFromTrails = trailCoverage.reduce((acc, row) => acc + (Number(row.hikersContacted) || 0), 0)
+  const hikersContactedFromApi = numOrNull(rawSummary?.hikersContacted)
+  const hikersContacted = hikersContactedFromApi !== null ? hikersContactedFromApi : sumContactedFromTrails
+  const hikersContactedDelta = numOrNull(rawSummary?.hikersContactedDelta) ?? 0
+
   const summaryBase: ActivitySummary = {
     ...EMPTY_SUMMARY,
     ...rawSummary,
     hikersSeen,
     hikersSeenDelta,
+    hikersContacted,
+    hikersContactedDelta,
   }
 
   const treesClearedRounded = roundTreesClearedForScope(Number(summaryBase.treesCleared), memberScoped)

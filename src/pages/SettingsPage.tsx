@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
@@ -17,9 +17,10 @@ interface PrefRowProps {
   label: string
   checked: boolean
   onChange: (v: boolean) => void
+  afterLabel?: ReactNode
 }
 
-function PrefRow({ label, checked, onChange }: PrefRowProps) {
+function PrefRow({ label, checked, onChange, afterLabel }: PrefRowProps) {
   return (
     <label className="flex items-center gap-3 py-2.5 cursor-pointer group select-none">
       <div className={`
@@ -39,16 +40,25 @@ function PrefRow({ label, checked, onChange }: PrefRowProps) {
           <Check className="absolute inset-0 w-full h-full p-0.5 text-white" strokeWidth={3} />
         )}
       </div>
-      <span className={`text-sm transition-colors ${
-        checked
-          ? 'text-stone-800 dark:text-stone-200'
-          : 'text-stone-500 dark:text-stone-400'
-      }`}>
-        {label}
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
+        <span className={`text-sm transition-colors ${
+          checked
+            ? 'text-stone-800 dark:text-stone-200'
+            : 'text-stone-500 dark:text-stone-400'
+        }`}>
+          {label}
+        </span>
+        {afterLabel}
       </span>
     </label>
   )
 }
+
+const notImplementedNotice = (
+  <span className="text-[10px] font-medium text-red-600 dark:text-red-400 normal-case tracking-normal">
+    not yet implemented
+  </span>
+)
 
 // ─── Section card ─────────────────────────────────────────────────────────────
 
@@ -161,8 +171,8 @@ export function SettingsPage() {
               <PrefRow label="Trails Covered"  checked={prefs.dashboardKpi.trailsCovered}   onChange={v => updateKpi('trailsCovered', v)} />
               <PrefRow label="Trees Cleared"   checked={prefs.dashboardKpi.treesCleared}    onChange={v => updateKpi('treesCleared', v)} />
               <PrefRow label="Hikers Seen"     checked={prefs.dashboardKpi.hikersSeen}      onChange={v => updateKpi('hikersSeen', v)} />
-              <PrefRow label="Days Patrolling" checked={prefs.dashboardKpi.daysPatrolling}  onChange={v => updateKpi('daysPatrolling', v)} />
-              <PrefRow label="Days Weeding"    checked={prefs.dashboardKpi.daysWeeding}     onChange={v => updateKpi('daysWeeding', v)} />
+              <PrefRow label="Days Patrolling" checked={prefs.dashboardKpi.daysPatrolling} onChange={v => updateKpi('daysPatrolling', v)} afterLabel={notImplementedNotice} />
+              <PrefRow label="Days Weeding" checked={prefs.dashboardKpi.daysWeeding} onChange={v => updateKpi('daysWeeding', v)} afterLabel={notImplementedNotice} />
               <PrefRow label="Hikers Contacted" checked={prefs.dashboardKpi.hikersContacted} onChange={v => updateKpi('hikersContacted', v)} />
             </SectionCard>
 

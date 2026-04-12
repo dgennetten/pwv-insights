@@ -29,12 +29,12 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     hikersSeen: true,
     daysPatrolling: false,
     daysWeeding: false,
-    hikersContacted: false,
+    hikersContacted: true,
   },
   trailDetail: {
     treesCleared: true,
     hikersSeen: true,
-    hikersContacted: false,
+    hikersContacted: true,
   },
 }
 

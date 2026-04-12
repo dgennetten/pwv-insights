@@ -70,7 +70,8 @@ try {
   } catch (Throwable $e) {
     error_log('dashboard trailCoverage(current): ' . $e->getMessage() . ' @' . $e->getFile() . ':' . $e->getLine());
   }
-  $hikersSeenCur = sumTrailHikersSeen($trailCoverage);
+  $hikersSeenCur       = sumTrailHikersSeen($trailCoverage);
+  $hikersContactedCur  = sumTrailHikersContacted($trailCoverage);
 
   $prevTrailCov = [];
   if ($prevStart) {
@@ -80,7 +81,8 @@ try {
       error_log('dashboard trailCoverage(prev): ' . $e->getMessage() . ' @' . $e->getFile() . ':' . $e->getLine());
     }
   }
-  $hikersSeenPrev = $prevStart ? sumTrailHikersSeen($prevTrailCov) : 0;
+  $hikersSeenPrev      = $prevStart ? sumTrailHikersSeen($prevTrailCov)      : 0;
+  $hikersContactedPrev = $prevStart ? sumTrailHikersContacted($prevTrailCov) : 0;
 
   $patrolsByTrailId = [];
   try {
@@ -132,8 +134,10 @@ try {
       'trailsCoveredDelta'   => $prev ? $cur['trailsCovered']   - $prev['trailsCovered']   : 0,
       'treesCleared'         => $cur['treesCleared'],
       'treesClearedDelta'    => $prev ? $cur['treesCleared']    - $prev['treesCleared']    : 0,
-      'hikersSeen'           => $hikersSeenCur,
-      'hikersSeenDelta'      => $prevStart ? ($hikersSeenCur - $hikersSeenPrev) : 0,
+      'hikersSeen'              => $hikersSeenCur,
+      'hikersSeenDelta'         => $prevStart ? ($hikersSeenCur      - $hikersSeenPrev)      : 0,
+      'hikersContacted'         => $hikersContactedCur,
+      'hikersContactedDelta'    => $prevStart ? ($hikersContactedCur - $hikersContactedPrev) : 0,
       'volunteerHours'       => $cur['volunteerHours'],
       'totalActiveMembers'   => $cur['totalActiveMembers'],
       'periodLabel'          => periodLabel($start, $end),
@@ -910,6 +914,15 @@ function sumTrailHikersSeen(array $rows): int {
   return $s;
 }
 
+/** Sum hikersContacted from trailCoverage rows (from t_report.NumContacted). */
+function sumTrailHikersContacted(array $rows): int {
+  $s = 0;
+  foreach ($rows as $r) {
+    $s += (int)($r['hikersContacted'] ?? 0);
+  }
+  return $s;
+}
+
 function patrolActivity(PDO $db, ?string $s, ?string $e, $ctx, string $range): array {
   [$w, $p] = scopeWhere($db, $s, $e, $ctx);
 
@@ -1003,7 +1016,6 @@ function trailCoverage(PDO $db, ?string $s, ?string $e, $ctx): array {
       wt.TrailID,
       COUNT(DISTINCT r.ReportID) AS patrols,
       COUNT(DISTINCT rm.$rmPid) AS members,
-      COALESCE(SUM(r.NumContacted), 0) AS hikersContacted,
       MAX(r.ActivityDate) AS lastPatrolDate
     FROM t_report r
     JOIN lu_wksite_trail wt ON wt.WksiteID = r.WksiteID
@@ -1021,10 +1033,12 @@ function trailCoverage(PDO $db, ?string $s, ?string $e, $ctx): array {
   if (empty($stats)) return [];
   $ids = implode(',', array_keys($stats));
 
-  // Hikers seen per trail (via observation table)
+  // Hikers seen + contacted per trail (both columns from t_rpt_observation)
   [$w2, $p2] = scopeWhere($db, $s, $e, $ctx);
   $seenStmt = $db->prepare("
-    SELECT wt.TrailID, COALESCE(SUM(o.NumSeen), 0) AS hikersSeen
+    SELECT wt.TrailID,
+           COALESCE(SUM(o.NumSeen), 0)      AS hikersSeen,
+           COALESCE(SUM(o.NumContacted), 0) AS hikersContacted
     FROM t_rpt_observation o
     JOIN lu_obs_type ot ON ot.ObsTypeID = o.ObsTypeID AND ot.CanContact = 1
     JOIN t_report r ON r.ReportID = o.ReportID
@@ -1033,9 +1047,11 @@ function trailCoverage(PDO $db, ?string $s, ?string $e, $ctx): array {
     GROUP BY wt.TrailID
   ");
   $seenStmt->execute($p2);
-  $seen = [];
+  $seen      = [];
+  $contacted = [];
   foreach ($seenStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    $seen[(int)$row['TrailID']] = (int)$row['hikersSeen'];
+    $seen[(int)$row['TrailID']]      = (int)$row['hikersSeen'];
+    $contacted[(int)$row['TrailID']] = (int)$row['hikersContacted'];
   }
 
   // Trail metadata
@@ -1069,8 +1085,8 @@ function trailCoverage(PDO $db, ?string $s, ?string $e, $ctx): array {
       'inWilderness'   => (bool)$t['InWilderness'],
       'patrols'        => (int)$s2['patrols'],
       'members'        => (int)$s2['members'],
-      'hikersSeen'     => $seen[$tid] ?? 0,
-      'hikersContacted'=> (int)$s2['hikersContacted'],
+      'hikersSeen'      => $seen[$tid]      ?? 0,
+      'hikersContacted' => $contacted[$tid] ?? 0,
       'lastPatrolDate' => $s2['lastPatrolDate'],
     ];
   }
@@ -1093,8 +1109,8 @@ function patrolsByTrail(PDO $db, ?string $s, ?string $e, $ctx): array {
       DATE_FORMAT(r.ActivityDate,'%Y-%m-%d') AS date,
       COALESCE(GROUP_CONCAT(DISTINCT CONCAT(m.FirstName,' ',m.LastName)
                ORDER BY m.LastName SEPARATOR ' & '), 'Unknown') AS memberName,
-      COALESCE(obs.hikersSeen, 0) AS hikersSeen,
-      COALESCE(r.NumContacted, 0) AS hikersContacted,
+      COALESCE(obs.hikersSeen, 0)      AS hikersSeen,
+      COALESCE(obs.hikersContacted, 0) AS hikersContacted,
       (
         SELECT COALESCE(SUM($qtySub), 0)
         FROM $tcf tc
@@ -1105,13 +1121,15 @@ function patrolsByTrail(PDO $db, ?string $s, ?string $e, $ctx): array {
     LEFT JOIN t_report_member rm ON rm.ReportID = r.ReportID
     LEFT JOIN t_member m ON m.PersonID = rm.$rmPid
     LEFT JOIN (
-      SELECT o.ReportID, SUM(o.NumSeen) AS hikersSeen
+      SELECT o.ReportID,
+             SUM(o.NumSeen)      AS hikersSeen,
+             SUM(o.NumContacted) AS hikersContacted
       FROM t_rpt_observation o
       JOIN lu_obs_type ot ON ot.ObsTypeID = o.ObsTypeID AND ot.CanContact = 1
       GROUP BY o.ReportID
     ) obs ON obs.ReportID = r.ReportID
     WHERE $w
-    GROUP BY wt.TrailID, r.ReportID, r.ActivityDate, r.NumContacted, obs.hikersSeen
+    GROUP BY wt.TrailID, r.ReportID, r.ActivityDate, obs.hikersSeen, obs.hikersContacted
     ORDER BY wt.TrailID, r.ActivityDate DESC
   ");
   $stmt->execute($p);
