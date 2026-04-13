@@ -4,7 +4,6 @@ import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
 import { canAccessAdminPage } from '../lib/adminAccess'
 import { fetchAdminRecentLogins, getStoredAuthToken, type AdminLoginRow } from '../services/authService'
-import { formatInteger } from '../lib/formatNumber'
 
 function formatLoginDate(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return '—'
@@ -138,7 +137,7 @@ export function AdminPage() {
                           {formatLoginTime(row.loggedInAtMs)}
                         </td>
                         <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">
-                          {formatInteger(row.memberId)}
+                          {Number.isFinite(row.memberId) ? String(Math.trunc(row.memberId)) : '—'}
                         </td>
                         <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">
                           {memberNameLastFirst(row)}
