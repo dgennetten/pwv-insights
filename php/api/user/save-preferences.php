@@ -65,7 +65,7 @@ $prefs = [
     'hikersSeen'      => $bool($dashKpiRaw['hikersSeen']      ?? true),
     'daysPatrolling'  => $bool($dashKpiRaw['daysPatrolling']  ?? false),
     'daysWeeding'     => $bool($dashKpiRaw['daysWeeding']     ?? false),
-    'hikersContacted' => $bool($dashKpiRaw['hikersContacted'] ?? true),
+    'hikersContacted' => $bool($dashKpiRaw['hikersContacted'] ?? false),
   ],
   'trailDetail' => [
     'treesCleared'    => $bool($trailRaw['treesCleared']    ?? true),

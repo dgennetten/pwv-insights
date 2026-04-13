@@ -145,7 +145,7 @@ export function ActivityDashboardPage() {
   const { user } = useAuth()
 
   const [scope, setScope] = useState<DashboardScope>(() => ({
-    timeRange: '7d',
+    timeRange: '3m',
     memberContext: initialMemberContext(user?.personId),
   }))
   const [data, setData]       = useState<DashData | null>(null)

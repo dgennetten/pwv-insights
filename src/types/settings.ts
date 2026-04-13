@@ -29,7 +29,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     hikersSeen: true,
     daysPatrolling: false,
     daysWeeding: false,
-    hikersContacted: true,
+    hikersContacted: false,
   },
   trailDetail: {
     treesCleared: true,
