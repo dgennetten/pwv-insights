@@ -12,6 +12,7 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- Hit notifier removed: browser fetch to auth.gennetten.org is blocked by CORS unless notify.php sends Access-Control-Allow-Origin for this site. Re-enable after fixing the auth endpoint or proxy hits same-origin. -->
+    <script src="https://auth.gennetten.org/hit-test/client-snippet-php.js"></script>
+    <script>initHitNotifier('https://auth.gennetten.org/hit-test/notify.php');</script>
   </body>
 </html>

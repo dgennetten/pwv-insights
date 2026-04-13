@@ -194,10 +194,14 @@ export function ActivityDashboardPage() {
     void fetchUserPreferences(token).then(prefs => setUserPrefs(prefs))
   }, [user?.personId])
 
-  // Repair scope if memberContext became invalid (e.g. String(undefined) → API PersonID 0)
+  // When signed out, org-wide scope only (was: memberContext stayed on last user's PersonID).
+  // When signed in, repair invalid memberContext (e.g. bad number → default to self).
   useEffect(() => {
     const pid = user?.personId
-    if (pid == null) return
+    if (pid == null) {
+      setScope(prev => (prev.memberContext === 'all' ? prev : { ...prev, memberContext: 'all' }))
+      return
+    }
     const me = initialMemberContext(pid)
     if (me === 'all') return
     setScope(prev => {
