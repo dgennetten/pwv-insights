@@ -45,6 +45,7 @@ export interface Member {
   milesCovered: number;
   trailCount: number;
   trailTypes: number;
+  patrolTypeNames: string[];
   totalHours: number;
   patrolHours: number;
   nonPatrolHours: number;

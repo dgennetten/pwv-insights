@@ -44,6 +44,8 @@ interface PodiumStageProps {
 function PodiumStage({ top3, currentUserId, metric, unit }: PodiumStageProps) {
   if (top3.length < 3) return null
 
+  const isTypes = metric === 'trailTypes'
+
   // Visual display order: 2nd (left), 1st (center/elevated), 3rd (right)
   const slots = [
     { member: top3[1], rank: 2, platformH: 48, avatarSize: 'w-11 h-11', textSize: 'text-sm', valSize: 'text-base font-bold', badgeBg: 'bg-stone-300 dark:bg-stone-600 text-stone-700 dark:text-stone-200' },
@@ -92,10 +94,16 @@ function PodiumStage({ top3, currentUserId, metric, unit }: PodiumStageProps) {
                 <span className="block text-[10px] font-normal text-emerald-500 leading-none mt-0.5">You</span>
               )}
             </p>
-            <p className={`${valSize} text-stone-700 dark:text-stone-200 tabular-nums leading-none`}>
-              {fmtVal(value)}
-              <span className="text-[10px] font-normal text-stone-400 dark:text-stone-500 ml-0.5">{unit}</span>
-            </p>
+            {isTypes ? (
+              <p className="text-[10px] font-normal text-stone-500 dark:text-stone-400 text-center leading-snug max-w-[130px]">
+                {member.patrolTypeNames.join(' · ')}
+              </p>
+            ) : (
+              <p className={`${valSize} text-stone-700 dark:text-stone-200 tabular-nums leading-none`}>
+                {fmtVal(value)}
+                <span className="text-[10px] font-normal text-stone-400 dark:text-stone-500 ml-0.5">{unit}</span>
+              </p>
+            )}
 
             {/* Platform block */}
             <div
@@ -121,6 +129,7 @@ function MemberRow({
   isCurrentUser: boolean
 }) {
   const value = member[metric]
+  const isTypes = metric === 'trailTypes'
 
   return (
     <div className={`flex items-center gap-3 px-4 py-2.5 ${
@@ -144,12 +153,20 @@ function MemberRow({
           <span className="ml-1.5 text-[11px] font-normal text-emerald-500 dark:text-emerald-500">You</span>
         )}
       </span>
-      <span className={`text-sm font-bold tabular-nums shrink-0 ${
-        isCurrentUser ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-700 dark:text-stone-300'
-      }`}>
-        {fmtVal(value)}
-        <span className="ml-1 text-[11px] font-normal text-stone-400 dark:text-stone-500">{unit}</span>
-      </span>
+      {isTypes ? (
+        <span className={`text-xs font-normal text-right shrink-0 max-w-[55%] leading-snug ${
+          isCurrentUser ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-500 dark:text-stone-400'
+        }`}>
+          {member.patrolTypeNames.join(', ')}
+        </span>
+      ) : (
+        <span className={`text-sm font-bold tabular-nums shrink-0 ${
+          isCurrentUser ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-700 dark:text-stone-300'
+        }`}>
+          {fmtVal(value)}
+          <span className="ml-1 text-[11px] font-normal text-stone-400 dark:text-stone-500">{unit}</span>
+        </span>
+      )}
     </div>
   )
 }

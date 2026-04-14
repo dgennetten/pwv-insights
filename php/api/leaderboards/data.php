@@ -136,7 +136,7 @@ function lbMembers(PDO $db, ?string $start, ?string $end): array {
                 JOIN lu_trail lt2 ON lt2.TrailID = wt2.TrailID
                 WHERE wt2.WksiteID = r.WksiteID AND lt2.InWilderness = 1
             ) THEN r.ReportID END)                                                       AS wildernessDays,
-            COUNT(DISTINCT r.ActMethodID)                                                AS trailTypes,
+            COUNT(DISTINCT r.ActTypeID)                                                  AS trailTypes,
             ROUND(SUM(
                 CASE
                     WHEN rm.TimeStarted IS NOT NULL AND rm.TimeEnded IS NOT NULL
@@ -273,11 +273,29 @@ function lbMembers(PDO $db, ?string $start, ?string $end): array {
         error_log('lbMembers extraWork: ' . $e->getMessage());
     }
 
-    // ── 5. Merge and build output ─────────────────────────────────────────────
+    // ── 5. Activity type names per member ────────────────────────────────────
+    $typeNamesStmt = $db->prepare("
+        SELECT
+            rm.PersonID,
+            GROUP_CONCAT(DISTINCT at.ActTypeName ORDER BY at.ActTypeName SEPARATOR '|') AS typeNames
+        FROM t_report_member rm
+        JOIN t_report r         ON r.ReportID  = rm.ReportID
+        JOIN lu_activity_type at ON at.ActTypeID = r.ActTypeID
+        WHERE $w
+        GROUP BY rm.PersonID
+    ");
+    $typeNamesStmt->execute($p);
+    $typeNamesMap = [];
+    foreach ($typeNamesStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $pid = (int) $row['PersonID'];
+        $typeNamesMap[$pid] = !empty($row['typeNames']) ? explode('|', $row['typeNames']) : [];
+    }
+
+    // ── 6. Merge and build output ─────────────────────────────────────────────
     $result = [];
     foreach ($base as $pid => $b) {
-        $t  = $trails[$pid]   ?? [];
-        $wk = $work[$pid]     ?? [];
+        $t  = $trails[$pid]    ?? [];
+        $wk = $work[$pid]      ?? [];
         $ex = $extraWork[$pid] ?? [];
 
         $firstName = trim($b['FirstName'] ?? '');
@@ -306,6 +324,7 @@ function lbMembers(PDO $db, ?string $start, ?string $end): array {
             'milesCovered'   => round((float)($t['milesCovered'] ?? 0), 1),
             'trailCount'     => (int)($t['trailCount']     ?? 0),
             'trailTypes'     => (int)($b['trailTypes']     ?? 0),
+            'patrolTypeNames' => $typeNamesMap[$pid] ?? [],
             'totalHours'     => $totalHours,
             'patrolHours'    => $patrolHours,
             'nonPatrolHours' => $nonPatrolHours,
