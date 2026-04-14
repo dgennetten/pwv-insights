@@ -238,9 +238,18 @@ try {
             END AS MemberName,
             COALESCE(obs.HikersSeen,      0) AS HikersSeen,
             COALESCE(obs.HikersContacted, 0) AS HikersContacted,
-            ROUND(COALESCE(r.TravelMinutes,0)/60,1) AS DurationHours
+            ROUND(
+                CASE
+                    WHEN rm.TimeStarted IS NOT NULL AND rm.TimeEnded IS NOT NULL
+                    THEN TIMESTAMPDIFF(MINUTE, rm.TimeStarted, rm.TimeEnded) / 60.0
+                    WHEN r.TimeStarted IS NOT NULL AND r.TimeEnded IS NOT NULL
+                    THEN TIMESTAMPDIFF(MINUTE, r.TimeStarted, r.TimeEnded) / 60.0
+                    ELSE 0
+                END
+            , 1) AS DurationHours
         FROM t_report r
         LEFT JOIN t_member m ON m.PersonID = r.ReportWriterID
+        LEFT JOIN t_report_member rm ON rm.ReportID = r.ReportID AND rm.PersonID = r.ReportWriterID
         LEFT JOIN (
             SELECT o.ReportID,
                    SUM(o.NumSeen)      AS HikersSeen,

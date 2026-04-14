@@ -12,11 +12,9 @@ import { TrendCharts } from './TrendCharts'
 // ── Config ───────────────────────────────────────────────────────────────────
 
 const TIME_RANGES: { value: TimeRange; label: string }[] = [
-  { value: 'week',    label: 'Week to Date' },
-  { value: 'month',   label: 'Month to Date' },
-  { value: 'quarter', label: 'Quarter to Date' },
-  { value: 'year',    label: 'Season to Date' },
-  { value: 'all',     label: 'All Time' },
+  { value: 'month', label: 'Month to Date' },
+  { value: 'year',  label: 'Season to Date' },
+  { value: 'all',   label: 'All Time' },
 ]
 
 const CATEGORY_OPTIONS: { value: LeaderboardCategory; label: string }[] = [
