@@ -25,7 +25,12 @@
       "Bash(curl -s http://localhost:5173/)",
       "Bash(awk 'NR==2751, NR==2825' \"/c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql\")",
       "Bash(grep -E \"^\\\\s*\\\\`\")",
-      "Bash(awk 'NR==3085, NR==3110' \"/c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql\")"
+      "Bash(awk 'NR==3085, NR==3110' \"/c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql\")",
+      "Bash(grep -v '^[[:space:]]*$')",
+      "Bash(python3:*)",
+      "Bash(where python:*)",
+      "Bash(where python3:*)",
+      "Bash(node:*)"
     ]
   }
 }

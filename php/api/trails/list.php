@@ -11,11 +11,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 try {
     $db = getDb();
 
-    $year      = (int) date('Y');
-    $startDate = $year . '-01-01';
-    $endDate   = date('Y-m-d');
-    // Months elapsed so far this year (at least 1 to avoid division by zero)
-    $monthsSoFar = max(1, (int) date('m'));
+    // Rolling 12-month window — always captures a full patrol season worth of data
+    // regardless of where we are in the Oct 1–Sep 30 season year. A hard Oct 1
+    // cutoff leaves May–Sep (peak hiking) outside the window until next summer.
+    $startDate   = date('Y-m-d', strtotime('-365 days'));
+    $endDate     = date('Y-m-d');
+    $monthsSoFar = 12;
 
     // ── 1. All trail worksites with area + trail metadata ────────────────────
     // Only include worksites that have BOTH an area assignment AND trail
@@ -60,9 +61,8 @@ try {
     $stmt = $db->prepare("
         SELECT
             r.WksiteID,
-            COUNT(DISTINCT r.ReportID)       AS PatrolCount,
-            MAX(r.ActivityDate)              AS LastPatrolDate,
-            SUM(COALESCE(r.NumContacted, 0)) AS HikersContacted,
+            COUNT(DISTINCT r.ReportID)              AS PatrolCount,
+            MAX(r.ActivityDate)                     AS LastPatrolDate,
             SUM(COALESCE(r.TravelMinutes, 0)) / 60.0 AS TotalHours
         FROM t_report r
         WHERE r.WksiteID IN ($in)
@@ -75,6 +75,30 @@ try {
     $stmt->execute([...$wksiteIds, $startDate, $endDate, TRAILS_PWV_GROUP]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $patrolStats[(int)$row['WksiteID']] = $row;
+    }
+
+    // ── 2b. Hiker counts from t_rpt_observation (CanContact types only) ───────
+    // t_report.NumContacted is not used — real seen/contacted counts are in
+    // t_rpt_observation, mirroring how the Activity Dashboard queries them.
+    $hikerStats = [];
+    $stmt = $db->prepare("
+        SELECT
+            r.WksiteID,
+            COALESCE(SUM(o.NumSeen),      0) AS HikersSeen,
+            COALESCE(SUM(o.NumContacted), 0) AS HikersContacted
+        FROM t_rpt_observation o
+        JOIN lu_obs_type ot ON ot.ObsTypeID = o.ObsTypeID AND ot.CanContact = 1
+        JOIN t_report r     ON r.ReportID   = o.ReportID
+        WHERE r.WksiteID IN ($in)
+          AND r.ActivityDate BETWEEN ? AND ?
+          AND r.GroupID = ?
+          AND (r.IsDraft     IS NULL OR r.IsDraft     = 0)
+          AND (r.IsUnofficial IS NULL OR r.IsUnofficial = 0)
+        GROUP BY r.WksiteID
+    ");
+    $stmt->execute([...$wksiteIds, $startDate, $endDate, TRAILS_PWV_GROUP]);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $hikerStats[(int)$row['WksiteID']] = $row;
     }
 
     // ── 3. Trees DOWN by size class (t_rpt_tree_down.TreeSize 1–5) ──────────
@@ -96,9 +120,20 @@ try {
     }
 
     // ── 4. Trees CLEARED by size class (t_rpt_trail_clearing ID 1–5) ────────
+    // Detect the quantity column — mirrors dashboard/data.php:trailClearingQtyColumn().
+    // The column may be NumCleared, Qty, or Quantity depending on the DB version.
+    $clearingQtyCol = 'NumCleared';
+    foreach (['NumCleared', 'Qty', 'Quantity'] as $candidate) {
+        try {
+            $db->query("SELECT `$candidate` FROM `t_rpt_trail_clearing` LIMIT 0");
+            $clearingQtyCol = $candidate;
+            break;
+        } catch (Throwable $e) { /* column absent — try next */ }
+    }
+
     $treesCleared = [];
     $stmt = $db->prepare("
-        SELECT r.WksiteID, tc.TrailClearingID, SUM(COALESCE(tc.NumCleared, 0)) AS NumCleared
+        SELECT r.WksiteID, tc.TrailClearingID, SUM(COALESCE(tc.`$clearingQtyCol`, 0)) AS NumCleared
         FROM t_rpt_trail_clearing tc
         JOIN t_report r ON r.ReportID = tc.ReportID
         WHERE r.WksiteID IN ($in)
@@ -201,10 +236,19 @@ try {
                 THEN CONCAT(m.FirstName, ' ', LEFT(m.LastName, 1), '.')
                 ELSE 'Unknown'
             END AS MemberName,
-            COALESCE(r.NumContacted, 0)            AS HikersContacted,
+            COALESCE(obs.HikersSeen,      0) AS HikersSeen,
+            COALESCE(obs.HikersContacted, 0) AS HikersContacted,
             ROUND(COALESCE(r.TravelMinutes,0)/60,1) AS DurationHours
         FROM t_report r
         LEFT JOIN t_member m ON m.PersonID = r.ReportWriterID
+        LEFT JOIN (
+            SELECT o.ReportID,
+                   SUM(o.NumSeen)      AS HikersSeen,
+                   SUM(o.NumContacted) AS HikersContacted
+            FROM t_rpt_observation o
+            JOIN lu_obs_type ot ON ot.ObsTypeID = o.ObsTypeID AND ot.CanContact = 1
+            GROUP BY o.ReportID
+        ) obs ON obs.ReportID = r.ReportID
         WHERE r.WksiteID IN ($in)
           AND r.ActivityDate BETWEEN ? AND ?
           AND r.GroupID = ?
@@ -219,7 +263,7 @@ try {
         $patrolHistory[$wid][] = [
             'date'            => $row['ActivityDate'],
             'memberName'      => $row['MemberName'],
-            'hikersSeen'      => (int)$row['HikersContacted'],
+            'hikersSeen'      => (int)$row['HikersSeen'],
             'hikersContacted' => (int)$row['HikersContacted'],
             'durationHours'   => (float)$row['DurationHours'],
         ];
@@ -233,10 +277,11 @@ try {
     $trails = [];
     foreach ($wksites as $w) {
         $wid    = (int)$w['WksiteID'];
-        $stats  = $patrolStats[$wid] ?? [];
-        $patrol  = (int)($stats['PatrolCount'] ?? 0);
-        $hikers  = (int)($stats['HikersContacted'] ?? 0);
-        $length  = (float)$w['LengthMiles'];
+        $stats           = $patrolStats[$wid] ?? [];
+        $patrol          = (int)($stats['PatrolCount'] ?? 0);
+        $hikersSeen      = (int)($hikerStats[$wid]['HikersSeen']      ?? 0);
+        $hikersContacted = (int)($hikerStats[$wid]['HikersContacted'] ?? 0);
+        $length          = (float)$w['LengthMiles'];
 
         // Efficiency score: contacts per vehicle-visit this season (null when no parking data).
         // Score = min(100, contacts * 100 / total_vehicles).
@@ -244,7 +289,7 @@ try {
         // Trails with no t_rpt_parking_lot entries for this period are excluded (null).
         $totalVehicles = $vehicleCounts[$wid] ?? 0;
         if ($totalVehicles > 0) {
-            $effScore = min(100, (int) round($hikers * 100 / $totalVehicles));
+            $effScore = min(100, (int) round($hikersContacted * 100 / $totalVehicles));
         } else {
             $effScore = null;
         }
@@ -283,8 +328,8 @@ try {
             'wilderness'            => (bool)(int)$w['InWilderness'],
             'patrolCount'           => $patrol,
             'patrolFrequency'       => $patrolFreq,
-            'hikersSeen'            => $hikers,
-            'hikersContacted'       => $hikers,
+            'hikersSeen'            => $hikersSeen,
+            'hikersContacted'       => $hikersContacted,
             'lastPatrolDate'        => $stats['LastPatrolDate'] ?? null,
             'efficiencyScore'       => $effScore,
             'underPatrolled'        => $effScore !== null && $effScore < 50,

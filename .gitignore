@@ -18,6 +18,9 @@ db/
 # PHP secrets
 php/api/config.secret.php
 
+# Deploy script (contains live SSH credentials)
+scripts/deploy.sh
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

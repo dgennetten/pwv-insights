@@ -13,6 +13,15 @@ const SIZE_LABELS: Record<keyof TreeSizeBreakdown, string> = {
 }
 const SIZE_KEYS = ['small', 'medium', 'large', 'xl', 'xxl'] as const
 
+// Matches the color scheme used by TreesClearedChart in the Activity Dashboard
+const SIZE_COLORS: Record<keyof TreeSizeBreakdown, { bar: string; label: string }> = {
+  small:  { bar: 'bg-stone-300 dark:bg-stone-600',     label: 'text-stone-500 dark:text-stone-400' },
+  medium: { bar: 'bg-emerald-300 dark:bg-emerald-700', label: 'text-emerald-600 dark:text-emerald-400' },
+  large:  { bar: 'bg-emerald-500',                     label: 'text-emerald-600 dark:text-emerald-400' },
+  xl:     { bar: 'bg-emerald-600 dark:bg-emerald-400', label: 'text-emerald-700 dark:text-emerald-300' },
+  xxl:    { bar: 'bg-emerald-800 dark:bg-emerald-300', label: 'text-emerald-800 dark:text-emerald-200' },
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, icon, accent = false }: {
@@ -60,45 +69,59 @@ function SectionCard({ title, children }: { title: string; children: React.React
 }
 
 function TreesSection({ treesDown, treesCleared }: { treesDown: TreeSizeBreakdown; treesCleared: TreeSizeBreakdown }) {
-  const maxDown = Math.max(...SIZE_KEYS.map(k => treesDown[k]), 1)
+  const EPS = 1e-9
+  const maxCleared = Math.max(...SIZE_KEYS.map(k => treesCleared[k]), 1)
+  const hasAnyDown    = SIZE_KEYS.some(k => treesDown[k] > 0)
+  const hasAnyCleared = SIZE_KEYS.some(k => treesCleared[k] > 0)
+
+  if (!hasAnyDown && !hasAnyCleared) {
+    return (
+      <SectionCard title="Trees Cleared by Size Class">
+        <p className="text-sm text-stone-400 dark:text-stone-500">No trees recorded this season.</p>
+      </SectionCard>
+    )
+  }
+
   return (
-    <SectionCard title="Trees Down & Cleared by Size Class">
-      <div className="space-y-3">
+    <SectionCard title="Trees Cleared by Size Class">
+      {/* Vertical bar chart — same style as Activity Dashboard TreesClearedChart */}
+      <div className="flex items-end gap-4" style={{ height: '100px' }}>
         {SIZE_KEYS.map(key => {
-          const down = treesDown[key], cleared = treesCleared[key], remaining = down - cleared
-          const pct = Math.round((down / maxDown) * 100)
+          const c = treesCleared[key]
+          const { bar, label } = SIZE_COLORS[key]
+          const heightPct = c <= EPS ? 0 : Math.max((c / maxCleared) * 100, 4)
           return (
-            <div key={key} className="flex items-center gap-3">
-              <span className="text-xs font-mono text-stone-400 w-12 shrink-0 text-right">{SIZE_LABELS[key]}</span>
-              <div className="flex-1 flex items-center gap-1.5 min-w-0">
-                <div className="flex-1 bg-stone-100 dark:bg-stone-800 rounded-full h-5 overflow-hidden relative">
-                  {down > 0 && (
-                    <div className="absolute inset-y-0 left-0 bg-stone-300 dark:bg-stone-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                  )}
-                  {cleared > 0 && (
-                    <div className="absolute inset-y-0 left-0 bg-emerald-500 dark:bg-emerald-600 rounded-full transition-all" style={{ width: `${Math.round((cleared / maxDown) * 100)}%` }} />
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-xs tabular-nums shrink-0 w-24">
-                  <span className={`font-semibold ${down === 0 ? 'text-stone-300 dark:text-stone-600' : 'text-stone-700 dark:text-stone-300'}`}>
-                    {down} down
-                  </span>
-                  {remaining > 0 && <span className="text-amber-600 dark:text-amber-400 font-medium">{remaining} left</span>}
-                  {down > 0 && remaining === 0 && <span className="text-emerald-600 dark:text-emerald-400 font-medium">cleared</span>}
-                </div>
-              </div>
+            <div key={key} className="flex-1 flex flex-col items-center justify-end gap-1.5 h-full min-w-0">
+              <span className={`text-xs font-medium tabular-nums ${c > 0 ? label : 'opacity-0'}`}>{c}</span>
+              <div className={`w-full rounded-t-sm ${bar}`} style={{ height: `${heightPct}%` }} />
             </div>
           )
         })}
       </div>
-      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-stone-100 dark:border-stone-800">
-        <span className="flex items-center gap-1.5 text-xs text-stone-400">
-          <span className="w-3 h-3 rounded-full bg-stone-300 dark:bg-stone-600 inline-block" /> Down
-        </span>
-        <span className="flex items-center gap-1.5 text-xs text-stone-400">
-          <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" /> Cleared
-        </span>
+
+      {/* Size labels + trees-down context per column */}
+      <div className="flex gap-4 mt-2">
+        {SIZE_KEYS.map(key => {
+          const d = treesDown[key]
+          const remaining = d - treesCleared[key]
+          return (
+            <div key={key} className="flex-1 text-center space-y-0.5">
+              <div className="text-[10px] text-stone-400">{SIZE_LABELS[key]}</div>
+              {d > 0 && (
+                <div className={`text-[10px] tabular-nums font-medium ${remaining > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'}`}>
+                  {remaining > 0 ? `${remaining} left` : `${d} ✓`}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
+
+      {hasAnyDown && (
+        <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800 text-xs text-stone-400">
+          Bars = cleared · "N left" = still on trail · "N ✓" = all cleared
+        </div>
+      )}
     </SectionCard>
   )
 }

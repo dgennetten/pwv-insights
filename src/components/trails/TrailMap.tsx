@@ -36,18 +36,20 @@ function FlyToTrail({ trail }: { trail: Trail | null }) {
   return null
 }
 
-function FitBounds({ trails }: { trails: Trail[] }) {
+function FitBounds({ trails, skip }: { trails: Trail[]; skip?: boolean }) {
   const map = useMap()
   const fitted = useRef(false)
 
   useEffect(() => {
-    if (fitted.current || trails.length === 0) return
+    // Skip initial fit when a trail is already selected — FlyToTrail handles zoom instead.
+    // Without this, FitBounds (which runs after FlyToTrail on mount) overrides the flyTo.
+    if (skip || fitted.current || trails.length === 0) return
     const withGeo = trails.filter(t => t.latitude && t.longitude)
     if (withGeo.length === 0) return
     const bounds = latLngBounds(withGeo.map(t => [t.latitude!, t.longitude!]))
     map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13, duration: 0.5 })
     fitted.current = true
-  }, [trails, map])
+  }, [trails, map, skip])
 
   return null
 }
@@ -133,7 +135,7 @@ export function TrailMap({ trails, selectedTrailId, hoveredTrailId, onSelectTrai
         ))}
 
         <FlyToTrail trail={selectedTrail} />
-        <FitBounds trails={mappable} />
+        <FitBounds trails={mappable} skip={!!selectedTrail} />
       </MapContainer>
     </div>
   )
