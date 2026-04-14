@@ -14,6 +14,7 @@ export interface TrailDetailPrefs {
   treesCleared: boolean
   hikersSeen: boolean
   hikersContacted: boolean
+  patrolEfficiency: boolean
 }
 
 export interface UserPreferences {
@@ -35,6 +36,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     treesCleared: true,
     hikersSeen: true,
     hikersContacted: true,
+    patrolEfficiency: false,
   },
 }
 

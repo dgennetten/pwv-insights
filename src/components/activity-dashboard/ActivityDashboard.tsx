@@ -412,14 +412,14 @@ export function ActivityDashboard({
         {kpi.hikersSeen && (
           <KpiCard label="Hikers Seen" value={summary.hikersSeen} delta={summary.hikersSeenDelta} icon={<Eye className="w-4 h-4" strokeWidth={1.5} />} />
         )}
+        {kpi.hikersContacted && (
+          <KpiCard label="Hikers Contacted" value={summary.hikersContacted ?? 0} delta={summary.hikersContactedDelta ?? 0} icon={<MessageSquare className="w-4 h-4" strokeWidth={1.5} />} />
+        )}
         {kpi.daysPatrolling && (
           <KpiCard label="Days Patrolling" value={summary.daysPatrolling ?? 0} delta={summary.daysPatrollingDelta ?? 0} icon={<CalendarDays className="w-4 h-4" strokeWidth={1.5} />} />
         )}
         {kpi.daysWeeding && (
           <KpiCard label="Days Weeding" value={summary.daysWeeding ?? 0} delta={summary.daysWeedingDelta ?? 0} icon={<Scissors className="w-4 h-4" strokeWidth={1.5} />} />
-        )}
-        {kpi.hikersContacted && (
-          <KpiCard label="Hikers Contacted" value={summary.hikersContacted ?? 0} delta={summary.hikersContactedDelta ?? 0} icon={<MessageSquare className="w-4 h-4" strokeWidth={1.5} />} />
         )}
       </div>
 
@@ -460,6 +460,7 @@ export function ActivityDashboard({
         <TrailCoverageList
           data={trailCoverage}
           pageSize={trailCoveragePageSize}
+          trailDetailPrefs={trailDetailPrefs}
           onTrailSelect={handleTrailRowSelect}
           onSortChange={onTrailCoverageSortChange}
         />

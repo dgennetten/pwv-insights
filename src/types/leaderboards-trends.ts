@@ -45,7 +45,8 @@ export interface Member {
   milesCovered: number;
   trailCount: number;
   trailTypes: number;
-  patrolTypeNames: string[];
+  /** Present when metric is trail-types; may be missing from API stubs. */
+  patrolTypeNames?: string[];
   totalHours: number;
   patrolHours: number;
   nonPatrolHours: number;

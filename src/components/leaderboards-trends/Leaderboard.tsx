@@ -64,6 +64,8 @@ function PodiumStage({ top3, currentUserId, metric, unit }: PodiumStageProps) {
       {slots.map(({ member, rank, platformH, avatarSize, textSize, valSize, badgeBg }) => {
         const isCurrentUser = member.id === currentUserId
         const value = member[metric]
+        const typeNames = member.patrolTypeNames ?? []
+        const firstName = (member.name ?? '').split(' ')[0] || '—'
 
         return (
           <div key={member.id} className="flex-1 flex flex-col items-center gap-1.5 max-w-[150px]">
@@ -89,14 +91,14 @@ function PodiumStage({ top3, currentUserId, metric, unit }: PodiumStageProps) {
 
             {/* Name + value */}
             <p className={`${textSize} text-stone-800 dark:text-stone-100 truncate max-w-[130px] text-center leading-tight`}>
-              {member.name.split(' ')[0]}
+              {firstName}
               {isCurrentUser && (
                 <span className="block text-[10px] font-normal text-emerald-500 leading-none mt-0.5">You</span>
               )}
             </p>
             {isTypes ? (
               <p className="text-[10px] font-normal text-stone-500 dark:text-stone-400 text-center leading-snug max-w-[130px]">
-                {member.patrolTypeNames.join(' · ')}
+                {typeNames.length ? typeNames.join(' · ') : '—'}
               </p>
             ) : (
               <p className={`${valSize} text-stone-700 dark:text-stone-200 tabular-nums leading-none`}>
@@ -130,6 +132,7 @@ function MemberRow({
 }) {
   const value = member[metric]
   const isTypes = metric === 'trailTypes'
+  const typeNames = member.patrolTypeNames ?? []
 
   return (
     <div className={`flex items-center gap-3 px-4 py-2.5 ${
@@ -157,7 +160,7 @@ function MemberRow({
         <span className={`text-xs font-normal text-right shrink-0 max-w-[55%] leading-snug ${
           isCurrentUser ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-500 dark:text-stone-400'
         }`}>
-          {member.patrolTypeNames.join(', ')}
+          {typeNames.length ? typeNames.join(', ') : '—'}
         </span>
       ) : (
         <span className={`text-sm font-bold tabular-nums shrink-0 ${

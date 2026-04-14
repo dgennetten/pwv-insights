@@ -171,19 +171,20 @@ export function SettingsPage() {
               <PrefRow label="Trails Covered"  checked={prefs.dashboardKpi.trailsCovered}   onChange={v => updateKpi('trailsCovered', v)} />
               <PrefRow label="Trees Cleared"   checked={prefs.dashboardKpi.treesCleared}    onChange={v => updateKpi('treesCleared', v)} />
               <PrefRow label="Hikers Seen"     checked={prefs.dashboardKpi.hikersSeen}      onChange={v => updateKpi('hikersSeen', v)} />
+              <PrefRow label="Hikers Contacted" checked={prefs.dashboardKpi.hikersContacted} onChange={v => updateKpi('hikersContacted', v)} />
               <PrefRow label="Days Patrolling" checked={prefs.dashboardKpi.daysPatrolling} onChange={v => updateKpi('daysPatrolling', v)} afterLabel={notImplementedNotice} />
               <PrefRow label="Days Weeding" checked={prefs.dashboardKpi.daysWeeding} onChange={v => updateKpi('daysWeeding', v)} afterLabel={notImplementedNotice} />
-              <PrefRow label="Hikers Contacted" checked={prefs.dashboardKpi.hikersContacted} onChange={v => updateKpi('hikersContacted', v)} />
             </SectionCard>
 
-            {/* ── Trail Detail ──────────────────────────────────────────── */}
+            {/* ── Trail Lists ───────────────────────────────────────────── */}
             <SectionCard
-              title="Trail Detail"
-              description="Choose which columns appear in the trail patrol breakdown."
+              title="Trail Lists"
+              description="Choose which columns appear in trail coverage lists and drill-downs."
             >
               <PrefRow label="Trees Cleared"    checked={prefs.trailDetail.treesCleared}    onChange={v => updateTrailDetail('treesCleared', v)} />
               <PrefRow label="Hikers Seen"      checked={prefs.trailDetail.hikersSeen}      onChange={v => updateTrailDetail('hikersSeen', v)} />
               <PrefRow label="Hikers Contacted" checked={prefs.trailDetail.hikersContacted} onChange={v => updateTrailDetail('hikersContacted', v)} />
+              <PrefRow label="Contact Efficiency" checked={prefs.trailDetail.patrolEfficiency} onChange={v => updateTrailDetail('patrolEfficiency', v)} />
             </SectionCard>
 
             {/* ── Save bar ──────────────────────────────────────────────── */}

@@ -292,13 +292,13 @@ try {
         $hikersContacted = (int)($hikerStats[$wid]['HikersContacted'] ?? 0);
         $length          = (float)$w['LengthMiles'];
 
-        // Efficiency score: contacts per vehicle-visit this season (null when no parking data).
-        // Score = min(100, contacts * 100 / total_vehicles).
-        // A score of 100 means we contacted as many people as there were vehicle-starts recorded.
+        // Efficiency score: hikers contacted per 50 vehicle-observations this season (null when no parking data).
+        // Score = min(100, contacts * 50 / total_vehicles).
+        // A score of 100 requires ~2 contacts per observed vehicle-start, making saturation meaningful.
         // Trails with no t_rpt_parking_lot entries for this period are excluded (null).
         $totalVehicles = $vehicleCounts[$wid] ?? 0;
         if ($totalVehicles > 0) {
-            $effScore = min(100, (int) round($hikersContacted * 100 / $totalVehicles));
+            $effScore = min(100, (int) round($hikersContacted * 50 / $totalVehicles));
         } else {
             $effScore = null;
         }

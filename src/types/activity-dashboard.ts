@@ -60,7 +60,7 @@ export interface TrailCoverageRow {
   lastPatrolDate: string | null  // ISO 8601 date; null if no patrols in period
 }
 
-export type TrailCoverageSortKey = 'trailName' | 'patrols' | 'hikersSeen'
+export type TrailCoverageSortKey = 'trailName' | 'patrols' | 'hikersSeen' | 'patrolEfficiency'
 
 /** A single patrol row for the trail coverage drill-down (scoped to the dashboard time range and member). */
 export interface CoveragePatrolRow {

@@ -52,14 +52,6 @@ function EfficiencyBadge({ score }: { score: number | null }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold tabular-nums ${cls}`}>{score}</span>
 }
 
-function DifficultyLabel({ difficulty }: { difficulty: Difficulty }) {
-  const cls: Record<Difficulty, string> = {
-    easy: 'text-emerald-600 dark:text-emerald-400',
-    moderate: 'text-amber-600 dark:text-amber-400',
-    hard: 'text-red-500 dark:text-red-400',
-  }
-  return <span className={`text-xs font-medium capitalize ${cls[difficulty]}`}>{difficulty}</span>
-}
 
 function SortButton({ sortKey, currentKey, currentDir, onSort, children }: {
   sortKey: SortKey; currentKey: SortKey; currentDir: SortDir
@@ -270,9 +262,7 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
                   <th className="px-4 py-3 text-left hidden lg:table-cell">
                     <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Area</span>
                   </th>
-                  <th className="px-4 py-3 text-left hidden sm:table-cell">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Difficulty</span>
-                  </th>
+
                   <th className="px-4 py-3 text-right">
                     <SortButton sortKey="patrolCount" currentKey={sortKey} currentDir={sortDir} onSort={handleSort}>Patrols</SortButton>
                   </th>
@@ -331,10 +321,6 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
 
                       <td className="px-4 py-3 hidden lg:table-cell">
                         <span className="text-xs text-stone-500 dark:text-stone-400">{trail.area}</span>
-                      </td>
-
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <DifficultyLabel difficulty={trail.difficulty} />
                       </td>
 
                       <td className="px-4 py-3 text-right">
