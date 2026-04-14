@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local DB dumps / exports (large; do not commit)
+db/
+
 # PHP secrets
 php/api/config.secret.php
 

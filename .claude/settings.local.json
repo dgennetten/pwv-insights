@@ -1,7 +1,28 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(ls /c/Users/dougl/GIT/pwv-insights/db/*.doc)",
+      "Bash(grep -A 30 \"^CREATE TABLE \\\\`lu_trail\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 20 \"^CREATE TABLE \\\\`lu_area\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 25 \"^CREATE TABLE \\\\`t_report\\\\` \" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 20 \"^CREATE TABLE \\\\`lu_trail_difficulty\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 3 \"INSERT INTO \\\\`lu_trail_difficulty\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 30 \"^CREATE TABLE \\\\`lu_worksite\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 5 \"^CREATE TABLE \\\\`t_rpt_tree_down\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 5 \"^CREATE TABLE \\\\`t_rpt_violation\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 5 \"^CREATE TABLE \\\\`t_rpt_trail_work\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 10 \"^CREATE TABLE \\\\`lu_wksite_trail\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 3 \"INSERT INTO \\\\`lu_wksite_trail\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 10 \"^CREATE TABLE \\\\`lu_wksite_area\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 3 \"INSERT INTO \\\\`lu_wksite_area\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 3 \"INSERT INTO \\\\`lu_viol_type\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 3 \"INSERT INTO \\\\`lu_trail_work\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(grep -A 3 \"INSERT INTO \\\\`lu_trail_clearing\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(npm install:*)",
+      "Bash(grep -A 10 \"^CREATE TABLE \\\\`t_member\\\\`\" /c/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_week.16.2026-04-13_10h00m.sql)",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s http://localhost:5173/)"
     ]
   }
 }
