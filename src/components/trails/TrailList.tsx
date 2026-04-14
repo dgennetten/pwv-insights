@@ -41,7 +41,10 @@ function formatLastPatrol(d: string) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function EfficiencyBadge({ score }: { score: number }) {
+function EfficiencyBadge({ score }: { score: number | null }) {
+  if (score === null) {
+    return <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold text-stone-300 dark:text-stone-600">—</span>
+  }
   const cls =
     score >= 75 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
     : score >= 50 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
@@ -140,7 +143,9 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
         const d = ad < bd ? -1 : ad > bd ? 1 : 0
         return sortDir === 'desc' ? -d : d
       }
-      const d = a[sortKey] - b[sortKey]
+      const av = a[sortKey] ?? -1
+      const bv = b[sortKey] ?? -1
+      const d = av - bv
       return sortDir === 'desc' ? -d : d
     })
     return r
@@ -379,9 +384,10 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
           <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3 text-amber-500" /> Needs more coverage</span>
           <span className="flex items-center gap-1"><TreePine className="w-3 h-3 text-orange-500" /> Uncleared trees</span>
           <span className="flex items-center gap-1">
-            Score: <span className="font-semibold text-emerald-600">75+</span> good ·
+            Contact score: <span className="font-semibold text-emerald-600">75+</span> good ·
             <span className="font-semibold text-amber-600">50–74</span> fair ·
-            <span className="font-semibold text-red-500">&lt;50</span> low
+            <span className="font-semibold text-red-500">&lt;50</span> low ·
+            <span className="font-semibold text-stone-400">—</span> no parking data
           </span>
         </div>
       </div>

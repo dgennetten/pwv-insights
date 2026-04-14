@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Tooltip, Popup, useMap } from 'react-leaflet'
 import { Icon, latLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { Trail } from '../../types/trails'
@@ -100,10 +100,15 @@ export function TrailMap({ trails, selectedTrailId, hoveredTrailId, onSelectTrai
             key={trail.id}
             position={[trail.latitude!, trail.longitude!]}
             icon={getIcon(trail)}
-            eventHandlers={{ click: () => onSelectTrail?.(trail.id) }}
           >
-            <Tooltip direction="top" sticky offset={[0, -30]}>
-              <div className="text-sm leading-snug min-w-[160px]">
+            {/* Hover tooltip — desktop only (invisible on touch devices) */}
+            <Tooltip direction="top" offset={[0, -30]} opacity={0.9}>
+              {trail.name}
+            </Tooltip>
+
+            {/* Tap/click popup — works on both desktop and mobile */}
+            <Popup>
+              <div className="text-sm leading-snug min-w-[160px] space-y-1.5">
                 <div className="font-semibold text-stone-900">{trail.name}</div>
                 {trail.trailNumber > 0 && (
                   <div className="text-xs text-stone-500">Trail #{trail.trailNumber}</div>
@@ -112,13 +117,18 @@ export function TrailMap({ trails, selectedTrailId, hoveredTrailId, onSelectTrai
                   href={`https://www.google.com/maps/dir/?api=1&destination=${trail.latitude},${trail.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-emerald-600 hover:underline mt-1 block"
-                  onClick={e => e.stopPropagation()}
+                  className="text-xs text-emerald-600 hover:underline block"
                 >
                   Driving directions →
                 </a>
+                <button
+                  onClick={() => onSelectTrail?.(trail.id)}
+                  className="text-xs font-semibold text-stone-600 hover:text-emerald-700 block pt-0.5"
+                >
+                  View trail details →
+                </button>
               </div>
-            </Tooltip>
+            </Popup>
           </Marker>
         ))}
 

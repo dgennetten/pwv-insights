@@ -43,7 +43,7 @@ export interface Trail {
   patrolFrequency: number; // patrols per month this season
   hikersSeen: number;
   hikersContacted: number;
-  efficiencyScore: number; // 0–100
+  efficiencyScore: number | null; // 0–100, null = no parking lot data
   underPatrolled: boolean;
   patrolHistory: PatrolEntry[];
   treesDown: TreeSizeBreakdown;

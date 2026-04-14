@@ -167,7 +167,29 @@ try {
         }
     }
 
-    // ── 7. Patrol history (up to 20 most-recent patrols per worksite) ────────
+    // ── 7. Parking lot vehicle counts ────────────────────────────────────────
+    // Sums the per-visit vehicle count (NumVehiclesStart preferred, else End)
+    // across all patrol reports that recorded parking data for each worksite.
+    // Worksites with zero matching rows have NO entry in $vehicleCounts.
+    $vehicleCounts = [];
+    $stmt = $db->prepare("
+        SELECT r.WksiteID,
+               SUM(COALESCE(pl.NumVehiclesStart, pl.NumVehiclesEnd, 0)) AS TotalVehicles
+        FROM t_rpt_parking_lot pl
+        JOIN t_report r ON r.ReportID = pl.ReportID
+        WHERE r.WksiteID IN ($in)
+          AND r.ActivityDate BETWEEN ? AND ?
+          AND r.GroupID = ?
+          AND (r.IsDraft     IS NULL OR r.IsDraft     = 0)
+          AND (r.IsUnofficial IS NULL OR r.IsUnofficial = 0)
+        GROUP BY r.WksiteID
+    ");
+    $stmt->execute([...$wksiteIds, $startDate, $endDate, TRAILS_PWV_GROUP]);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $vehicleCounts[(int)$row['WksiteID']] = (int)$row['TotalVehicles'];
+    }
+
+    // ── 8. Patrol history (up to 20 most-recent patrols per worksite) ────────
     $patrolHistory = [];
     $historyCounts = [];
     $stmt = $db->prepare("
@@ -212,13 +234,20 @@ try {
     foreach ($wksites as $w) {
         $wid    = (int)$w['WksiteID'];
         $stats  = $patrolStats[$wid] ?? [];
-        $patrol = (int)($stats['PatrolCount'] ?? 0);
-        $length = (float)$w['LengthMiles'];
+        $patrol  = (int)($stats['PatrolCount'] ?? 0);
+        $hikers  = (int)($stats['HikersContacted'] ?? 0);
+        $length  = (float)$w['LengthMiles'];
 
-        // Efficiency score: expect 1 patrol per 3 miles per month, minimum 0.5/month
-        $expectedPerMonth = max(0.5, $length / 3.0);
-        $expectedTotal    = max(1, $expectedPerMonth * $monthsSoFar);
-        $effScore         = min(100, (int) round($patrol * 100 / $expectedTotal));
+        // Efficiency score: contacts per vehicle-visit this season (null when no parking data).
+        // Score = min(100, contacts * 100 / total_vehicles).
+        // A score of 100 means we contacted as many people as there were vehicle-starts recorded.
+        // Trails with no t_rpt_parking_lot entries for this period are excluded (null).
+        if (array_key_exists($wid, $vehicleCounts)) {
+            $totalVehicles = $vehicleCounts[$wid];
+            $effScore = min(100, (int) round($hikers * 100 / max(1, $totalVehicles)));
+        } else {
+            $effScore = null;
+        }
 
         $difficulty = match((int)$w['DifficultyID']) {
             1       => 'easy',
@@ -240,8 +269,7 @@ try {
             ? array_values(array_filter(array_map('intval', explode(',', $w['TrailNumbers']))))
             : [];
         $primaryTrailNum  = $trailNums[0] ?? 0;
-        $patrolFreq       = round($patrol / $monthsSoFar, 2);
-        $hikers           = (int)($stats['HikersContacted'] ?? 0);
+        $patrolFreq = round($patrol / $monthsSoFar, 2);
 
         $trails[] = [
             'id'                    => 'w' . $wid,
@@ -259,7 +287,7 @@ try {
             'hikersContacted'       => $hikers,
             'lastPatrolDate'        => $stats['LastPatrolDate'] ?? null,
             'efficiencyScore'       => $effScore,
-            'underPatrolled'        => $effScore < 50,
+            'underPatrolled'        => $effScore !== null && $effScore < 50,
             'patrolHistory'         => $patrolHistory[$wid] ?? [],
             'treesDown'             => $down,
             'treesCleared'          => $cleared,

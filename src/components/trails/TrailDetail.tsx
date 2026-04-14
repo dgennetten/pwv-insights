@@ -282,29 +282,31 @@ export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPr
         </div>
 
         {/* Efficiency score bar */}
-        <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800 space-y-1.5">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-stone-400">Patrol efficiency score</span>
-            <div className="flex-1 bg-stone-100 dark:bg-stone-800 rounded-full h-2 max-w-48">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  trail.efficiencyScore >= 75 ? 'bg-emerald-500'
-                  : trail.efficiencyScore >= 50 ? 'bg-amber-400'
-                  : 'bg-red-400'
-                }`}
-                style={{ width: `${trail.efficiencyScore}%` }}
-              />
+        {trail.efficiencyScore !== null && (
+          <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800 space-y-1.5">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-stone-400">Contact efficiency</span>
+              <div className="flex-1 bg-stone-100 dark:bg-stone-800 rounded-full h-2 max-w-48">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    trail.efficiencyScore >= 75 ? 'bg-emerald-500'
+                    : trail.efficiencyScore >= 50 ? 'bg-amber-400'
+                    : 'bg-red-400'
+                  }`}
+                  style={{ width: `${trail.efficiencyScore}%` }}
+                />
+              </div>
+              <span className={`text-sm font-bold tabular-nums ${
+                trail.efficiencyScore >= 75 ? 'text-emerald-600 dark:text-emerald-400'
+                : trail.efficiencyScore >= 50 ? 'text-amber-600 dark:text-amber-400'
+                : 'text-red-500 dark:text-red-400'
+              }`}>{trail.efficiencyScore} / 100</span>
             </div>
-            <span className={`text-sm font-bold tabular-nums ${
-              trail.efficiencyScore >= 75 ? 'text-emerald-600 dark:text-emerald-400'
-              : trail.efficiencyScore >= 50 ? 'text-amber-600 dark:text-amber-400'
-              : 'text-red-500 dark:text-red-400'
-            }`}>{trail.efficiencyScore} / 100</span>
+            <p className="text-xs text-stone-400 dark:text-stone-500 leading-snug">
+              Hikers contacted per 100 vehicles recorded at the trailhead this season. Trails with no parking data are unscored.
+            </p>
           </div>
-          <p className="text-xs text-stone-400 dark:text-stone-500 leading-snug">
-            Patrols completed this season relative to the expected pace for this trail's length and months elapsed. 100 = fully on pace; below 50 = needs more coverage.
-          </p>
-        </div>
+        )}
       </div>
 
       {/* KPI cards */}

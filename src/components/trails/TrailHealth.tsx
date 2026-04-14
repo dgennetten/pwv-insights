@@ -1,5 +1,6 @@
 import { useState, useMemo, lazy, Suspense } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { Map, List } from 'lucide-react'
 import type { Trail } from '../../types/trails'
 import { TrailList } from './TrailList'
 import { TrailDetail } from './TrailDetail'
@@ -37,6 +38,7 @@ export function TrailHealth({
 
   const [hoveredTrailId, setHoveredTrailId] = useState<string | null>(null)
   const [mapOpen,        setMapOpen]        = useState(false)
+  const [mobileView,     setMobileView]     = useState<'list' | 'map'>('list')
 
   const enriched = useMemo(() => attachGeo(trails), [trails])
   const selectedTrail = enriched.find(t => t.id === selectedTrailId) ?? null
@@ -44,8 +46,9 @@ export function TrailHealth({
   const handleSelect = (id: string) => {
     setSearchParams({ trail: id })
     onSelectTrail?.(id)
-    // When a trail is selected, clear hover highlight
     setHoveredTrailId(null)
+    // On mobile: switch to list view so the detail panel becomes visible
+    setMobileView('list')
   }
 
   const handleBack = () => {
@@ -62,8 +65,13 @@ export function TrailHealth({
   if (mapOpen) {
     return (
       <div className="flex h-screen overflow-hidden">
-        {/* Left panel: list or detail */}
-        <div className="w-[480px] lg:w-[520px] xl:w-[580px] shrink-0 overflow-y-auto border-r border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950">
+
+        {/* Left panel — full-width on mobile when mobileView='list', hidden otherwise; fixed-width on sm+ */}
+        <div className={[
+          'shrink-0 overflow-y-auto border-r border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950',
+          mobileView === 'list' ? 'flex-1' : 'hidden',
+          'sm:flex sm:flex-initial sm:w-[480px] lg:w-[520px] xl:w-[580px]',
+        ].join(' ')}>
           {selectedTrail ? (
             <TrailDetail
               trail={selectedTrail}
@@ -82,8 +90,12 @@ export function TrailHealth({
           )}
         </div>
 
-        {/* Right panel: map — lazy loaded */}
-        <div className="flex-1 min-w-0">
+        {/* Right panel — full-width on mobile when mobileView='map', hidden otherwise; flex-1 on sm+ */}
+        <div className={[
+          'min-w-0',
+          mobileView === 'map' ? 'flex-1 h-full' : 'hidden',
+          'sm:flex sm:flex-1',
+        ].join(' ')}>
           <Suspense fallback={<div className="h-full flex items-center justify-center bg-stone-100 dark:bg-stone-900 text-sm text-stone-400">Loading map…</div>}>
             <TrailMap
               trails={enriched}
@@ -93,6 +105,17 @@ export function TrailHealth({
             />
           </Suspense>
         </div>
+
+        {/* Floating toggle pill — mobile only (sm:hidden) */}
+        <button
+          onClick={() => setMobileView(v => v === 'list' ? 'map' : 'list')}
+          className="sm:hidden fixed bottom-4 right-4 z-[1000] flex items-center gap-2 px-4 py-2.5 rounded-full bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-semibold shadow-lg shadow-stone-900/30 active:scale-95 transition-transform"
+          aria-label={mobileView === 'list' ? 'Show map' : 'Show list'}
+        >
+          {mobileView === 'list'
+            ? <><Map className="w-4 h-4" />Show Map</>
+            : <><List className="w-4 h-4" />Show List</>}
+        </button>
       </div>
     )
   }
@@ -109,7 +132,7 @@ export function TrailHealth({
     <TrailList
       trails={enriched}
       mapOpen={mapOpen}
-      onToggleMap={() => setMapOpen(true)}
+      onToggleMap={() => { setMapOpen(true); setMobileView('map') }}
       onSelectTrail={handleSelect}
       onHoverTrail={setHoveredTrailId}
     />
