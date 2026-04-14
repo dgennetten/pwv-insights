@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, Leaf, AlertTriangle, Footprints, PersonStanding, Lock } from 'lucide-react'
+import { ArrowLeft, Leaf, AlertTriangle, Footprints, PersonStanding, Lock, Map } from 'lucide-react'
 import type { Trail, Difficulty, TreeSizeBreakdown } from '../../types/trails'
 
 function formatDate(iso: string) {
@@ -225,9 +225,11 @@ interface TrailDetailProps {
   isAuthenticated?: boolean
   onBack?: () => void
   onSignInPrompt?: () => void
+  mapOpen?: boolean
+  onToggleMap?: () => void
 }
 
-export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPrompt }: TrailDetailProps) {
+export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPrompt, mapOpen, onToggleMap }: TrailDetailProps) {
   const totalDown    = SIZE_KEYS.reduce((s, k) => s + trail.treesDown[k], 0)
   const totalCleared = SIZE_KEYS.reduce((s, k) => s + trail.treesCleared[k], 0)
 
@@ -245,14 +247,33 @@ export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPr
 
   return (
     <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors mb-5 group"
-      >
-        <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-        Trails
-      </button>
+      <div className="flex items-center justify-between mb-5">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+          Trails
+        </button>
+
+        {onToggleMap && (
+          <button
+            type="button"
+            onClick={onToggleMap}
+            title={mapOpen ? 'Close map' : 'Show map'}
+            aria-label={mapOpen ? 'Close trail map' : 'Show trail map'}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              mapOpen
+                ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500 shadow-sm'
+                : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700'
+            }`}
+          >
+            <Map className="w-3.5 h-3.5" />
+            Map
+          </button>
+        )}
+      </div>
 
       {/* Trail header */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">

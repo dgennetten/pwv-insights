@@ -70,7 +70,7 @@ export function TrailHealth({
         <div className={[
           'shrink-0 overflow-y-auto border-r border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950',
           mobileView === 'list' ? 'flex-1' : 'hidden',
-          'sm:flex sm:flex-initial sm:w-[480px] lg:w-[520px] xl:w-[580px]',
+          'sm:flex sm:flex-initial sm:w-[480px] lg:w-[580px] xl:w-[680px]',
         ].join(' ')}>
           {selectedTrail ? (
             <TrailDetail
@@ -78,6 +78,8 @@ export function TrailHealth({
               isAuthenticated={isAuthenticated}
               onBack={handleBack}
               onSignInPrompt={onSignInPrompt}
+              mapOpen={mapOpen}
+              onToggleMap={() => setMapOpen(false)}
             />
           ) : (
             <TrailList
@@ -127,6 +129,8 @@ export function TrailHealth({
       isAuthenticated={isAuthenticated}
       onBack={handleBack}
       onSignInPrompt={onSignInPrompt}
+      mapOpen={mapOpen}
+      onToggleMap={() => { setMapOpen(true); setMobileView('map') }}
     />
   ) : (
     <TrailList

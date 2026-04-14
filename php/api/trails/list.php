@@ -242,9 +242,9 @@ try {
         // Score = min(100, contacts * 100 / total_vehicles).
         // A score of 100 means we contacted as many people as there were vehicle-starts recorded.
         // Trails with no t_rpt_parking_lot entries for this period are excluded (null).
-        if (array_key_exists($wid, $vehicleCounts)) {
-            $totalVehicles = $vehicleCounts[$wid];
-            $effScore = min(100, (int) round($hikers * 100 / max(1, $totalVehicles)));
+        $totalVehicles = $vehicleCounts[$wid] ?? 0;
+        if ($totalVehicles > 0) {
+            $effScore = min(100, (int) round($hikers * 100 / $totalVehicles));
         } else {
             $effScore = null;
         }

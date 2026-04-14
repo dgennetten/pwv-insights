@@ -160,12 +160,12 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
       <div className="sticky top-0 z-10 bg-stone-50 dark:bg-stone-950 px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-3 shadow-[0_1px_0_0] shadow-stone-200 dark:shadow-stone-800">
 
         <div className="mb-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 truncate min-w-0">
               Trails <span className="font-semibold text-stone-400 dark:text-stone-500">Season to Date</span>
             </h2>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {underPatrolledCount > 0 && (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-full">
                   <AlertTriangle className="w-3 h-3" />
