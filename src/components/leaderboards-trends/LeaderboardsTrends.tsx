@@ -7,7 +7,6 @@ import type {
   LeaderboardCategory,
 } from '../../types/leaderboards-trends'
 import { Leaderboard } from './Leaderboard'
-import { TrendCharts } from './TrendCharts'
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -115,8 +114,6 @@ function resolveInitialLeaderboardUI(
   return initialCategoryAndMetric(defaultLeaderboardCategory, defaultMetric)
 }
 
-type ActiveView = 'leaderboards' | 'trends'
-
 function LeaderboardSignInGate({
   children,
   onSignIn,
@@ -162,7 +159,6 @@ function LeaderboardSignInGate({
 
 export function LeaderboardsTrends({
   members,
-  trends,
   currentUserId,
   defaultTimeRange = 'year',
   defaultLeaderboardCategory = DEFAULT_CATEGORY,
@@ -175,7 +171,6 @@ export function LeaderboardsTrends({
   const isAuthenticated =
     currentUserId !== undefined && currentUserId !== null && String(currentUserId).trim() !== ''
 
-  const [view, setView] = useState<ActiveView>(() => (isAuthenticated ? 'leaderboards' : 'trends'))
   const [timeRange, setTimeRange] = useState<TimeRange>(defaultTimeRange)
   const [leaderboardCategory, setLeaderboardCategory] = useState<LeaderboardCategory>(() =>
     resolveInitialLeaderboardUI(defaultLeaderboardCategory, defaultMetric).category
@@ -222,7 +217,7 @@ export function LeaderboardsTrends({
       {/* Header row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">
-          Leaderboards & Trends
+          Leaderboards
         </h2>
 
         {/* Time range pill group */}
@@ -244,26 +239,8 @@ export function LeaderboardsTrends({
         </div>
       </div>
 
-      {/* View tabs */}
-      <div className="flex gap-0 border-b border-stone-200 dark:border-stone-800 mb-6">
-        {(['leaderboards', 'trends'] as ActiveView[]).map(v => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => setView(v)}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors capitalize ${
-              view === v
-                ? 'border-emerald-500 text-emerald-700 dark:text-emerald-400'
-                : 'border-transparent text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200'
-            }`}
-          >
-            {v === 'leaderboards' ? 'Leaderboards' : 'Trends'}
-          </button>
-        ))}
-      </div>
-
-      {/* Active view */}
-      {view === 'leaderboards' && isAuthenticated && (
+      {/* Leaderboard */}
+      {isAuthenticated && (
         <Leaderboard
           members={sortedMembers}
           currentUserId={currentUserId!}
@@ -275,7 +252,7 @@ export function LeaderboardsTrends({
           onMetricChange={handleMetric}
         />
       )}
-      {view === 'leaderboards' && !isAuthenticated && (
+      {!isAuthenticated && (
         <LeaderboardSignInGate onSignIn={onSignInPrompt}>
           <Leaderboard
             members={sortedMembers}
@@ -289,7 +266,6 @@ export function LeaderboardsTrends({
           />
         </LeaderboardSignInGate>
       )}
-      {view === 'trends' && <TrendCharts trends={trends} timeRange={timeRange} />}
     </div>
   )
 }
