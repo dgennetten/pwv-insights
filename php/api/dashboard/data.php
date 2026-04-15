@@ -195,13 +195,31 @@ function dateRange(string $r): array {
       return [date('Y-m-d', strtotime('-30 days')), $today,
               date('Y-m-d', strtotime('-60 days')), date('Y-m-d', strtotime('-31 days'))];
     case '3m':
-      $sy = date('Y-01-01');
-      $py = (date('Y') - 1) . '-01-01';
-      $pe = date((date('Y') - 1) . substr($today, 4));
+      // "Season to Date" = Oct 1 of current season through today
+      $mo = (int)date('n');
+      $yr = (int)date('Y');
+      $sy = ($mo >= 10 ? $yr : $yr - 1) . '-10-01';
+      $py = ($mo >= 10 ? $yr - 1 : $yr - 2) . '-10-01';
+      $pe = ($mo >= 10 ? $yr - 1 : $yr - 2) . substr($today, 4);
       return [$sy, $today, $py, $pe];
     case '1y':
-      return [date('Y-m-d', strtotime('-365 days')), $today,
-              date('Y-m-d', strtotime('-730 days')), date('Y-m-d', strtotime('-366 days'))];
+      // "Last Season" = Oct 1 – Sep 30 prior to the current season
+      $mo = (int)date('n');
+      $yr = (int)date('Y');
+      if ($mo >= 10) {
+        // Current season started Oct 1 this year; last season was Oct–Sep last year
+        $ls  = ($yr - 1) . '-10-01';
+        $le  = $yr . '-09-30';
+        $pls = ($yr - 2) . '-10-01';
+        $ple = ($yr - 1) . '-09-30';
+      } else {
+        // Current season started Oct 1 last year; last season was Oct–Sep the year before
+        $ls  = ($yr - 2) . '-10-01';
+        $le  = ($yr - 1) . '-09-30';
+        $pls = ($yr - 3) . '-10-01';
+        $ple = ($yr - 2) . '-09-30';
+      }
+      return [$ls, $le, $pls, $ple];
     default: // all
       return [null, null, null, null];
   }

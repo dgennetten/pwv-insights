@@ -27,7 +27,7 @@ import { TrailCoveragePatrolDetail } from './TrailCoveragePatrolDetail'
 const ACTIVE_LABEL: Record<TimeRange, string> = {
   '7d':  'Active this week',
   '1m':  'Active this month',
-  '3m':  'Active this quarter',
+  '3m':  'Active this season',
   '1y':  'Active this year',
   'all': 'Active (all time)',
 }
@@ -36,7 +36,7 @@ const TIME_RANGES: { value: TimeRange; label: string }[] = [
   { value: '7d',  label: 'Last 7 Days' },
   { value: '1m',  label: 'Last Month' },
   { value: '3m',  label: 'Season to Date' },
-  { value: '1y',  label: 'Last Year' },
+  { value: '1y',  label: 'Last Season' },
   { value: 'all', label: 'All Time' },
 ]
 
