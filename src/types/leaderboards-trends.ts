@@ -1,4 +1,4 @@
-export type TimeRange = 'week' | 'month' | 'quarter' | 'year' | 'all';
+export type TimeRange = 'week' | 'month' | 'quarter' | 'year' | 'last_season' | 'all';
 
 /** Trends tab: current-period view vs year-over-year (dropdown disabled when page time range is All Time). */
 export type TrendYearComparison = 'thisYear' | 'yearOverYear';

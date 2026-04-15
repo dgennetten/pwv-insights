@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 try {
     $timeRange = $_GET['timeRange'] ?? 'year';
-    if (!in_array($timeRange, ['week', 'month', 'quarter', 'year', 'all'], true)) {
+    if (!in_array($timeRange, ['week', 'month', 'quarter', 'year', 'last_season', 'all'], true)) {
         $timeRange = 'year';
     }
 
@@ -62,6 +62,12 @@ function lbDateRange(string $r): array {
             // Patrol season runs Oct 1 – Sep 30
             $seasonStart = ($m >= 10) ? "$y-10-01" : ($y - 1) . '-10-01';
             return [$seasonStart, $today];
+        case 'last_season': {
+            // Previous full season: Oct 1 of (curSeasonYear-1) through Sep 30 of curSeasonYear
+            $curSeasonYear  = ($m >= 10) ? $y : $y - 1;
+            $prevSeasonYear = $curSeasonYear - 1;
+            return ["$prevSeasonYear-10-01", "$curSeasonYear-09-30"];
+        }
         default: // all
             return [null, null];
     }

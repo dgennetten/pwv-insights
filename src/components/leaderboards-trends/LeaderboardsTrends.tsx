@@ -12,8 +12,9 @@ import { Leaderboard } from './Leaderboard'
 
 const TIME_RANGES: { value: TimeRange; label: string }[] = [
   { value: 'month', label: 'Month to Date' },
-  { value: 'year',  label: 'Season to Date' },
-  { value: 'all',   label: 'All Time' },
+  { value: 'year',        label: 'Season to Date' },
+  { value: 'last_season', label: 'Last Season' },
+  { value: 'all',         label: 'All Time' },
 ]
 
 const CATEGORY_OPTIONS: { value: LeaderboardCategory; label: string }[] = [
