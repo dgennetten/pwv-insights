@@ -32,13 +32,20 @@ if (!$otpRow) {
 // Mark code as used
 $db->prepare('UPDATE otp_codes SET used = 1 WHERE id = ?')->execute([$otpRow['id']]);
 
-// Look up member
-$stmt = $db->prepare(
-  'SELECT PersonID, FirstName, LastName FROM t_member
-   WHERE LOWER(EmailAddress) = ? LIMIT 1'
-);
-$stmt->execute([$email]);
-$member = $stmt->fetch(PDO::FETCH_ASSOC);
+// Look up member — prefer the PersonID with the most patrol activity when duplicates exist
+// (AWS syncs can insert new rows rather than update, leaving stale PersonIDs for the same email)
+$preferredId = resolvePreferredPersonId($db, $email);
+$member = null;
+if ($preferredId !== null) {
+  $stmt = $db->prepare('SELECT PersonID, FirstName, LastName FROM t_member WHERE PersonID = ? LIMIT 1');
+  $stmt->execute([$preferredId]);
+  $member = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+if ($member === null) {
+  $stmt = $db->prepare('SELECT PersonID, FirstName, LastName FROM t_member WHERE LOWER(EmailAddress) = ? LIMIT 1');
+  $stmt->execute([$email]);
+  $member = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
 
 if (!$member) {
   jsonOut(['success' => false, 'error' => 'Member not found']);

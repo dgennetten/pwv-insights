@@ -33,12 +33,18 @@ if (!devAutoLoginAllowed()) {
 $email = 'douglas@gennetten.com';
 
 $db = getDb();
-$stmt = $db->prepare(
-  'SELECT PersonID, FirstName, LastName FROM t_member
-   WHERE LOWER(EmailAddress) = ? LIMIT 1'
-);
-$stmt->execute([$email]);
-$member = $stmt->fetch(PDO::FETCH_ASSOC);
+$preferredId = resolvePreferredPersonId($db, strtolower($email));
+$member = null;
+if ($preferredId !== null) {
+  $stmt = $db->prepare('SELECT PersonID, FirstName, LastName FROM t_member WHERE PersonID = ? LIMIT 1');
+  $stmt->execute([$preferredId]);
+  $member = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+if ($member === null) {
+  $stmt = $db->prepare('SELECT PersonID, FirstName, LastName FROM t_member WHERE LOWER(EmailAddress) = ? LIMIT 1');
+  $stmt->execute([strtolower($email)]);
+  $member = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
 
 if (!$member) {
   jsonOut(['success' => false, 'error' => 'Member not found'], 404);

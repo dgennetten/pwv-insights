@@ -45,17 +45,44 @@ if ($expiresTs === false || $expiresTs < time()) {
 $email = strtolower(trim($row['EmailAddress']));
 $role  = (strtolower($email) === strtolower(ADMIN_EMAIL)) ? 'admin' : 'member';
 
+// Re-resolve the preferred PersonID in case the AWS sync created a newer t_member record
+// for this email after the original session was issued.  If the preferred ID differs from
+// the stored one and the t_member row exists, update the session and return the new ID so
+// "Me" on the dashboard matches the same PersonID as the "Other member" members list.
+$sessionPersonId = (int) $row['person_id'];
+$preferredId     = resolvePreferredPersonId($db, $email) ?? $sessionPersonId;
+if ($preferredId !== $sessionPersonId) {
+  try {
+    $db->prepare('UPDATE auth_sessions SET person_id = ? WHERE token = ?')->execute([$preferredId, $token]);
+    $sessionPersonId = $preferredId;
+  } catch (Throwable $e) {
+    error_log('session.php personId refresh: ' . $e->getMessage());
+    // Non-fatal: continue with the original person_id
+  }
+}
+
 // Remember-this-device restores hit session.php, not verify-otp.php — log those too.
-authLoginLogRecord($db, (int) $row['person_id']);
-memberLastLoginTouch($db, (int) $row['person_id']);
+authLoginLogRecord($db, $sessionPersonId);
+memberLastLoginTouch($db, $sessionPersonId);
 syncRequestPullFromAwsIfStale($db);
+
+// Also fetch name/email from the preferred member record if it changed
+$name = trim($row['FirstName'] . ' ' . $row['LastName']);
+if ($preferredId !== (int) $row['person_id']) {
+  $nameStmt = $db->prepare('SELECT FirstName, LastName FROM t_member WHERE PersonID = ? LIMIT 1');
+  $nameStmt->execute([$preferredId]);
+  $nameRow = $nameStmt->fetch(PDO::FETCH_ASSOC);
+  if ($nameRow) {
+    $name = trim($nameRow['FirstName'] . ' ' . $nameRow['LastName']);
+  }
+}
 
 jsonOut([
   'success'   => true,
   'token'     => $token,
   'email'     => $email,
-  'name'      => trim($row['FirstName'] . ' ' . $row['LastName']),
+  'name'      => $name,
   'role'      => $role,
-  'personId'  => (int)$row['person_id'],
+  'personId'  => $sessionPersonId,
   'expiresAt' => $expiresTs * 1000,
 ]);

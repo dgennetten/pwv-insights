@@ -187,6 +187,28 @@ function userPrefsEnsureTable(PDO $db): void {
   }
 }
 
+/**
+ * When the same email appears in t_member more than once (e.g. after an AWS sync that inserts
+ * rather than updates), return the PersonID that has the most patrol activity in t_report_member.
+ * Falls back to the highest PersonID as a tiebreaker so the result is always deterministic.
+ *
+ * Auth callers (verify-otp, session refresh, dev-auto-login) use this instead of a bare
+ * LIMIT 1 so that "Me" on the dashboard resolves to the same PersonID as the members list.
+ */
+function resolvePreferredPersonId(PDO $db, string $emailLower): ?int {
+  $stmt = $db->prepare(
+    'SELECT m.PersonID
+     FROM t_member m
+     WHERE LOWER(m.EmailAddress) = ?
+     ORDER BY (SELECT COUNT(*) FROM t_report_member rm WHERE rm.PersonID = m.PersonID) DESC,
+              m.PersonID DESC
+     LIMIT 1'
+  );
+  $stmt->execute([$emailLower]);
+  $row = $stmt->fetchColumn();
+  return $row !== false ? (int)$row : null;
+}
+
 function jsonOut(array $data, int $status = 200): never {
   http_response_code($status);
   header('Content-Type: application/json');
