@@ -257,7 +257,10 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
               <thead>
                 <tr className="border-b border-stone-100 dark:border-stone-800">
                   <th className="px-4 py-3 text-left">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Trail</span>
+                    <span className="text-xs font-semibold tracking-wider text-stone-400">
+                      <span className="uppercase">Trail</span>
+                      <span className="font-semibold normal-case"> — Click for Details</span>
+                    </span>
                   </th>
                   <th className="px-4 py-3 text-left hidden lg:table-cell">
                     <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Area</span>
