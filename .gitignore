@@ -17,6 +17,7 @@ db/
 
 # PHP secrets
 php/api/config.secret.php
+auth-service/api/config.secret.php
 
 # Deploy script (contains live SSH credentials)
 scripts/deploy.sh

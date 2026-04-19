@@ -36,9 +36,7 @@ $db->prepare('INSERT INTO otp_codes (app_id, email, code, expires_at) VALUES (?,
 // Send the email
 $subject = 'Your sign-in code';
 $message = "Your one-time sign-in code is:\n\n    {$code}\n\nIt expires in " . OTP_TTL_MINUTES . " minutes.\n\nIf you didn't request this, you can ignore this email.";
-$headers = "From: " . MAIL_FROM_NAME . " <" . MAIL_FROM . ">\r\n"
-         . "Content-Type: text/plain; charset=UTF-8\r\n";
 
-mail($email, $subject, $message, $headers);
+sendOtpMail($email, $subject, $message);
 
 jsonOut(['ok' => true]);

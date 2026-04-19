@@ -209,6 +209,46 @@ function resolvePreferredPersonId(PDO $db, string $emailLower): ?int {
   return $row !== false ? (int)$row : null;
 }
 
+function sendOtpMail(string $to, string $subject, string $body): void {
+  $secrets = getSecrets();
+  $smtp    = $secrets['smtp']          ?? null;
+  $srcDir  = $secrets['phpmailer_src'] ?? '';
+
+  if ($srcDir && is_array($smtp) && !empty($smtp['username'])) {
+    if (!file_exists($srcDir . '/PHPMailer.php')) {
+      error_log("sendOtpMail: PHPMailer not found at $srcDir");
+      return;
+    }
+    require_once $srcDir . '/Exception.php';
+    require_once $srcDir . '/PHPMailer.php';
+    require_once $srcDir . '/SMTP.php';
+
+    try {
+      $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+      $mail->isSMTP();
+      $mail->Host       = $smtp['host'];
+      $mail->SMTPAuth   = $smtp['auth'] ?? true;
+      $mail->Username   = $smtp['username'];
+      $mail->Password   = $smtp['password'];
+      $mail->SMTPSecure = $smtp['secure'] ?? 'tls';
+      $mail->Port       = (int) ($smtp['port'] ?? 587);
+      $mail->Timeout    = (int) ($smtp['timeout'] ?? 10);
+      $mail->setFrom($smtp['from_email'] ?? MAIL_FROM, $smtp['from_name'] ?? MAIL_FROM_NAME);
+      $mail->addAddress($to);
+      $mail->Subject = $subject;
+      $mail->Body    = $body;
+      $mail->isHTML(false);
+      $mail->send();
+    } catch (PHPMailer\PHPMailer\Exception $e) {
+      error_log('sendOtpMail SMTP error: ' . $e->getMessage());
+    }
+  } else {
+    $headers = 'From: ' . MAIL_FROM_NAME . ' <' . MAIL_FROM . ">\r\n"
+             . "Content-Type: text/plain; charset=UTF-8\r\n";
+    mail($to, $subject, $body, $headers);
+  }
+}
+
 function jsonOut(array $data, int $status = 200): never {
   http_response_code($status);
   header('Content-Type: application/json');
