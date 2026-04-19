@@ -64,6 +64,7 @@ export type TrailCoverageSortKey = 'trailName' | 'patrols' | 'hikersSeen' | 'pat
 
 /** A single patrol row for the trail coverage drill-down (scoped to the dashboard time range and member). */
 export interface CoveragePatrolRow {
+  reportId: number
   date: string // ISO 8601 date (YYYY-MM-DD)
   memberName: string
   hikersSeen: number

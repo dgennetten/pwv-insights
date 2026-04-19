@@ -31,7 +31,8 @@
       "Bash(where python:*)",
       "Bash(where python3:*)",
       "Bash(node:*)",
-      "Bash(cmd /c \"node_modules\\\\.bin\\\\tsc.cmd --noEmit\")"
+      "Bash(cmd /c \"node_modules\\\\.bin\\\\tsc.cmd --noEmit\")",
+      "Bash(grep *)"
     ]
   }
 }

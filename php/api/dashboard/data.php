@@ -1157,6 +1157,7 @@ function patrolsByTrail(PDO $db, ?string $s, ?string $e, $ctx): array {
     $tid = (int)$row['TrailID'];
     if (!isset($result[$tid])) $result[$tid] = [];
     $result[$tid][] = [
+      'reportId'        => (int)$row['ReportID'],
       'date'            => $row['date'],
       'memberName'      => $row['memberName'],
       'hikersSeen'      => (int)$row['hikersSeen'],

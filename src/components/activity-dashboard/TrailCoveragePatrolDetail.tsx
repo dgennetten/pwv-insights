@@ -104,7 +104,7 @@ export function TrailCoveragePatrolDetail({
               <thead>
                 <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/50">
                   <th className="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
-                    Date
+                    Date / ID
                   </th>
                   <th className="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[6rem]">
                     Member
@@ -127,10 +127,11 @@ export function TrailCoveragePatrolDetail({
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-                {sorted.map((row, i) => (
-                  <tr key={`${row.date}-${i}`} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
+                {sorted.map((row) => (
+                  <tr key={row.reportId} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs text-stone-500 dark:text-stone-400 whitespace-nowrap align-top">
-                      {formatDate(row.date)}
+                      <div>{formatDate(row.date)}</div>
+                      <div className="text-[10px] text-stone-400 dark:text-stone-600 tabular-nums mt-0.5">#{row.reportId}</div>
                     </td>
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-stone-800 dark:text-stone-200 break-words max-w-[11rem] sm:max-w-none align-top">
                       {row.memberName}
