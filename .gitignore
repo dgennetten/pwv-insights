@@ -19,6 +19,9 @@ db/
 php/api/config.secret.php
 auth-service/api/config.secret.php
 
+# Throwaway test scripts (may contain credentials)
+**/smtp-test.php
+
 # Deploy script (contains live SSH credentials)
 scripts/deploy.sh
 
