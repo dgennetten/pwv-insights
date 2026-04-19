@@ -152,29 +152,48 @@ function ViolationsSection({ violations }: { violations: Trail['violationsByCate
 
 function PatrolHistorySection({ history }: { history: Trail['patrolHistory'] }) {
   return (
-    <SectionCard title="Patrol History">
+    <SectionCard title="Patrols">
       {history.length === 0 ? (
         <p className="text-sm text-stone-400 dark:text-stone-500">No patrols recorded.</p>
       ) : (
-        <div className="divide-y divide-stone-100 dark:divide-stone-800 -mx-4">
-          {history.map((entry, i) => (
-            <div key={i} className="flex items-center justify-between px-4 py-2.5">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-stone-800 dark:text-stone-200">{entry.memberName}</span>
-                    <span className="text-xs text-stone-400">{formatDate(entry.date)}</span>
-                  </div>
-                  <div className="text-xs text-stone-400 mt-0.5">{entry.durationHours}h patrol</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0 ml-3 text-sm tabular-nums">
-                <span className="text-stone-500">{entry.hikersSeen} seen</span>
-                <span className="font-semibold text-stone-700 dark:text-stone-300">{entry.hikersContacted} contacted</span>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto -mx-4">
+          <table className="w-full min-w-[20rem] text-sm">
+            <thead>
+              <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/50">
+                <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                  Date / ID
+                </th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[6rem]">
+                  Member
+                </th>
+                <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                  Seen
+                </th>
+                <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                  Contacted
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
+              {history.map((entry) => (
+                <tr key={entry.reportId} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
+                  <td className="px-4 py-2.5 text-xs text-stone-500 dark:text-stone-400 whitespace-nowrap align-top">
+                    <div>{formatDate(entry.date)}</div>
+                    <div className="text-[10px] text-stone-400 dark:text-stone-600 tabular-nums mt-0.5">#{entry.reportId}</div>
+                  </td>
+                  <td className="px-4 py-2.5 text-xs sm:text-sm font-medium text-stone-800 dark:text-stone-200 break-words max-w-[11rem] sm:max-w-none align-top">
+                    {entry.memberName}
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
+                    {entry.hikersSeen}
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
+                    {entry.hikersContacted}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </SectionCard>

@@ -9,11 +9,11 @@ export interface TreeSizeBreakdown {
 }
 
 export interface PatrolEntry {
+  reportId: number;
   date: string;           // ISO date string (YYYY-MM-DD)
   memberName: string;
   hikersSeen: number;
   hikersContacted: number;
-  durationHours: number;
 }
 
 export interface ViolationCategory {

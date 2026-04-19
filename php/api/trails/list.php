@@ -3,6 +3,38 @@ require_once __DIR__ . '/../config.php';
 
 define('TRAILS_PWV_GROUP', 10);
 
+function trailsTableHasColumn(PDO $db, string $table, string $col): bool {
+    static $cache = [];
+    if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $table) || !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $col)) {
+        return false;
+    }
+    $key = $table . '.' . $col;
+    if (array_key_exists($key, $cache)) return $cache[$key];
+    try {
+        $db->query('SELECT `' . $col . '` FROM `' . $table . '` LIMIT 0');
+        $cache[$key] = true;
+    } catch (Throwable $e) {
+        $cache[$key] = false;
+    }
+    return $cache[$key];
+}
+
+function trailsReportMemberPersonIdColumn(PDO $db): string {
+    static $resolved = null;
+    if ($resolved !== null) return $resolved;
+    $secrets = getSecrets();
+    if (!empty($secrets['t_report_member_person_column']) && is_string($secrets['t_report_member_person_column'])) {
+        $c = $secrets['t_report_member_person_column'];
+        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $c) && trailsTableHasColumn($db, 't_report_member', $c)) {
+            return $resolved = $c;
+        }
+    }
+    foreach (['PersonID', 'MemberPersonID', 'VolunteerPersonID', 'MemberID'] as $c) {
+        if (trailsTableHasColumn($db, 't_report_member', $c)) return $resolved = $c;
+    }
+    return $resolved = 'PersonID';
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -227,29 +259,19 @@ try {
     // ── 8. Patrol history (up to 20 most-recent patrols per worksite) ────────
     $patrolHistory = [];
     $historyCounts = [];
+    $rmPid = trailsReportMemberPersonIdColumn($db);
     $stmt = $db->prepare("
         SELECT
             r.WksiteID,
+            r.ReportID,
             r.ActivityDate,
-            CASE
-                WHEN m.FirstName IS NOT NULL
-                THEN CONCAT(m.FirstName, ' ', LEFT(m.LastName, 1), '.')
-                ELSE 'Unknown'
-            END AS MemberName,
-            COALESCE(obs.HikersSeen,      0) AS HikersSeen,
-            COALESCE(obs.HikersContacted, 0) AS HikersContacted,
-            ROUND(
-                CASE
-                    WHEN rm.TimeStarted IS NOT NULL AND rm.TimeEnded IS NOT NULL
-                    THEN TIMESTAMPDIFF(MINUTE, rm.TimeStarted, rm.TimeEnded) / 60.0
-                    WHEN r.TimeStarted IS NOT NULL AND r.TimeEnded IS NOT NULL
-                    THEN TIMESTAMPDIFF(MINUTE, r.TimeStarted, r.TimeEnded) / 60.0
-                    ELSE 0
-                END
-            , 1) AS DurationHours
+            COALESCE(GROUP_CONCAT(DISTINCT CONCAT(m.FirstName, ' ', m.LastName)
+                ORDER BY m.LastName SEPARATOR ' & '), 'Unknown') AS MemberName,
+            COALESCE(MAX(obs.HikersSeen),      0) AS HikersSeen,
+            COALESCE(MAX(obs.HikersContacted), 0) AS HikersContacted
         FROM t_report r
-        LEFT JOIN t_member m ON m.PersonID = r.ReportWriterID
-        LEFT JOIN t_report_member rm ON rm.ReportID = r.ReportID AND rm.PersonID = r.ReportWriterID
+        LEFT JOIN t_report_member rm ON rm.ReportID = r.ReportID
+        LEFT JOIN t_member m ON m.PersonID = rm.$rmPid
         LEFT JOIN (
             SELECT o.ReportID,
                    SUM(o.NumSeen)      AS HikersSeen,
@@ -263,6 +285,7 @@ try {
           AND r.GroupID = ?
           AND (r.IsDraft     IS NULL OR r.IsDraft     = 0)
           AND (r.IsUnofficial IS NULL OR r.IsUnofficial = 0)
+        GROUP BY r.WksiteID, r.ReportID, r.ActivityDate
         ORDER BY r.WksiteID, r.ActivityDate DESC
     ");
     $stmt->execute([...$wksiteIds, $startDate, $endDate, TRAILS_PWV_GROUP]);
@@ -270,11 +293,11 @@ try {
         $wid = (int)$row['WksiteID'];
         if (($historyCounts[$wid] ?? 0) >= 20) continue;
         $patrolHistory[$wid][] = [
+            'reportId'        => (int)$row['ReportID'],
             'date'            => $row['ActivityDate'],
             'memberName'      => $row['MemberName'],
             'hikersSeen'      => (int)$row['HikersSeen'],
             'hikersContacted' => (int)$row['HikersContacted'],
-            'durationHours'   => (float)$row['DurationHours'],
         ];
         $historyCounts[$wid] = ($historyCounts[$wid] ?? 0) + 1;
     }
