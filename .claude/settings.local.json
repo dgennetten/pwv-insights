@@ -32,7 +32,8 @@
       "Bash(where python3:*)",
       "Bash(node:*)",
       "Bash(cmd /c \"node_modules\\\\.bin\\\\tsc.cmd --noEmit\")",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(bash db/generate-repair-sql.sh)"
     ]
   }
 }
