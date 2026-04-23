@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Emerald-600 rounded background, matching app shell brand badge -->
+  <rect width="32" height="32" rx="7" fill="#059669"/>
+  <!-- Lucide Mountain icon, white, strokeWidth=2 equivalent after scale -->
+  <g transform="translate(7, 7) scale(0.75)">
+    <path d="m8 3 4 8 5-5 5 15H2L8 3z"
+          fill="none"
+          stroke="white"
+          stroke-width="2.667"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+  </g>
+</svg>
