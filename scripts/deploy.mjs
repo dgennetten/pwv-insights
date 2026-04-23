@@ -18,14 +18,19 @@ const SSH_TARGET      = `${SSH_USER}@${SSH_HOST}`
 const USE_TAR         = process.env.DEPLOY_USE_TAR === '1'
 
 // SSH multiplexing: authenticate once, reuse the socket for all transfers.
-// ControlPath uses forward slashes — required by OpenSSH on Windows too.
-const CTL_PATH = join(tmpdir(), `pwv-deploy-${process.pid}.ctl`).replace(/\\/g, '/')
-const SSH_MUX  = `-o ControlMaster=auto -o ControlPath="${CTL_PATH}" -o ControlPersist=30`
+// Disabled on Windows — OpenSSH for Windows doesn't support ControlMaster reliably.
+// With key-based auth in place this only saves a fraction of a second anyway.
+const CTL_PATH = IS_WIN ? null : join(tmpdir(), `pwv-deploy-${process.pid}.ctl`)
+const SSH_MUX  = CTL_PATH
+  ? `-o ControlMaster=auto -o ControlPath="${CTL_PATH}" -o ControlPersist=30`
+  : ''
 
-process.on('exit', () => {
-  spawnSync('ssh', ['-O', 'exit', '-o', `ControlPath=${CTL_PATH}`, SSH_TARGET], { stdio: 'ignore' })
-  try { rmSync(CTL_PATH) } catch { /* already gone */ }
-})
+if (CTL_PATH) {
+  process.on('exit', () => {
+    spawnSync('ssh', ['-O', 'exit', '-o', `ControlPath=${CTL_PATH}`, SSH_TARGET], { stdio: 'ignore' })
+    try { rmSync(CTL_PATH) } catch { /* already gone */ }
+  })
+}
 
 function die(msg) { console.error(msg); process.exit(1) }
 
@@ -59,14 +64,16 @@ console.log('  ✓ dist/ ready\n')
 // ── Transfer ──────────────────────────────────────────────────────────────────
 const useRsync = !USE_TAR && canRun('rsync')
 
+const rsyncSshOpt = SSH_MUX ? ['-e', `ssh ${SSH_MUX}`] : []
+
 if (useRsync) {
   console.log(`▶ Uploading frontend → ${SSH_TARGET}:${REMOTE_WEB_ROOT}/`)
-  run('rsync', ['-az', '--delete', '-e', `ssh ${SSH_MUX}`, '--exclude', '.htaccess',
+  run('rsync', ['-az', '--delete', ...rsyncSshOpt, '--exclude', '.htaccess',
     'dist/', `${SSH_TARGET}:${REMOTE_WEB_ROOT}/`])
   console.log('  ✓ Frontend deployed\n')
 
   console.log(`▶ Uploading PHP API → ${SSH_TARGET}:${REMOTE_PHP_ROOT}/`)
-  run('rsync', ['-az', '-e', `ssh ${SSH_MUX}`,
+  run('rsync', ['-az', ...rsyncSshOpt,
     '--exclude', 'config.secret.php',
     '--exclude', 'config.secret.example.php',
     'php/api/', `${SSH_TARGET}:${REMOTE_PHP_ROOT}/`])
@@ -86,15 +93,16 @@ if (useRsync) {
 
   console.log(`▶ Uploading frontend → ${SSH_TARGET}:${REMOTE_WEB_ROOT}/ (tar+ssh via ${bash})`)
   console.log('  Note: stale hashed files may linger — prefer rsync when possible')
+  const sshCmd = SSH_MUX ? `ssh ${SSH_MUX}` : 'ssh'
   run(bash, ['-c',
     `cd dist && tar cf - --exclude='./.htaccess' . ` +
-    `| ssh ${SSH_MUX} "${SSH_TARGET}" "mkdir -p ${REMOTE_WEB_ROOT} && cd ${REMOTE_WEB_ROOT} && tar xf -"`])
+    `| ${sshCmd} "${SSH_TARGET}" "mkdir -p ${REMOTE_WEB_ROOT} && cd ${REMOTE_WEB_ROOT} && tar xf -"`])
   console.log('  ✓ Frontend deployed\n')
 
   console.log(`▶ Uploading PHP API → ${SSH_TARGET}:${REMOTE_PHP_ROOT}/ (tar+ssh)`)
   run(bash, ['-c',
     `cd php/api && tar cf - --exclude='./config.secret.php' --exclude='./config.secret.example.php' . ` +
-    `| ssh ${SSH_MUX} "${SSH_TARGET}" "mkdir -p ${REMOTE_PHP_ROOT} && cd ${REMOTE_PHP_ROOT} && tar xf -"`])
+    `| ${sshCmd} "${SSH_TARGET}" "mkdir -p ${REMOTE_PHP_ROOT} && cd ${REMOTE_PHP_ROOT} && tar xf -"`])
   console.log('  ✓ PHP deployed (config.secret.php untouched)\n')
 }
 

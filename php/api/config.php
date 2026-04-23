@@ -213,18 +213,39 @@ function sendOtpMail(string $to, string $subject, string $body): void {
   $secrets = getSecrets();
   $smtp    = $secrets['smtp']          ?? null;
   $srcDir  = $secrets['phpmailer_src'] ?? '';
+  $t0      = microtime(true);
+
+  // Write to ~/otp.log (two levels above php/api/ — home dir, not web-accessible).
+  // Falls back to error_log() if the file is not writable.
+  $logFile = dirname(dirname(__DIR__)) . '/otp.log';
+  $otpLog  = static function (string $line) use ($logFile): void {
+    $entry = date('[Y-m-d H:i:s T]') . ' ' . $line . PHP_EOL;
+    if (@file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX) === false) {
+      error_log($line);
+    }
+  };
 
   if ($srcDir && is_array($smtp) && !empty($smtp['username'])) {
     if (!file_exists($srcDir . '/PHPMailer.php')) {
-      error_log("sendOtpMail: PHPMailer not found at $srcDir");
+      $otpLog('[OTP-SEND] FAIL to=' . $to . ' reason=PHPMailer not found at ' . $srcDir);
       return;
     }
     require_once $srcDir . '/Exception.php';
     require_once $srcDir . '/PHPMailer.php';
     require_once $srcDir . '/SMTP.php';
 
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
     try {
-      $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+      // Set smtp.debug: 1-4 in config.secret.php to capture SMTP conversation.
+      // 1 = client commands only, 2 = client+server (recommended for diagnosis).
+      $debugLevel = (int) ($smtp['debug'] ?? 0);
+      if ($debugLevel > 0) {
+        $mail->SMTPDebug   = $debugLevel;
+        $mail->Debugoutput = static function (string $str, int $level) use ($to, $otpLog): void {
+          $otpLog('[OTP-SMTP-DEBUG:' . $level . '] to=' . $to . ' ' . rtrim($str));
+        };
+      }
+
       $mail->isSMTP();
       $mail->Host       = $smtp['host'];
       $mail->SMTPAuth   = $smtp['auth'] ?? true;
@@ -239,13 +260,21 @@ function sendOtpMail(string $to, string $subject, string $body): void {
       $mail->Body    = $body;
       $mail->isHTML(false);
       $mail->send();
+
+      $ms = round((microtime(true) - $t0) * 1000);
+      $otpLog('[OTP-SEND] OK to=' . $to . ' msg-id=' . $mail->MessageID . ' elapsed=' . $ms . 'ms');
     } catch (PHPMailer\PHPMailer\Exception $e) {
-      error_log('sendOtpMail SMTP error: ' . $e->getMessage());
+      $ms = round((microtime(true) - $t0) * 1000);
+      $otpLog('[OTP-SEND] FAIL to=' . $to . ' elapsed=' . $ms . 'ms'
+        . ' error=' . $e->getMessage()
+        . ' detail=' . $mail->ErrorInfo);
     }
   } else {
     $headers = 'From: ' . MAIL_FROM_NAME . ' <' . MAIL_FROM . ">\r\n"
              . "Content-Type: text/plain; charset=UTF-8\r\n";
-    mail($to, $subject, $body, $headers);
+    $result = mail($to, $subject, $body, $headers);
+    $ms     = round((microtime(true) - $t0) * 1000);
+    $otpLog('[OTP-SEND] ' . ($result ? 'OK' : 'FAIL') . ' to=' . $to . ' via mail() elapsed=' . $ms . 'ms');
   }
 }
 
