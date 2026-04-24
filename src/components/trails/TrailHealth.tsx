@@ -15,6 +15,9 @@ interface TrailHealthProps {
   onSelectTrail?: (trailId: string) => void
   onBackToList?: () => void
   onSignInPrompt?: () => void
+  season?: 'current' | 'last'
+  onSeasonChange?: (s: 'current' | 'last') => void
+  refreshing?: boolean
 }
 
 /** Enrich trails with lat/lng from static geo lookup keyed by wksiteId. */
@@ -32,6 +35,9 @@ export function TrailHealth({
   onSelectTrail,
   onBackToList,
   onSignInPrompt,
+  season = 'current',
+  onSeasonChange,
+  refreshing = false,
 }: TrailHealthProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedTrailId = searchParams.get('trail')
@@ -80,6 +86,9 @@ export function TrailHealth({
               onSignInPrompt={onSignInPrompt}
               mapOpen={mapOpen}
               onToggleMap={() => setMapOpen(false)}
+              season={season}
+              onSeasonChange={onSeasonChange}
+              refreshing={refreshing}
             />
           ) : (
             <TrailList
@@ -88,6 +97,9 @@ export function TrailHealth({
               onToggleMap={() => setMapOpen(false)}
               onSelectTrail={handleSelect}
               onHoverTrail={setHoveredTrailId}
+              season={season}
+              onSeasonChange={onSeasonChange}
+              refreshing={refreshing}
             />
           )}
         </div>
@@ -131,6 +143,9 @@ export function TrailHealth({
       onSignInPrompt={onSignInPrompt}
       mapOpen={mapOpen}
       onToggleMap={() => { setMapOpen(true); setMobileView('map') }}
+      season={season}
+      onSeasonChange={onSeasonChange}
+      refreshing={refreshing}
     />
   ) : (
     <TrailList
@@ -139,6 +154,9 @@ export function TrailHealth({
       onToggleMap={() => { setMapOpen(true); setMobileView('map') }}
       onSelectTrail={handleSelect}
       onHoverTrail={setHoveredTrailId}
+      season={season}
+      onSeasonChange={onSeasonChange}
+      refreshing={refreshing}
     />
   )
 }

@@ -3,9 +3,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { TrailHealth } from '../components/trails/TrailHealth'
 import type { Trail } from '../types/trails'
 
+type Season = 'current' | 'last'
+
 interface TrailsApiResponse {
   trails: Trail[]
-  year?: number
+  season?: string
   error?: string
 }
 
@@ -13,16 +15,22 @@ export function TrailsPage() {
   const { user, openLogin } = useAuth()
   const isAuthenticated = !!user
 
-  const [trails,  setTrails]  = useState<Trail[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState<string | null>(null)
+  const [trails,     setTrails]     = useState<Trail[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error,      setError]      = useState<string | null>(null)
+  const [season,     setSeason]     = useState<Season>('current')
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    // Full-page spinner only on the initial empty load; subsequent season
+    // switches keep TrailHealth mounted and show a lighter refreshing indicator.
+    setLoading(prev => prev)   // no-op — keeps existing loading state
+    setRefreshing(true)
     setError(null)
 
-    fetch('/api/trails/list.php')
+    const url = season === 'last' ? '/api/trails/list.php?season=last' : '/api/trails/list.php'
+    fetch(url, { cache: 'no-store' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json() as Promise<TrailsApiResponse>
@@ -36,13 +44,17 @@ export function TrailsPage() {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load trails')
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+          setRefreshing(false)
+        }
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [season])
 
-  if (loading) {
+  // Full-page spinner only while the initial fetch is pending (no data yet).
+  if (loading && trails.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-sm text-stone-400 dark:text-stone-500 animate-pulse">Loading trails…</div>
@@ -71,6 +83,9 @@ export function TrailsPage() {
       trails={trails}
       isAuthenticated={isAuthenticated}
       onSignInPrompt={openLogin}
+      season={season}
+      onSeasonChange={setSeason}
+      refreshing={refreshing}
     />
   )
 }

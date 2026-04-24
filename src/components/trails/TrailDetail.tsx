@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, Leaf, AlertTriangle, Footprints, PersonStanding, Lock, Map } from 'lucide-react'
+import { ArrowLeft, Leaf, AlertTriangle, Footprints, PersonStanding, Lock, Map, Loader2 } from 'lucide-react'
 import type { Trail, Difficulty, TreeSizeBreakdown } from '../../types/trails'
 
 function formatDate(iso: string) {
@@ -269,9 +269,12 @@ interface TrailDetailProps {
   onSignInPrompt?: () => void
   mapOpen?: boolean
   onToggleMap?: () => void
+  season?: 'current' | 'last'
+  onSeasonChange?: (s: 'current' | 'last') => void
+  refreshing?: boolean
 }
 
-export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPrompt, mapOpen, onToggleMap }: TrailDetailProps) {
+export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPrompt, mapOpen, onToggleMap, season = 'current', onSeasonChange, refreshing = false }: TrailDetailProps) {
   const totalDown    = SIZE_KEYS.reduce((s, k) => s + trail.treesDown[k], 0)
   const totalCleared = SIZE_KEYS.reduce((s, k) => s + trail.treesCleared[k], 0)
 
@@ -289,15 +292,38 @@ export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPr
 
   return (
     <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
-      <div className="flex items-center justify-between mb-5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors group"
-        >
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-          Trails
-        </button>
+      <div className="flex items-center justify-between mb-5 gap-2">
+        <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors group shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            Trails
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            <div className="flex gap-1">
+              {(['current', 'last'] as const).map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => !refreshing && onSeasonChange?.(s)}
+                  disabled={refreshing}
+                  className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors disabled:opacity-60 ${
+                    season === s
+                      ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
+                      : 'bg-stone-50 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700'
+                  }`}
+                >
+                  {s === 'current' ? 'Season to Date' : 'Last Season'}
+                </button>
+              ))}
+            </div>
+            {refreshing && <Loader2 className="w-3.5 h-3.5 text-stone-400 animate-spin shrink-0" />}
+          </div>
+        </div>
 
         {onToggleMap && (
           <button
@@ -305,7 +331,7 @@ export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPr
             onClick={onToggleMap}
             title={mapOpen ? 'Close map' : 'Show map'}
             aria-label={mapOpen ? 'Close trail map' : 'Show trail map'}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
               mapOpen
                 ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500 shadow-sm'
                 : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700'

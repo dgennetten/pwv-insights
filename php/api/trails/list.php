@@ -36,6 +36,7 @@ function trailsReportMemberPersonIdColumn(PDO $db): string {
 }
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
@@ -43,12 +44,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 try {
     $db = getDb();
 
-    // Rolling 12-month window — always captures a full patrol season worth of data
-    // regardless of where we are in the Oct 1–Sep 30 season year. A hard Oct 1
-    // cutoff leaves May–Sep (peak hiking) outside the window until next summer.
-    $startDate   = date('Y-m-d', strtotime('-365 days'));
-    $endDate     = date('Y-m-d');
-    $monthsSoFar = 12;
+    // Season runs Oct 1 – Sep 30. Determine start year: if current month >= Oct
+    // the new season has just started, otherwise we're still in last year's season.
+    $today           = new DateTime();
+    $currentMonth    = (int)$today->format('n');
+    $currentYear     = (int)$today->format('Y');
+    $seasonStartYear = $currentMonth >= 10 ? $currentYear : $currentYear - 1;
+
+    $requestedSeason = (($_GET['season'] ?? 'current') === 'last') ? 'last' : 'current';
+
+    if ($requestedSeason === 'last') {
+        $startDate   = ($seasonStartYear - 1) . '-10-01';
+        $endDate     = $seasonStartYear . '-09-30';
+        $monthsSoFar = 12;
+        $seasonLabel = ($seasonStartYear - 1) . '–' . $seasonStartYear;
+    } else {
+        $startDate    = $seasonStartYear . '-10-01';
+        $endDate      = $today->format('Y-m-d');
+        $diff         = (new DateTime($startDate))->diff($today);
+        $monthsSoFar  = max(1, $diff->m + ($diff->y * 12) + ($diff->d > 0 ? 1 : 0));
+        $seasonLabel  = $seasonStartYear . '–' . ($seasonStartYear + 1);
+    }
 
     // ── 1. All trail worksites with area + trail metadata ────────────────────
     // Only include worksites that have BOTH an area assignment AND trail
@@ -82,7 +98,7 @@ try {
     $wksites = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($wksites)) {
-        jsonOut(['trails' => [], 'year' => $year]);
+        jsonOut(['trails' => [], 'season' => $seasonLabel]);
     }
 
     $wksiteIds = array_map('intval', array_column($wksites, 'WksiteID'));
@@ -373,7 +389,7 @@ try {
         ];
     }
 
-    jsonOut(['trails' => $trails, 'year' => $year]);
+    jsonOut(['trails' => $trails, 'season' => $seasonLabel]);
 
 } catch (Throwable $e) {
     error_log('trails/list.php: ' . $e->getMessage() . ' @' . $e->getFile() . ':' . $e->getLine());

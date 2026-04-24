@@ -2,11 +2,11 @@ import { useState, useMemo } from 'react'
 import {
   ChevronUp, ChevronDown, ChevronsUpDown,
   AlertTriangle, Leaf, SlidersHorizontal, Search,
-  TreePine, Clock, Map,
+  TreePine, Clock, Map, Loader2,
 } from 'lucide-react'
 import type { Trail, Difficulty } from '../../types/trails'
 
-type SortKey = 'efficiencyScore' | 'patrolCount' | 'lastPatrolled'
+type SortKey = 'name' | 'efficiencyScore' | 'patrolCount' | 'lastPatrolled'
 type SortDir = 'asc' | 'desc'
 
 const AREAS = [
@@ -98,23 +98,26 @@ interface TrailListProps {
   onToggleMap: () => void
   onSelectTrail?: (id: string) => void
   onHoverTrail?: (id: string | null) => void
+  season?: 'current' | 'last'
+  onSeasonChange?: (s: 'current' | 'last') => void
+  refreshing?: boolean
 }
 
-export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHoverTrail }: TrailListProps) {
+export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHoverTrail, season = 'current', onSeasonChange, refreshing = false }: TrailListProps) {
   const [search,              setSearch]              = useState('')
   const [filterArea,          setFilterArea]          = useState<string>('all')
   const [filterDifficulty,    setFilterDifficulty]    = useState<string>('all')
   const [filterWilderness,    setFilterWilderness]    = useState(false)
   const [filterUnderPatrolled,setFilterUnderPatrolled]= useState(false)
-  const [sortKey,             setSortKey]             = useState<SortKey>('efficiencyScore')
-  const [sortDir,             setSortDir]             = useState<SortDir>('desc')
+  const [sortKey,             setSortKey]             = useState<SortKey>('name')
+  const [sortDir,             setSortDir]             = useState<SortDir>('asc')
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) {
       setSortDir(p => p === 'desc' ? 'asc' : 'desc')
     } else {
       setSortKey(key)
-      setSortDir(key === 'lastPatrolled' ? 'asc' : 'desc')
+      setSortDir(key === 'name' || key === 'lastPatrolled' ? 'asc' : 'desc')
     }
   }
 
@@ -129,6 +132,10 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
     if (filterWilderness)         r = r.filter(t => t.wilderness)
     if (filterUnderPatrolled)     r = r.filter(t => t.underPatrolled)
     r.sort((a, b) => {
+      if (sortKey === 'name') {
+        const d = a.name.localeCompare(b.name)
+        return sortDir === 'asc' ? d : -d
+      }
       if (sortKey === 'lastPatrolled') {
         const ad = getLastPatrolDate(a) ?? '0000-00-00'
         const bd = getLastPatrolDate(b) ?? '0000-00-00'
@@ -146,16 +153,35 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
   const underPatrolledCount = trails.filter(t => t.underPatrolled).length
 
   return (
-    <div className="min-h-full bg-stone-50 dark:bg-stone-950">
+    <div className="flex flex-col h-full bg-stone-50 dark:bg-stone-950">
 
       {/* ── Sticky header ──────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 bg-stone-50 dark:bg-stone-950 px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-3 shadow-[0_1px_0_0] shadow-stone-200 dark:shadow-stone-800">
+      <div className="shrink-0 sticky top-0 z-10 bg-stone-50 dark:bg-stone-950 px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-3 shadow-[0_1px_0_0] shadow-stone-200 dark:shadow-stone-800">
 
         <div className="mb-3">
           <div className="flex items-center justify-between gap-2 min-w-0">
-            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 truncate min-w-0">
-              Trails <span className="font-semibold text-stone-400 dark:text-stone-500">Season to Date</span>
-            </h2>
+            <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+              <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 shrink-0">Trails</h2>
+              <div className="flex items-center gap-1.5">
+                <div className="flex gap-1">
+                  {(['current', 'last'] as const).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => !refreshing && onSeasonChange?.(s)}
+                      disabled={refreshing}
+                      className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors disabled:opacity-60 ${
+                        season === s
+                          ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
+                          : 'bg-stone-50 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700'
+                      }`}
+                    >
+                      {s === 'current' ? 'Season to Date' : 'Last Season'}
+                    </button>
+                  ))}
+                </div>
+                {refreshing && <Loader2 className="w-3.5 h-3.5 text-stone-400 animate-spin shrink-0" />}
+              </div>
+            </div>
 
             <div className="flex items-center gap-2 shrink-0">
               {underPatrolledCount > 0 && (
@@ -250,17 +276,17 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
       </div>
 
       {/* ── Table ──────────────────────────────────────────────────────────── */}
-      <div className="px-4 md:px-6 lg:px-8 pt-4 pb-6">
-        <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
+      <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 lg:px-8 pt-4 pb-6 gap-3">
+        <div className="flex-1 min-h-0 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden">
+          <div className="h-full overflow-x-auto overflow-y-auto">
             <table className="w-full text-sm">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-white dark:bg-stone-900">
                 <tr className="border-b border-stone-100 dark:border-stone-800">
                   <th className="px-4 py-3 text-left">
-                    <span className="text-xs font-semibold tracking-wider text-stone-400">
-                      <span className="uppercase">Trail</span>
-                      <span className="font-semibold normal-case"> — Click for Details</span>
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <SortButton sortKey="name" currentKey={sortKey} currentDir={sortDir} onSort={handleSort}>Trail</SortButton>
+                      <span className="text-xs font-normal text-stone-400 normal-case tracking-normal hidden sm:inline">— Click Row for Details</span>
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-left hidden lg:table-cell">
                     <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Area</span>
@@ -368,7 +394,7 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
         </div>
 
         {/* Legend */}
-        <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-stone-400 dark:text-stone-500">
+        <div className="shrink-0 flex flex-wrap items-center gap-4 text-xs text-stone-400 dark:text-stone-500">
           <span className="flex items-center gap-1"><Leaf className="w-3 h-3 text-emerald-500" /> Wilderness</span>
           <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3 text-amber-500" /> Needs more coverage</span>
           <span className="flex items-center gap-1"><TreePine className="w-3 h-3 text-orange-500" /> Uncleared trees</span>
