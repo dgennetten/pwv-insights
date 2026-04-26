@@ -118,9 +118,11 @@ function resolveInitialLeaderboardUI(
 function LeaderboardSignInGate({
   children,
   onSignIn,
+  onBack,
 }: {
   children: ReactNode
   onSignIn?: () => void
+  onBack?: () => void
 }) {
   return (
     <div className="relative rounded-xl overflow-hidden">
@@ -150,6 +152,15 @@ function LeaderboardSignInGate({
               Sign in
             </button>
           )}
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-xs text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 transition-colors"
+            >
+              ← Go back
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -168,6 +179,7 @@ export function LeaderboardsTrends({
   onLeaderboardCategoryChange,
   onMetricChange,
   onSignInPrompt,
+  onBack,
 }: LeaderboardsTrendsProps) {
   const isAuthenticated =
     currentUserId !== undefined && currentUserId !== null && String(currentUserId).trim() !== ''
@@ -254,7 +266,7 @@ export function LeaderboardsTrends({
         />
       )}
       {!isAuthenticated && (
-        <LeaderboardSignInGate onSignIn={onSignInPrompt}>
+        <LeaderboardSignInGate onSignIn={onSignInPrompt} onBack={onBack}>
           <Leaderboard
             members={sortedMembers}
             currentUserId={sortedMembers[0]?.id ?? ''}

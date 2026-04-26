@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { MemberGate } from '../components/MemberGate'
 import { Reports } from '../components/reports/Reports'
 import type { ReportsData } from '../types/reports'
 
@@ -14,6 +16,8 @@ function memberContextParam(ctx: MemberContext): string {
 
 export function ReportsPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const isAuthenticated = !!user?.personId
 
   const [memberContext, setMemberContext] = useState<MemberContext>('all')
   const [season, setSeason]               = useState<Season>('current')
@@ -39,12 +43,32 @@ export function ReportsPage() {
     }
   }, [])
 
-  useEffect(() => { void fetchData(memberContext, season) }, [memberContext, season, fetchData])
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false)
+      setData(null)
+      setError(null)
+      return
+    }
+    void fetchData(memberContext, season)
+  }, [isAuthenticated, memberContext, season, fetchData])
 
   // When user logs out, reset to 'all'
   useEffect(() => {
     if (!user?.personId) setMemberContext('all')
   }, [user?.personId])
+
+  const handleGoBack = useCallback(() => {
+    navigate(-1)
+  }, [navigate])
+
+  if (!isAuthenticated) {
+    return (
+      <MemberGate onBack={handleGoBack}>
+        <div className="min-h-[60vh] bg-stone-50 dark:bg-stone-950" />
+      </MemberGate>
+    )
+  }
 
   if (loading && !data) {
     return (
@@ -70,7 +94,15 @@ export function ReportsPage() {
     )
   }
 
-  const d = data!
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-sm text-stone-400 dark:text-stone-500 animate-pulse">Loading reports…</div>
+      </div>
+    )
+  }
+
+  const d = data
   return (
     <div className="relative">
       {loading && (
