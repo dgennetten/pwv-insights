@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { MemberGate } from '../components/MemberGate'
 import { Reports } from '../components/reports/Reports'
 import type { ReportsData } from '../types/reports'
 
@@ -14,6 +15,7 @@ function memberContextParam(ctx: MemberContext): string {
 
 export function ReportsPage() {
   const { user } = useAuth()
+  const isAuthenticated = !!user?.personId
 
   const [memberContext, setMemberContext] = useState<MemberContext>('all')
   const [season, setSeason]               = useState<Season>('current')
@@ -39,12 +41,28 @@ export function ReportsPage() {
     }
   }, [])
 
-  useEffect(() => { void fetchData(memberContext, season) }, [memberContext, season, fetchData])
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false)
+      setData(null)
+      setError(null)
+      return
+    }
+    void fetchData(memberContext, season)
+  }, [isAuthenticated, memberContext, season, fetchData])
 
   // When user logs out, reset to 'all'
   useEffect(() => {
     if (!user?.personId) setMemberContext('all')
   }, [user?.personId])
+
+  if (!isAuthenticated) {
+    return (
+      <MemberGate>
+        <div className="min-h-[60vh] bg-stone-50 dark:bg-stone-950" />
+      </MemberGate>
+    )
+  }
 
   if (loading && !data) {
     return (
