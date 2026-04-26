@@ -26,7 +26,7 @@ import { ViolationsChart } from './ViolationsChart'
 import { TreesClearedChart } from './TreesClearedChart'
 import { MembersByAgeChart } from './MembersByAgeChart'
 import { formatInteger } from '../../lib/formatNumber'
-import { formatTreesCleared, formatTreesClearedWhole } from './formatTreesCleared'
+import { formatTreesClearedWhole } from './formatTreesCleared'
 import { TrailCoveragePatrolDetail } from './TrailCoveragePatrolDetail'
 import { MemberGate } from '../MemberGate'
 
@@ -399,13 +399,9 @@ export function ActivityDashboard({
         {kpi.treesCleared && (
           <KpiCard
             label="Trees Cleared"
-            value={
-              scope.memberContext === 'all'
-                ? formatTreesClearedWhole(Number(summary.treesCleared))
-                : formatTreesCleared(Number(summary.treesCleared))
-            }
+            value={formatTreesClearedWhole(Number(summary.treesCleared))}
             delta={summary.treesClearedDelta}
-            deltaFormatter={scope.memberContext === 'all' ? formatTreesClearedWhole : formatTreesCleared}
+            deltaFormatter={formatTreesClearedWhole}
             icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
           />
         )}
