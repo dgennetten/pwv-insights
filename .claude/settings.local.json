@@ -33,7 +33,9 @@
       "Bash(node:*)",
       "Bash(cmd /c \"node_modules\\\\.bin\\\\tsc.cmd --noEmit\")",
       "Bash(grep *)",
-      "Bash(bash db/generate-repair-sql.sh)"
+      "Bash(bash db/generate-repair-sql.sh)",
+      "Bash(git check-ignore *)",
+      "Bash(mysql *)"
     ]
   }
 }
