@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LeaderboardsTrends } from '../components/leaderboards-trends/LeaderboardsTrends'
 import type {
@@ -22,6 +23,7 @@ const EMPTY_TRENDS: Trends = {
 
 export function LeaderboardsPage() {
   const { user, openLogin } = useAuth()
+  const navigate = useNavigate()
 
   const [timeRange, setTimeRange] = useState<TimeRange>('year')
   const [data, setData]       = useState<LeaderboardsData | null>(null)
@@ -52,6 +54,9 @@ export function LeaderboardsPage() {
   useEffect(() => { void fetchData(timeRange) }, [timeRange, fetchData])
 
   const handleTimeRangeChange = (range: TimeRange) => setTimeRange(range)
+  const handleGoBack = useCallback(() => {
+    navigate(-1)
+  }, [navigate])
 
   if (loading && !data) {
     return (
@@ -83,6 +88,7 @@ export function LeaderboardsPage() {
         defaultTimeRange={timeRange}
         onTimeRangeChange={handleTimeRangeChange}
         onSignInPrompt={openLogin}
+        onBack={handleGoBack}
       />
     </div>
   )

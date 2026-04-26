@@ -122,4 +122,6 @@ export interface LeaderboardsTrendsProps {
   onMetricChange?: (metric: LeaderboardMetric) => void;
   /** When the user is not logged in, optional handler for the **Sign in** control on the leaderboard gate. */
   onSignInPrompt?: () => void;
+  /** Optional go-back handler for the logged-out leaderboard gate. */
+  onBack?: () => void;
 }
