@@ -4,6 +4,7 @@ import { ActivityDashboardPage } from "./pages/ActivityDashboardPage";
 import { AdminPage } from "./pages/AdminPage";
 import { HelpPage } from "./pages/HelpPage";
 import { LeaderboardsPage } from "./pages/LeaderboardsPage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TrailsPage } from "./pages/TrailsPage";
 
@@ -15,6 +16,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "dashboard", element: <ActivityDashboardPage /> },
       { path: "trails", element: <TrailsPage /> },
+      { path: "reports", element: <ReportsPage /> },
       { path: "leaderboards", element: <LeaderboardsPage /> },
       { path: "admin", element: <AdminPage /> },
       { path: "settings", element: <SettingsPage /> },
