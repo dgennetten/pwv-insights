@@ -3,6 +3,15 @@ require_once __DIR__ . '/../config.php';
 
 define('REPORTS_PWV_GROUP', 10);
 
+/** Comma-separated brush/limbing TrailClearingIDs to exclude from tree totals (default 6,7,8). */
+function reportsBrushIdList(): string {
+    static $result = null;
+    if ($result !== null) return $result;
+    $ids = getSecrets()['trail_clearing_brush_ids'] ?? [6, 7, 8];
+    if (!is_array($ids) || empty($ids)) return $result = '-1';
+    return $result = implode(',', array_map('intval', $ids));
+}
+
 header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
@@ -73,6 +82,7 @@ try {
         $baseParams[] = $personId;
     }
 
+    $brushIds = reportsBrushIdList();
     $stmt = $db->prepare("
         SELECT
             r.ReportID,
@@ -90,7 +100,15 @@ try {
                 END
                 ORDER BY m.LastName, m.FirstName
                 SEPARATOR ', '
-            ) AS OtherMembers
+            ) AS OtherMembers,
+            (SELECT COALESCE(SUM(o.NumSeen), 0)
+             FROM t_rpt_observation o WHERE o.ReportID = r.ReportID) AS HikersSeen,
+            (SELECT COALESCE(SUM(o.NumContacted), 0)
+             FROM t_rpt_observation o WHERE o.ReportID = r.ReportID) AS HikersContacted,
+            (SELECT COALESCE(SUM(tc.NumCleared), 0)
+             FROM t_rpt_trail_clearing tc
+             WHERE tc.ReportID = r.ReportID
+               AND tc.TrailClearingID NOT IN ($brushIds)) AS TreesCleared
         FROM t_report r
         LEFT JOIN t_member w
                ON w.PersonID = r.ReportWriterID
@@ -110,10 +128,13 @@ try {
             ? array_values(array_filter(array_map('trim', explode(',', $row['OtherMembers']))))
             : [];
         return [
-            'reportId'     => (int) $row['ReportID'],
-            'activityDate' => $row['ActivityDate'],
-            'writerName'   => $row['WriterName'] ?? null,
-            'otherMembers' => $others,
+            'reportId'        => (int) $row['ReportID'],
+            'activityDate'    => $row['ActivityDate'],
+            'writerName'      => $row['WriterName'] ?? null,
+            'otherMembers'    => $others,
+            'hikersSeen'      => (int) $row['HikersSeen'],
+            'hikersContacted' => (int) $row['HikersContacted'],
+            'treesCleared'    => (int) $row['TreesCleared'],
         ];
     }, $rows);
 

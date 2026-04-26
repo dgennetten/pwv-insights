@@ -3,6 +3,9 @@ export interface Report {
   activityDate: string
   writerName: string | null
   otherMembers: string[]
+  hikersSeen: number
+  hikersContacted: number
+  treesCleared: number
 }
 
 export interface ReportsData {

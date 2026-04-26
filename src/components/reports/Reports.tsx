@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDown, ArrowUp, ClipboardList } from 'lucide-react'
+import { ArrowDown, ArrowUp, ClipboardList, Eye, MessageSquare, TreePine } from 'lucide-react'
 import type { Report } from '../../types/reports'
 import { formatInteger } from '../../lib/formatNumber'
 
@@ -30,7 +30,7 @@ function KpiCard({ label, value, icon }: { label: string; value: number; icon: R
   )
 }
 
-type SortCol = 'reportId' | 'writerName'
+type SortCol = 'reportId' | 'writerName' | 'hikersSeen' | 'hikersContacted' | 'treesCleared'
 type SortDir = 'asc' | 'desc'
 
 const segmentBase = 'px-3 py-1.5 text-xs font-medium transition-colors rounded-md'
@@ -45,6 +45,10 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
   const isAll = memberContext === 'all'
   const isMe = isLoggedIn && !isAll
 
+  const totalHikersSeen      = reports.reduce((s, r) => s + r.hikersSeen,      0)
+  const totalHikersContacted = reports.reduce((s, r) => s + r.hikersContacted, 0)
+  const totalTreesCleared    = reports.reduce((s, r) => s + r.treesCleared,    0)
+
   function handleSortClick(col: SortCol) {
     if (sortCol === col) {
       setSortDir(d => d === 'desc' ? 'asc' : 'desc')
@@ -58,8 +62,14 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
     let cmp = 0
     if (sortCol === 'reportId') {
       cmp = a.reportId - b.reportId
-    } else {
+    } else if (sortCol === 'writerName') {
       cmp = (a.writerName ?? '').localeCompare(b.writerName ?? '')
+    } else if (sortCol === 'hikersSeen') {
+      cmp = a.hikersSeen - b.hikersSeen
+    } else if (sortCol === 'hikersContacted') {
+      cmp = a.hikersContacted - b.hikersContacted
+    } else {
+      cmp = a.treesCleared - b.treesCleared
     }
     return sortDir === 'asc' ? cmp : -cmp
   })
@@ -119,11 +129,26 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard
           label="Reports Filed"
           value={totalCount}
           icon={<ClipboardList className="w-4 h-4" strokeWidth={1.5} />}
+        />
+        <KpiCard
+          label="Hikers Seen"
+          value={totalHikersSeen}
+          icon={<Eye className="w-4 h-4" strokeWidth={1.5} />}
+        />
+        <KpiCard
+          label="Hikers Contacted"
+          value={totalHikersContacted}
+          icon={<MessageSquare className="w-4 h-4" strokeWidth={1.5} />}
+        />
+        <KpiCard
+          label="Trees Cleared"
+          value={totalTreesCleared}
+          icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
         />
       </div>
 
@@ -157,12 +182,39 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                   Other Members
                 </th>
+                <th
+                  className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap hover:text-stone-800 dark:hover:text-stone-200 transition-colors text-stone-500 dark:text-stone-400"
+                  onClick={() => handleSortClick('hikersSeen')}
+                >
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    Seen
+                    <SortIndicator col="hikersSeen" />
+                  </span>
+                </th>
+                <th
+                  className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap hover:text-stone-800 dark:hover:text-stone-200 transition-colors text-stone-500 dark:text-stone-400"
+                  onClick={() => handleSortClick('hikersContacted')}
+                >
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    Contacted
+                    <SortIndicator col="hikersContacted" />
+                  </span>
+                </th>
+                <th
+                  className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap hover:text-stone-800 dark:hover:text-stone-200 transition-colors text-stone-500 dark:text-stone-400"
+                  onClick={() => handleSortClick('treesCleared')}
+                >
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    Trees
+                    <SortIndicator col="treesCleared" />
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-stone-400 dark:text-stone-500 text-sm">
+                  <td colSpan={7} className="px-4 py-8 text-center text-stone-400 dark:text-stone-500 text-sm">
                     No reports found.
                   </td>
                 </tr>
@@ -183,6 +235,15 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
                         ? r.otherMembers.join(', ')
                         : <span className="text-stone-300 dark:text-stone-600">—</span>
                       }
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-right text-stone-600 dark:text-stone-400">
+                      {r.hikersSeen > 0 ? formatInteger(r.hikersSeen) : <span className="text-stone-300 dark:text-stone-600">—</span>}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-right text-stone-600 dark:text-stone-400">
+                      {r.hikersContacted > 0 ? formatInteger(r.hikersContacted) : <span className="text-stone-300 dark:text-stone-600">—</span>}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-right text-stone-600 dark:text-stone-400">
+                      {r.treesCleared > 0 ? formatInteger(r.treesCleared) : <span className="text-stone-300 dark:text-stone-600">—</span>}
                     </td>
                   </tr>
                 ))
