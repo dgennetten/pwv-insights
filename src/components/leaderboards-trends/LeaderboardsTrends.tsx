@@ -7,8 +7,11 @@ import type {
   LeaderboardCategory,
 } from '../../types/leaderboards-trends'
 import { Leaderboard } from './Leaderboard'
+import { LeaderboardHistogram } from './LeaderboardHistogram'
 
 // ── Config ───────────────────────────────────────────────────────────────────
+
+type LeaderboardView = 'stats' | 'names'
 
 const TIME_RANGES: { value: TimeRange; label: string }[] = [
   { value: 'month', label: 'Month to Date' },
@@ -56,8 +59,10 @@ const METRICS_BY_CATEGORY: Record<
 
 const DEFAULT_CATEGORY: LeaderboardCategory = 'work'
 const DEFAULT_METRIC: LeaderboardMetric = 'contacts'
+const DEFAULT_VIEW: LeaderboardView = 'stats'
 
 const LEADERBOARD_UI_STORAGE_KEY = 'pwv-leaderboards-category-metric-v1'
+const LEADERBOARD_VIEW_STORAGE_KEY = 'pwv-leaderboards-view-v1'
 
 function metricBelongsToCategory(metric: LeaderboardMetric, category: LeaderboardCategory): boolean {
   return METRICS_BY_CATEGORY[category].some(m => m.value === metric)
@@ -88,9 +93,23 @@ function writePersistedLeaderboardUI(category: LeaderboardCategory, metric: Lead
   if (typeof localStorage === 'undefined') return
   try {
     localStorage.setItem(LEADERBOARD_UI_STORAGE_KEY, JSON.stringify({ category, metric }))
-  } catch {
-    /* quota / private mode */
-  }
+  } catch { /* quota / private mode */ }
+}
+
+function readPersistedView(): LeaderboardView {
+  if (typeof localStorage === 'undefined') return DEFAULT_VIEW
+  try {
+    const v = localStorage.getItem(LEADERBOARD_VIEW_STORAGE_KEY)
+    if (v === 'stats' || v === 'names') return v
+  } catch { /* ignore */ }
+  return DEFAULT_VIEW
+}
+
+function writePersistedView(view: LeaderboardView) {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(LEADERBOARD_VIEW_STORAGE_KEY, view)
+  } catch { /* quota / private mode */ }
 }
 
 function initialCategoryAndMetric(
@@ -185,6 +204,7 @@ export function LeaderboardsTrends({
     currentUserId !== undefined && currentUserId !== null && String(currentUserId).trim() !== ''
 
   const [timeRange, setTimeRange] = useState<TimeRange>(defaultTimeRange)
+  const [view, setView] = useState<LeaderboardView>(() => readPersistedView())
   const [leaderboardCategory, setLeaderboardCategory] = useState<LeaderboardCategory>(() =>
     resolveInitialLeaderboardUI(defaultLeaderboardCategory, defaultMetric).category
   )
@@ -199,6 +219,11 @@ export function LeaderboardsTrends({
   const handleTimeRange = (range: TimeRange) => {
     setTimeRange(range)
     onTimeRangeChange?.(range)
+  }
+
+  const handleView = (v: LeaderboardView) => {
+    setView(v)
+    writePersistedView(v)
   }
 
   const handleCategory = useCallback(
@@ -224,16 +249,48 @@ export function LeaderboardsTrends({
     [members, metric]
   )
 
+  const activeMetric = categoryMetrics.find(m => m.value === metric) ?? categoryMetrics[0]!
+
+  // Shared props for both histogram and leaderboard
+  const tabProps = {
+    metric,
+    leaderboardCategory,
+    categoryOptions: CATEGORY_OPTIONS,
+    metrics: categoryMetrics,
+    onLeaderboardCategoryChange: handleCategory,
+    onMetricChange: handleMetric,
+  }
+
   return (
     <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
 
       {/* Header row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-        <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">
-          Leaderboards
-        </h2>
 
-        {/* Time range pill group */}
+        {/* Left: title + Stats/Names toggle */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">
+            Leaderboards
+          </h2>
+          <div className="flex bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg p-0.5 gap-0.5">
+            {(['stats', 'names'] as const).map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => handleView(v)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
+                  view === v
+                    ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
+                    : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800'
+                }`}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: time range pill group */}
         <div className="flex flex-wrap bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg p-0.5 gap-0.5 self-start">
           {TIME_RANGES.map(({ value, label }) => (
             <button
@@ -252,30 +309,30 @@ export function LeaderboardsTrends({
         </div>
       </div>
 
-      {/* Leaderboard */}
-      {isAuthenticated && (
+      {/* Stats view — histogram, no auth gate */}
+      {view === 'stats' && (
+        <LeaderboardHistogram
+          members={members}
+          currentUserId={isAuthenticated ? currentUserId! : undefined}
+          unit={activeMetric.unit}
+          {...tabProps}
+        />
+      )}
+
+      {/* Names view — podium + list, auth-gated */}
+      {view === 'names' && isAuthenticated && (
         <Leaderboard
           members={sortedMembers}
           currentUserId={currentUserId!}
-          metric={metric}
-          leaderboardCategory={leaderboardCategory}
-          categoryOptions={CATEGORY_OPTIONS}
-          metrics={categoryMetrics}
-          onLeaderboardCategoryChange={handleCategory}
-          onMetricChange={handleMetric}
+          {...tabProps}
         />
       )}
-      {!isAuthenticated && (
+      {view === 'names' && !isAuthenticated && (
         <LeaderboardSignInGate onSignIn={onSignInPrompt} onBack={onBack}>
           <Leaderboard
             members={sortedMembers}
             currentUserId={sortedMembers[0]?.id ?? ''}
-            metric={metric}
-            leaderboardCategory={leaderboardCategory}
-            categoryOptions={CATEGORY_OPTIONS}
-            metrics={categoryMetrics}
-            onLeaderboardCategoryChange={handleCategory}
-            onMetricChange={handleMetric}
+            {...tabProps}
           />
         </LeaderboardSignInGate>
       )}
