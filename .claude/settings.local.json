@@ -35,7 +35,10 @@
       "Bash(grep *)",
       "Bash(bash db/generate-repair-sql.sh)",
       "Bash(git check-ignore *)",
-      "Bash(mysql *)"
+      "Bash(mysql *)",
+      "Bash(bash -n \"C:/Users/dougl/GIT/pwv-insights/scripts/diagnose-sync.sh\")",
+      "Bash(bash -n \"C:/Users/dougl/GIT/pwv-insights/db/generate-repair-sql.sh\")",
+      "Bash(bash -n \"C:/Users/dougl/GIT/pwv-insights/scripts/pull-and-repair.sh\")"
     ]
   }
 }

@@ -100,9 +100,19 @@ Send a short requirements list:
 
 ## F. Checklist summary
 
-- [ ] Run `sql/06-app-sync-meta.sql` on DreamHost.
+### Phase 1 — dump-based weekly sync (current)
+
+- [x] Nightly cron (`scripts/pull-and-repair.sh`) downloads latest dump from clrdvol.org `/latest/`; max lag ~24 hours.
+- [x] `db/generate-repair-sql.sh --upsert` generates column-safe upsert SQL (INSERT … ON DUPLICATE KEY UPDATE); `--full-replace` available for emergency repair.
+- [x] Diagnostic tool: `bash scripts/diagnose-sync.sh [REPORT_ID]` — checks dump age, dump contents, and DB state.
+- [ ] Run `sql/06-app-sync-meta.sql` on DreamHost if not already applied.
+- [ ] Set `app_sync_meta.last_successful_pull_at` after first good cron run.
+
+### Phase 2 — direct AWS connection (future)
+
+- [ ] Obtain read credentials for AWS MariaDB.
 - [ ] Catch-up: apply ~3 months of deltas with column-safe upserts (manifest documented outside this file as you finalize table list).
-- [ ] Set `app_sync_meta.last_successful_pull_at` after first good run.
+- [ ] Write incremental sync worker; replace dump-based cron.
 - [ ] Enable `aws_sync_session_nudge` + interval in `config.secret.php` when ready.
 - [ ] Schedule cron to drain `pending_after_session_at` and run incremental script.
 - [ ] Monitor `last_pull_error` and logs from the worker.

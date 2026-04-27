@@ -119,10 +119,10 @@ if [[ ! -f "$LOCAL_SQL" ]]; then
   echo "   ✓ $(basename "$LOCAL_SQL")"
 fi
 
-# ── Step 4: generate repair SQL ───────────────────────────────────────────────
+# ── Step 4: generate repair SQL (upsert mode — preserves rows newer than dump) ──
 
-echo "▶  Generating repair SQL…"
-bash "$DB_DIR/generate-repair-sql.sh" "$LOCAL_SQL"
+echo "▶  Generating repair SQL (upsert mode)…"
+bash "$DB_DIR/generate-repair-sql.sh" --upsert "$LOCAL_SQL"
 echo "   ✓ repair-data.sql written"
 
 # ── Step 5: show current row counts ──────────────────────────────────────────
