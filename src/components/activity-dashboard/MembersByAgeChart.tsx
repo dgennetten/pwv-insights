@@ -14,7 +14,7 @@ export function MembersByAgeChart({ data, activeLabel }: MembersByAgeChartProps)
   return (
     <div className="space-y-2">
       {/* Grid + bars */}
-      <div className="relative" style={{ height: CHART_HEIGHT + 'px' }}>
+      <div className="relative overflow-visible" style={{ height: CHART_HEIGHT + 'px' }}>
         {/* Horizontal grid lines */}
         {[0, 25, 50, 75, 100].map(pct => (
           <div
@@ -33,7 +33,20 @@ export function MembersByAgeChart({ data, activeLabel }: MembersByAgeChartProps)
             const inactivePct = 100 - activePct
 
             return (
-              <div key={bin.ageGroup} className="flex-1 flex flex-col items-center justify-end h-full group">
+              <div key={bin.ageGroup} className="relative flex-1 flex flex-col items-center justify-end h-full group">
+                {/* Hover tooltip */}
+                <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 z-10 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
+                  <div className="bg-stone-800 dark:bg-stone-700 text-white rounded px-2 py-1 text-[10px] whitespace-nowrap shadow-lg">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-sm bg-emerald-400 shrink-0" />
+                      <span>Active {formatInteger(bin.active)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-sm bg-stone-400 shrink-0" />
+                      <span>Inactive {formatInteger(bin.inactive)}</span>
+                    </div>
+                  </div>
+                </div>
                 <span className="text-[10px] font-medium tabular-nums text-stone-500 dark:text-stone-400 mb-0.5">
                   {formatInteger(total)}
                 </span>
