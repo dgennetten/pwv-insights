@@ -249,16 +249,22 @@ export function LeaderboardsTrends({
     [members, metric]
   )
 
-  const activeMetric = categoryMetrics.find(m => m.value === metric) ?? categoryMetrics[0]!
-
-  // Shared props for both histogram and leaderboard
-  const tabProps = {
+  // Shared props for the leaderboard (names view)
+  const leaderboardProps = {
     metric,
     leaderboardCategory,
     categoryOptions: CATEGORY_OPTIONS,
     metrics: categoryMetrics,
     onLeaderboardCategoryChange: handleCategory,
     onMetricChange: handleMetric,
+  }
+
+  // Props for the histogram (stats view) — no metric/unit, renders all metrics stacked
+  const histogramProps = {
+    leaderboardCategory,
+    categoryOptions: CATEGORY_OPTIONS,
+    metrics: categoryMetrics,
+    onLeaderboardCategoryChange: handleCategory,
   }
 
   return (
@@ -309,13 +315,12 @@ export function LeaderboardsTrends({
         </div>
       </div>
 
-      {/* Stats view — histogram, no auth gate */}
+      {/* Stats view — all metrics stacked, no auth gate */}
       {view === 'stats' && (
         <LeaderboardHistogram
           members={members}
           currentUserId={isAuthenticated ? currentUserId! : undefined}
-          unit={activeMetric.unit}
-          {...tabProps}
+          {...histogramProps}
         />
       )}
 
@@ -324,7 +329,7 @@ export function LeaderboardsTrends({
         <Leaderboard
           members={sortedMembers}
           currentUserId={currentUserId!}
-          {...tabProps}
+          {...leaderboardProps}
         />
       )}
       {view === 'names' && !isAuthenticated && (
@@ -332,7 +337,7 @@ export function LeaderboardsTrends({
           <Leaderboard
             members={sortedMembers}
             currentUserId={sortedMembers[0]?.id ?? ''}
-            {...tabProps}
+            {...leaderboardProps}
           />
         </LeaderboardSignInGate>
       )}
