@@ -231,11 +231,11 @@ const CHART_META: Record<ChartType, { title: string; subtitle: string }> = {
 }
 
 const TREES_SIZE_LEGEND = [
-  { color: 'bg-emerald-200 dark:bg-emerald-800', label: '< 8"' },
+  { color: 'bg-emerald-300 dark:bg-emerald-700', label: '< 8"' },
   { color: 'bg-emerald-400 dark:bg-emerald-600', label: '8–15"' },
-  { color: 'bg-emerald-600 dark:bg-emerald-500', label: '16–23"' },
-  { color: 'bg-emerald-800 dark:bg-emerald-400', label: '24–36"' },
-  { color: 'bg-stone-700 dark:bg-stone-300',     label: '> 36"' },
+  { color: 'bg-emerald-500 dark:bg-emerald-500', label: '16–23"' },
+  { color: 'bg-emerald-600 dark:bg-emerald-400', label: '24–36"' },
+  { color: 'bg-emerald-800 dark:bg-emerald-300', label: '> 36"' },
 ]
 
 const YEAR_MODE_OPTIONS: { value: TrendYearComparison; label: string }[] = [
@@ -270,11 +270,11 @@ export function TrendCharts({ trends, timeRange }: TrendChartsProps) {
   const treesSizeData = trends.treesBySizeByMonth.map(d => ({
     label: d.month,
     segments: [
-      { value: d.under8in,         color: 'bg-emerald-200 dark:bg-emerald-800' },
+      { value: d.under8in,         color: 'bg-emerald-300 dark:bg-emerald-700' },
       { value: d.eightTo15in,      color: 'bg-emerald-400 dark:bg-emerald-600' },
-      { value: d.sixteenTo23in,    color: 'bg-emerald-600 dark:bg-emerald-500' },
-      { value: d.twentyFourTo36in, color: 'bg-emerald-800 dark:bg-emerald-400' },
-      { value: d.over36in,         color: 'bg-stone-700 dark:bg-stone-300' },
+      { value: d.sixteenTo23in,    color: 'bg-emerald-500 dark:bg-emerald-500' },
+      { value: d.twentyFourTo36in, color: 'bg-emerald-600 dark:bg-emerald-400' },
+      { value: d.over36in,         color: 'bg-emerald-800 dark:bg-emerald-300' },
     ],
   }))
 

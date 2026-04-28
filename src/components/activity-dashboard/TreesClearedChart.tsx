@@ -16,8 +16,8 @@ interface TreesClearedChartProps {
 type TreeView = 'aggregate' | 'byTrail'
 
 const SIZE_CLASS_COLORS: Record<TreeSizeClass, { bar: string; label: string; dot: string }> = {
-  '< 8"':     { bar: 'bg-stone-300 dark:bg-stone-600',    label: 'text-stone-500 dark:text-stone-400',   dot: 'bg-stone-300' },
-  '8" – 15"': { bar: 'bg-emerald-300 dark:bg-emerald-700', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-300' },
+  '< 8"':     { bar: 'bg-emerald-300 dark:bg-emerald-700', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-300' },
+  '8" – 15"': { bar: 'bg-emerald-400 dark:bg-emerald-600', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-400' },
   '16" – 23"':{ bar: 'bg-emerald-500 dark:bg-emerald-500', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
   '24" – 36"':{ bar: 'bg-emerald-600 dark:bg-emerald-400', label: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-600' },
   '> 36"':    { bar: 'bg-emerald-800 dark:bg-emerald-300', label: 'text-emerald-800 dark:text-emerald-200', dot: 'bg-emerald-800' },
