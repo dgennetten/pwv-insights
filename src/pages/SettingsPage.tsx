@@ -152,7 +152,10 @@ export function SettingsPage() {
 
         {/* Header */}
         <div className="mb-5">
-          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Settings</h2>
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Settings</h2>
+            <span className="text-xs text-stone-400 dark:text-stone-500">v1.0.0</span>
+          </div>
           <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
             Personalize your dashboard experience
           </p>

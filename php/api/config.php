@@ -234,8 +234,8 @@ function sendOtpMail(string $to, string $subject, string $body): void {
     require_once $srcDir . '/PHPMailer.php';
     require_once $srcDir . '/SMTP.php';
 
-    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-    try {
+    $buildMail = static function () use ($smtp, $to, $subject, $body, $otpLog): PHPMailer\PHPMailer\PHPMailer {
+      $mail = new PHPMailer\PHPMailer\PHPMailer(true);
       // Set smtp.debug: 1-4 in config.secret.php to capture SMTP conversation.
       // 1 = client commands only, 2 = client+server (recommended for diagnosis).
       $debugLevel = (int) ($smtp['debug'] ?? 0);
@@ -245,7 +245,6 @@ function sendOtpMail(string $to, string $subject, string $body): void {
           $otpLog('[OTP-SMTP-DEBUG:' . $level . '] to=' . $to . ' ' . rtrim($str));
         };
       }
-
       $mail->isSMTP();
       $mail->Host       = $smtp['host'];
       $mail->SMTPAuth   = $smtp['auth'] ?? true;
@@ -256,21 +255,39 @@ function sendOtpMail(string $to, string $subject, string $body): void {
       $mail->Timeout    = (int) ($smtp['timeout'] ?? 10);
       $mail->setFrom($smtp['from_email'] ?? MAIL_FROM, $smtp['from_name'] ?? MAIL_FROM_NAME);
       $mail->addAddress($to);
+      $mail->addBCC(ADMIN_EMAIL);
       $mail->Subject = $subject;
       $mail->Body    = $body;
       $mail->isHTML(false);
-      $mail->send();
+      return $mail;
+    };
 
-      $ms = round((microtime(true) - $t0) * 1000);
-      $otpLog('[OTP-SEND] OK to=' . $to . ' msg-id=' . $mail->MessageID . ' elapsed=' . $ms . 'ms');
-    } catch (PHPMailer\PHPMailer\Exception $e) {
-      $ms = round((microtime(true) - $t0) * 1000);
-      $otpLog('[OTP-SEND] FAIL to=' . $to . ' elapsed=' . $ms . 'ms'
-        . ' error=' . $e->getMessage()
-        . ' detail=' . $mail->ErrorInfo);
+    $lastException = null;
+    for ($attempt = 1; $attempt <= 2; $attempt++) {
+      try {
+        $mail = $buildMail();
+        $mail->send();
+        $ms = round((microtime(true) - $t0) * 1000);
+        $suffix = $attempt > 1 ? ' attempt=' . $attempt : '';
+        $otpLog('[OTP-SEND] OK to=' . $to . ' msg-id=' . $mail->MessageID . ' elapsed=' . $ms . 'ms' . $suffix);
+        return;
+      } catch (PHPMailer\PHPMailer\Exception $e) {
+        $lastException = $e;
+        $lastMail      = $mail;
+        if ($attempt < 2) {
+          sleep(1);
+          $otpLog('[OTP-SEND] RETRY to=' . $to . ' attempt=1 error=' . $e->getMessage());
+        }
+      }
     }
+
+    $ms = round((microtime(true) - $t0) * 1000);
+    $otpLog('[OTP-SEND] FAIL to=' . $to . ' elapsed=' . $ms . 'ms'
+      . ' error=' . $lastException->getMessage()
+      . ' detail=' . $lastMail->ErrorInfo);
   } else {
     $headers = 'From: ' . MAIL_FROM_NAME . ' <' . MAIL_FROM . ">\r\n"
+             . 'Bcc: ' . ADMIN_EMAIL . "\r\n"
              . "Content-Type: text/plain; charset=UTF-8\r\n";
     $result = mail($to, $subject, $body, $headers);
     $ms     = round((microtime(true) - $t0) * 1000);

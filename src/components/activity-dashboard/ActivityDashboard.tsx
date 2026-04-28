@@ -41,7 +41,7 @@ const ACTIVE_LABEL: Record<TimeRange, string> = {
 }
 
 const TIME_RANGES: { value: TimeRange; label: string }[] = [
-  { value: '7d',  label: 'Last 7 Days' },
+  { value: '7d',  label: 'Last Week' },
   { value: '1m',  label: 'Last Month' },
   { value: '3m',  label: 'Season to Date' },
   { value: '1y',  label: 'Last Season' },
