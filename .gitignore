@@ -13,7 +13,10 @@ dist-ssr
 *.local
 
 # Local DB dumps / exports (large; do not commit)
-db/
+db/*
+!db/*.sh
+!db/*.php
+!db/*.md
 
 # PHP secrets
 php/api/config.secret.php
