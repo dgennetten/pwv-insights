@@ -183,22 +183,26 @@ cat <<HEADER
 
 USE pwvinsights;
 SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
-SET UNIQUE_CHECKS     = 0;
-SET AUTOCOMMIT        = 0;
+SET FOREIGN_KEY_CHECKS        = 0;
+SET UNIQUE_CHECKS              = 0;
+SET AUTOCOMMIT                 = 0;
+SET SESSION innodb_lock_wait_timeout = 120;
 
 -- ── t_member (upsert, skip last_login_at) ────────────────────────────────────
 HEADER
 
   emit_upsert "t_member" "last_login_at"
+  echo "COMMIT;"
 
   echo ""
   echo "-- ── t_report ────────────────────────────────────────────────────────────────"
   emit_upsert "t_report"
+  echo "COMMIT;"
 
   echo ""
   echo "-- ── t_report_member ─────────────────────────────────────────────────────────"
   emit_upsert "t_report_member"
+  echo "COMMIT;"
 
   echo ""
   echo "-- ── t_rpt_* detail tables ───────────────────────────────────────────────────"
@@ -222,6 +226,7 @@ HEADER
     echo ""
     echo "-- ── $tbl"
     emit_upsert "$tbl"
+    echo "COMMIT;"
   done
 
 cat <<FOOTER

@@ -6,10 +6,8 @@
 # Usage (local):
 #   bash scripts/pull-and-repair.sh
 #
-# Usage (DreamHost cron, absolute paths required):
-#   0 3 * * * SSH_KEY=/home/dgennetten/.ssh/dg-voldb.pem \
-#             /bin/bash /home/dgennetten/db-repair/scripts/pull-and-repair.sh \
-#             >> /home/dgennetten/db-repair/cron.log 2>&1
+# Usage (DreamHost cron, absolute paths required — paste as one line):
+#   0 1 * * * SSH_KEY=/home/dgennetten/.ssh/dg-voldb.pem /bin/bash /home/dgennetten/db-repair/scripts/pull-and-repair.sh >> /home/dgennetten/db-repair/cron.log 2>&1
 #
 # Credentials (checked in order):
 #   1. DB_USER / DB_PASS environment variables
@@ -137,7 +135,17 @@ mysql_cmd "$DB_NAME" --table -e "
 # ── Step 6: apply repair SQL ──────────────────────────────────────────────────
 
 echo "▶  Applying repair to $DB_NAME on $DB_HOST…"
-mysql_cmd "$DB_NAME" < "$DB_DIR/repair-data.sql"
+for attempt in 1 2 3; do
+  if mysql_cmd "$DB_NAME" < "$DB_DIR/repair-data.sql"; then
+    break
+  elif [[ $attempt -lt 3 ]]; then
+    echo "   Lock contention on attempt $attempt/3 — waiting 30s before retry…"
+    sleep 30
+  else
+    echo "ERROR: mysql failed after 3 attempts." >&2
+    exit 1
+  fi
+done
 
 # ── Step 7: confirm final row counts ─────────────────────────────────────────
 
