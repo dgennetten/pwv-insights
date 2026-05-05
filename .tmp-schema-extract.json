@@ -1,0 +1,5483 @@
+{
+  "tables": [
+    {
+      "table": "t_emergency_contact",
+      "columns": [
+        {
+          "name": "EmerContactID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "FullName",
+          "type": "varchar(45)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "EmailAddress",
+          "type": "varchar(64)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PhoneLocaleID1",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PhoneNumber1",
+          "type": "varchar(25)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PhoneLocaleID2",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PhoneNumber2",
+          "type": "varchar(25)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "StreetAddress",
+          "type": "varchar(64)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "City",
+          "type": "varchar(45)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "State",
+          "type": "char(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ZipCode",
+          "type": "char(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_EmergencyContact_PhoneLocaleID1",
+          "type": "(`PhoneLocaleID1`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_EmergencyContact_PhoneLocaleID2",
+          "type": "(`PhoneLocaleID2`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_EmergencyContact_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_EmergencyContact_LUPhoneLocale1",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_EmergencyContact_LUPhoneLocale2",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "EmerContactID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PhoneLocaleID1",
+          "references": "lu_phone_locale.PhoneLocaleID",
+          "constraintName": "fk_EmergencyContact_LUPhoneLocale1"
+        },
+        {
+          "column": "PhoneLocaleID2",
+          "references": "lu_phone_locale.PhoneLocaleID",
+          "constraintName": "fk_EmergencyContact_LUPhoneLocale2"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_EmergencyContact_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_EmergencyContact_PhoneLocaleID1",
+          "columns": [
+            "PhoneLocaleID1"
+          ]
+        },
+        {
+          "name": "i_EmergencyContact_PhoneLocaleID2",
+          "columns": [
+            "PhoneLocaleID2"
+          ]
+        },
+        {
+          "name": "i_EmergencyContact_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_locked_out",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsInactive",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Date",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Reason",
+          "type": "varchar(45)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_LockedOut_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_LockedOut_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_LockedOut_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_address",
+      "columns": [
+        {
+          "name": "MemAddressID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "AddressLocaleID",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "StreetAddress",
+          "type": "varchar(45)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "City",
+          "type": "varchar(45)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "State",
+          "type": "char(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ZipCode",
+          "type": "char(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemAddress_AddressLocaleID",
+          "type": "(`AddressLocaleID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemAddress_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemAddress_LUAddressLocale",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "MemAddressID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "AddressLocaleID",
+          "references": "lu_address_locale.AddressLocaleID",
+          "constraintName": "fk_MemAddress_LUAddressLocale"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemAddress_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_MemAddress_AddressLocaleID",
+          "columns": [
+            "AddressLocaleID"
+          ]
+        },
+        {
+          "name": "i_MemAddress_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_admin",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsSuperAdmin",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsDataAdmin",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [],
+      "uniqueKeys": [
+        {
+          "name": "PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemAdmin_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_cert",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "CrosscutYear",
+          "type": "year(4)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "CrosscutLevel",
+          "type": "varchar(4)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [],
+      "uniqueKeys": [
+        {
+          "name": "PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemCert_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_group",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MemTypeIDs",
+          "type": "varchar(20)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MemberSince",
+          "type": "year(4)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Recert",
+          "type": "year(4)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "OrgStatusID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsAdmin",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsMentor",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrngGroupID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "AgreementDate",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroup_OrgStatusID",
+          "type": "(`OrgStatusID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroup_GroupID",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroup_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroup_TrngGroupID",
+          "type": "(`TrngGroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemGroup_LUOrgStatus",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemGroup_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID",
+        "GroupID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "OrgStatusID",
+          "references": "lu_org_status.OrgStatusID",
+          "constraintName": "fk_MemGroup_LUOrgStatus"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemGroup_Member"
+        },
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "t_mem_group_ibfk_1"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_MemGroup_OrgStatusID",
+          "columns": [
+            "OrgStatusID"
+          ]
+        },
+        {
+          "name": "i_MemGroup_GroupID",
+          "columns": [
+            "GroupID"
+          ]
+        },
+        {
+          "name": "i_MemGroup_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        },
+        {
+          "name": "i_MemGroup_TrngGroupID",
+          "columns": [
+            "TrngGroupID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_group_annual",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Year",
+          "type": "year(4)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PatrolDays",
+          "type": "int(11)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NonTrailHours",
+          "type": "int(11)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroupAnnual_GroupID",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroupAnnual_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemGroupAnnual_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID",
+        "GroupID",
+        "Year"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_MemGroupAnnual_LUGroup"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemGroupAnnual_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_MemGroupAnnual_GroupID",
+          "columns": [
+            "GroupID"
+          ]
+        },
+        {
+          "name": "i_MemGroupAnnual_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_group_cpnr",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": "3",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "HasFirstAidCert",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ClassTrngYear",
+          "type": "year(4)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "FieldTrngYear",
+          "type": "year(4)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "OnGearRentalList",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrailsDone",
+          "type": "varchar(1000)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "OnTrailCrew",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemGroupCpnr_LuGroup",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroupCpnr_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemGroupCpnr_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID",
+        "GroupID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_MemGroupCpnr_LUGroup"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemGroupCpnr_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "fk_MemGroupCpnr_LuGroup",
+          "columns": [
+            "GroupID"
+          ]
+        },
+        {
+          "name": "i_MemGroupCpnr_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_group_pwv",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": "10",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "CertificateRequested",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroupPwv_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroupPwv_GroupID",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemGroupPwv_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID",
+        "GroupID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_MemGroupPwv_LUGroup"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemGroupPwv_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_MemGroupPwv_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        },
+        {
+          "name": "i_MemGroupPwv_GroupID",
+          "columns": [
+            "GroupID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_group_vis",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": "10",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisCenterID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroupVis_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroupVis_GroupID",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemGroupVis_VisCenterID",
+          "type": "(`VisCenterID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemGroupVis_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemGroupVis_LUVisCenter",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID",
+        "GroupID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_MemGroupVis_LUGroup"
+        },
+        {
+          "column": "VisCenterID",
+          "references": "lu_vis_center.VisCenterID",
+          "constraintName": "fk_MemGroupVis_LUVisCenter"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemGroupVis_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_MemGroupVis_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        },
+        {
+          "name": "i_MemGroupVis_GroupID",
+          "columns": [
+            "GroupID"
+          ]
+        },
+        {
+          "name": "i_MemGroupVis_VisCenterID",
+          "columns": [
+            "VisCenterID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_notify",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "WantPartner",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [],
+      "uniqueKeys": [
+        {
+          "name": "PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemNotify_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_phone",
+      "columns": [
+        {
+          "name": "MemPhoneID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PhoneLocaleID",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "varchar(25)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PhonePrimary",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemPhone_PhoneLocaleID",
+          "type": "(`PhoneLocaleID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemPhone_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemPhone_LUPhoneLocale",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "MemPhoneID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PhoneLocaleID",
+          "references": "lu_phone_locale.PhoneLocaleID",
+          "constraintName": "fk_MemPhone_LUPhoneLocale"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemPhone_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_MemPhone_PhoneLocaleID",
+          "columns": [
+            "PhoneLocaleID"
+          ]
+        },
+        {
+          "name": "i_MemPhone_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_mem_race",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "RaceID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemPace_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_MemPacePaceID",
+          "type": "(`RaceID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_MemRace_LURace",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID",
+        "RaceID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "RaceID",
+          "references": "lu_race.RaceID",
+          "constraintName": "fk_MemRace_LURace"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_MemRace_Member"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_MemPace_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        },
+        {
+          "name": "i_MemPacePaceID",
+          "columns": [
+            "RaceID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_member",
+      "columns": [
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "FirstName",
+          "type": "varchar(24)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MiddleInitial",
+          "type": "varchar(4)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "LastName",
+          "type": "varchar(32)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NameSuffix",
+          "type": "varchar(44)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Username",
+          "type": "varchar(45)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "EmailAddress",
+          "type": "varchar(64)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GenderID",
+          "type": "smallint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "BirthDate",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "AgeID",
+          "type": "smallint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "BirthYear",
+          "type": "year(4)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsUSCitizen",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisaTypeID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsVeteran",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "HasDisability",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "KnownMedical",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "RisksReviewed",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Photo",
+          "type": "varchar(100)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ProfileLastChecked",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "DeviceTypeID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "DeviceCode",
+          "type": "varchar(64)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsBackpacker",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Member_VisaTypeID",
+          "type": "(`VisaTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Member_GenderID",
+          "type": "(`GenderID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Member_AgeID",
+          "type": "(`AgeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Member_DeviceTypeID",
+          "type": "(`DeviceTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Member_LUAge",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Member_LUDeviceType",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Member_LUGender",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "AgeID",
+          "references": "lu_age.AgeID",
+          "constraintName": "fk_Member_LUAge"
+        },
+        {
+          "column": "DeviceTypeID",
+          "references": "lu_devicetype.DeviceTypeID",
+          "constraintName": "fk_Member_LUDeviceType"
+        },
+        {
+          "column": "GenderID",
+          "references": "lu_gender.GenderID",
+          "constraintName": "fk_Member_LUGender"
+        },
+        {
+          "column": "VisaTypeID",
+          "references": "lu_visa_type.VisaTypeID",
+          "constraintName": "fk_Member_LUVisaType"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_Member_VisaTypeID",
+          "columns": [
+            "VisaTypeID"
+          ]
+        },
+        {
+          "name": "i_Member_GenderID",
+          "columns": [
+            "GenderID"
+          ]
+        },
+        {
+          "name": "i_Member_AgeID",
+          "columns": [
+            "AgeID"
+          ]
+        },
+        {
+          "name": "i_Member_DeviceTypeID",
+          "columns": [
+            "DeviceTypeID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_non_trail_activity",
+      "columns": [
+        {
+          "name": "NTActivityID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NTActTypeID",
+          "type": "tinyint(3)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActivityDate",
+          "type": "date",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MinutesWorked",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "0",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportDate",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportWriterID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(1360)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_NonTrailActivity_NTActTypeID",
+          "type": "(`NTActTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_NonTrailActivity_GroupID",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_NonTrailActivity_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "NTActivityID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_NonTrailActivity_LUGroup"
+        },
+        {
+          "column": "NTActTypeID",
+          "references": "lu_nontrail_activity_type.NTActTypeID",
+          "constraintName": "fk_NonTrailActivity_LUNontrailActivityType"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_NonTrailActivity_NTActTypeID",
+          "columns": [
+            "NTActTypeID"
+          ]
+        },
+        {
+          "name": "i_NonTrailActivity_GroupID",
+          "columns": [
+            "GroupID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_non_trail_activity_member",
+      "columns": [
+        {
+          "name": "NTActivityID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MinutesWorked",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_NonTrailActivityMember_NTActivityID",
+          "type": "(`NTActivityID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_NonTrailActivityMember_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_NonTrailActivityMember_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "PersonID",
+        "NTActivityID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_NonTrailActivityMember_Member"
+        },
+        {
+          "column": "NTActivityID",
+          "references": "t_non_trail_activity.NTActivityID",
+          "constraintName": "fk_NonTrailActivityMember_NonTrailActivity"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_NonTrailActivityMember_NTActivityID",
+          "columns": [
+            "NTActivityID"
+          ]
+        },
+        {
+          "name": "i_NonTrailActivityMember_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_project",
+      "columns": [
+        {
+          "name": "ProjectID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ProjectName",
+          "type": "varchar(150)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ProjectDescription",
+          "type": "varchar(1000)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "DeptID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "LeadContact",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "CreationDate",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "CreatedBy",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Project_DeptID",
+          "type": "(`DeptID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Project_CreatedBy",
+          "type": "(`CreatedBy`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Project_LeadContact",
+          "type": "(`LeadContact`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Project_CreatedBy",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Project_DeptID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ProjectID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "CreatedBy",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_Project_CreatedBy"
+        },
+        {
+          "column": "DeptID",
+          "references": "lu_dept.DeptID",
+          "constraintName": "fk_Project_DeptID"
+        },
+        {
+          "column": "LeadContact",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_Project_LeadContact"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_Project_DeptID",
+          "columns": [
+            "DeptID"
+          ]
+        },
+        {
+          "name": "i_Project_CreatedBy",
+          "columns": [
+            "CreatedBy"
+          ]
+        },
+        {
+          "name": "i_Project_LeadContact",
+          "columns": [
+            "LeadContact"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_project_report",
+      "columns": [
+        {
+          "name": "ProjReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ProjectID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActTypeID",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "OrgID",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "WksiteID",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActivityDate",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MinutesWorked",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumContacted",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportDate",
+          "type": "date",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportWriterID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(5000)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReport_ProjectID",
+          "type": "(`ProjectID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReport_ActTypeID",
+          "type": "(`ActTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReport_OrgID",
+          "type": "(`OrgID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReport_GroupID",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReport_WksiteID",
+          "type": "(`WksiteID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReport_ReportWriterID",
+          "type": "(`ReportWriterID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReport_ActTypeID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReport_GroupID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReport_OrgID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReport_ProjectID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReport_ReportWriterID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ProjReportID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ActTypeID",
+          "references": "lu_activity_type.ActTypeID",
+          "constraintName": "fk_ProjReport_ActTypeID"
+        },
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_ProjReport_GroupID"
+        },
+        {
+          "column": "OrgID",
+          "references": "lu_organization.OrgID",
+          "constraintName": "fk_ProjReport_OrgID"
+        },
+        {
+          "column": "ProjectID",
+          "references": "t_project.ProjectID",
+          "constraintName": "fk_ProjReport_ProjectID"
+        },
+        {
+          "column": "ReportWriterID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_ProjReport_ReportWriterID"
+        },
+        {
+          "column": "WksiteID",
+          "references": "lu_worksite.WksiteID",
+          "constraintName": "fk_ProjReport_WksiteID"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_ProjReport_ProjectID",
+          "columns": [
+            "ProjectID"
+          ]
+        },
+        {
+          "name": "i_ProjReport_ActTypeID",
+          "columns": [
+            "ActTypeID"
+          ]
+        },
+        {
+          "name": "i_ProjReport_OrgID",
+          "columns": [
+            "OrgID"
+          ]
+        },
+        {
+          "name": "i_ProjReport_GroupID",
+          "columns": [
+            "GroupID"
+          ]
+        },
+        {
+          "name": "i_ProjReport_WksiteID",
+          "columns": [
+            "WksiteID"
+          ]
+        },
+        {
+          "name": "i_ProjReport_ReportWriterID",
+          "columns": [
+            "ReportWriterID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_project_report_member",
+      "columns": [
+        {
+          "name": "ProjReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MinutesWorked",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReportMember_ProjReportID",
+          "type": "(`ProjReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReportMember_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReportMember_PersonID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ProjReportID",
+        "PersonID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_ProjReportMember_PersonID"
+        },
+        {
+          "column": "ProjReportID",
+          "references": "t_project_report.ProjReportID",
+          "constraintName": "fk_ProjReportMember_ProjReportID"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_ProjReportMember_ProjReportID",
+          "columns": [
+            "ProjReportID"
+          ]
+        },
+        {
+          "name": "i_ProjReportMember_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_project_report_nonmember",
+      "columns": [
+        {
+          "name": "ProjReportNonMemberID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ProjReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "RaceID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GenderID",
+          "type": "smallint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "AgeID",
+          "type": "smallint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Count",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MinutesWorked",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReportNonmember_ProjReportID",
+          "type": "(`ProjReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReportNonmember_GenderID",
+          "type": "(`GenderID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReportNonmember_AgeID",
+          "type": "(`AgeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ProjReportNonmember_RaceID",
+          "type": "(`RaceID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReportNonMember_RaceID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReportNonmember_AgeID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ProjReportNonmember_GenderID",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ProjReportNonMemberID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "RaceID",
+          "references": "lu_race.RaceID",
+          "constraintName": "fk_ProjReportNonMember_RaceID"
+        },
+        {
+          "column": "AgeID",
+          "references": "lu_age.AgeID",
+          "constraintName": "fk_ProjReportNonmember_AgeID"
+        },
+        {
+          "column": "GenderID",
+          "references": "lu_gender.GenderID",
+          "constraintName": "fk_ProjReportNonmember_GenderID"
+        },
+        {
+          "column": "ProjReportID",
+          "references": "t_project_report.ProjReportID",
+          "constraintName": "fk_ProjReportNonmember_ProjReportID"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_ProjReportNonmember_ProjReportID",
+          "columns": [
+            "ProjReportID"
+          ]
+        },
+        {
+          "name": "i_ProjReportNonmember_GenderID",
+          "columns": [
+            "GenderID"
+          ]
+        },
+        {
+          "name": "i_ProjReportNonmember_AgeID",
+          "columns": [
+            "AgeID"
+          ]
+        },
+        {
+          "name": "i_ProjReportNonmember_RaceID",
+          "columns": [
+            "RaceID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_report",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActTypeID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "WksiteID",
+          "type": "smallint(5)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActivityDate",
+          "type": "date",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrngTypeID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActMethodID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumGuests",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportDate",
+          "type": "date",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportWriterID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TimeStarted",
+          "type": "time",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TimeEnded",
+          "type": "time",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PatrolExtent",
+          "type": "varchar(1024)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumContacted",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrailConditions",
+          "type": "varchar(5000)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(5000)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ScheduleID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsDraft",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsUnofficial",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReviewStatusID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Report_ActMethodID",
+          "type": "(`ActMethodID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Report_ActTypeID",
+          "type": "(`ActTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Report_WksiteID",
+          "type": "(`WksiteID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Report_ReportWriterID",
+          "type": "(`ReportWriterID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Report_ScheduleID",
+          "type": "(`ScheduleID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Report_GroupID",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Report_TrngTypeID",
+          "type": "(`TrngTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Report_ReviewStatusID",
+          "type": "(`ReviewStatusID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Report_LUActivityMethod",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Report_LUActivityType",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Report_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Report_LUReviewStatus",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Report_LUTraining",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Report_LUWorksite",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Report_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ActMethodID",
+          "references": "lu_activity_method.ActMethodID",
+          "constraintName": "fk_Report_LUActivityMethod"
+        },
+        {
+          "column": "ActTypeID",
+          "references": "lu_activity_type.ActTypeID",
+          "constraintName": "fk_Report_LUActivityType"
+        },
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_Report_LUGroup"
+        },
+        {
+          "column": "ReviewStatusID",
+          "references": "lu_review_status.ReviewStatusID",
+          "constraintName": "fk_Report_LUReviewStatus"
+        },
+        {
+          "column": "TrngTypeID",
+          "references": "lu_trng_type.TrngTypeID",
+          "constraintName": "fk_Report_LUTraining"
+        },
+        {
+          "column": "WksiteID",
+          "references": "lu_worksite.WksiteID",
+          "constraintName": "fk_Report_LUWorksite"
+        },
+        {
+          "column": "ReportWriterID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_Report_Member"
+        },
+        {
+          "column": "ScheduleID",
+          "references": "t_schedule.ScheduleID",
+          "constraintName": "fk_Report_Schedule"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_Report_ActMethodID",
+          "columns": [
+            "ActMethodID"
+          ]
+        },
+        {
+          "name": "i_Report_ActTypeID",
+          "columns": [
+            "ActTypeID"
+          ]
+        },
+        {
+          "name": "i_Report_WksiteID",
+          "columns": [
+            "WksiteID"
+          ]
+        },
+        {
+          "name": "i_Report_ReportWriterID",
+          "columns": [
+            "ReportWriterID"
+          ]
+        },
+        {
+          "name": "i_Report_ScheduleID",
+          "columns": [
+            "ScheduleID"
+          ]
+        },
+        {
+          "name": "i_Report_GroupID",
+          "columns": [
+            "GroupID"
+          ]
+        },
+        {
+          "name": "i_Report_TrngTypeID",
+          "columns": [
+            "TrngTypeID"
+          ]
+        },
+        {
+          "name": "i_Report_ReviewStatusID",
+          "columns": [
+            "ReviewStatusID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_report_member",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsMentor",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TimeStarted",
+          "type": "time",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TimeEnded",
+          "type": "time",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActMethodID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptMember_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptMember_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ReportMember_LUActivityMethod",
+          "type": "(`ActMethodID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ReportMember_LUActivityMethod",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptMember_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID",
+        "PersonID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ActMethodID",
+          "references": "lu_activity_method.ActMethodID",
+          "constraintName": "fk_ReportMember_LUActivityMethod"
+        },
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_RptMember_Member"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptMember_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptMember_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        },
+        {
+          "name": "i_RptMember_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        },
+        {
+          "name": "fk_ReportMember_LUActivityMethod",
+          "columns": [
+            "ActMethodID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_campsite",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "CampsiteID",
+          "type": "smallint(5)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Visited",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SiteOccupied",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumFireRings",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumHazTreesPresent",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumHazTreesRemoved",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "DisplayOrder",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptCampsite_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptCampsite_CampsiteID",
+          "type": "(`CampsiteID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptCampsite_LUCampsite",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID",
+        "CampsiteID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "CampsiteID",
+          "references": "lu_campsite.CampsiteID",
+          "constraintName": "fk_RptCampsite_LUCampsite"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptCampsite_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptCampsite_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        },
+        {
+          "name": "i_RptCampsite_CampsiteID",
+          "columns": [
+            "CampsiteID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_extra",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SnowDepthInches",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SnowDepthInchesAtTH",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NewSnowInches",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrailCondIDs",
+          "type": "varchar(1024)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumFireRingsRemoved",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumFireRingsImproved",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptConditions_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptConditions_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptConditions_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_maintained_to_std",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptMaintainedToStd_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID",
+        "StartMile",
+        "FinishMile"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptMaintainedToStd_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptMaintainedToStd_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_maintenance_need",
+      "columns": [
+        {
+          "name": "RptMtncNeedID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GPS",
+          "type": "varchar(25)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Location",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Description",
+          "type": "varchar(1024)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptMaintenanceNeed_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "RptMtncNeedID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptMaintenanceNeed_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptMaintenanceNeed_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_notrees",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "AllClear",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Details",
+          "type": "varchar(1024)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptNoTrees_Report"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "table": "t_rpt_observation",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ObsTypeID",
+          "type": "tinyint(3)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumSeen",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumContacted",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptObservation_ObsTypeID",
+          "type": "(`ObsTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptObservation_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptObservation_LUObsType",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID",
+        "ObsTypeID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ObsTypeID",
+          "references": "lu_obs_type.ObsTypeID",
+          "constraintName": "fk_RptObservation_LUObsType"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptObservation_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptObservation_ObsTypeID",
+          "columns": [
+            "ObsTypeID"
+          ]
+        },
+        {
+          "name": "i_RptObservation_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_other_campsite",
+      "columns": [
+        {
+          "name": "RptOtherCampsiteID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ZoneID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GPS",
+          "type": "varchar(25)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Location",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SiteOccupied",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumFireRings",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "UnattendedFire",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "FireDuringRestrictions",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TimeObserved",
+          "type": "time",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "DisplayOrder",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptOtherCampsite_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptOtherCampsite_ZoneID",
+          "type": "(`ZoneID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptOtherCampsite_LUZone",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "RptOtherCampsiteID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ZoneID",
+          "references": "lu_zone.ZoneID",
+          "constraintName": "fk_RptOtherCampsite_LUZone"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptOtherCampsite_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptOtherCampsite_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        },
+        {
+          "name": "i_RptOtherCampsite_ZoneID",
+          "columns": [
+            "ZoneID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_parking_lot",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PLotID",
+          "type": "smallint(5)",
+          "nullable": "NO",
+          "default": "0",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PLotCondID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ToiletCondID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumVehiclesStart",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumVehiclesEnd",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumTrailersStart",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumTrailersEnd",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumSnowmobilesStart",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumSnowmobilesEnd",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptParkingLot_PLotID",
+          "type": "(`PLotID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptParkingLot_PLotCondID",
+          "type": "(`PLotCondID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptParkingLot_ToiletCondID",
+          "type": "(`ToiletCondID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptParkingLot_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptParkingLot_LUParkingLot",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptParkingLot_LUParkingLotCond",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptParkingLot_LUToiletCond",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID",
+        "PLotID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PLotID",
+          "references": "lu_parking_lot.PLotID",
+          "constraintName": "fk_RptParkingLot_LUParkingLot"
+        },
+        {
+          "column": "PLotCondID",
+          "references": "lu_plot_cond.PLotCondID",
+          "constraintName": "fk_RptParkingLot_LUParkingLotCond"
+        },
+        {
+          "column": "ToiletCondID",
+          "references": "lu_toilet_cond.ToiletCondID",
+          "constraintName": "fk_RptParkingLot_LUToiletCond"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptParkingLot_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptParkingLot_PLotID",
+          "columns": [
+            "PLotID"
+          ]
+        },
+        {
+          "name": "i_RptParkingLot_PLotCondID",
+          "columns": [
+            "PLotCondID"
+          ]
+        },
+        {
+          "name": "i_RptParkingLot_ToiletCondID",
+          "columns": [
+            "ToiletCondID"
+          ]
+        },
+        {
+          "name": "i_RptParkingLot_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_sign_need",
+      "columns": [
+        {
+          "name": "RptSignNeedID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SignMatlID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GPS",
+          "type": "varchar(25)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Location",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(1024)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptSignNeed_SignMatlID",
+          "type": "(`SignMatlID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptSignNeed_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptSignNeed_LUSignMatl",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "RptSignNeedID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "SignMatlID",
+          "references": "lu_sign_matl.SignMatlID",
+          "constraintName": "fk_RptSignNeed_LUSignMatl"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptSignNeed_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptSignNeed_SignMatlID",
+          "columns": [
+            "SignMatlID"
+          ]
+        },
+        {
+          "name": "i_RptSignNeed_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_sign_work",
+      "columns": [
+        {
+          "name": "RptSignWkID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SignMatlID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumInstalled",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumRepaired",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptSignWork_SignMatlID",
+          "type": "(`SignMatlID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptSignWork_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptSignWork_LUSignMatl",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "RptSignWkID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "SignMatlID",
+          "references": "lu_sign_matl.SignMatlID",
+          "constraintName": "fk_RptSignWork_LUSignMatl"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptSignWork_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptSignWork_SignMatlID",
+          "columns": [
+            "SignMatlID"
+          ]
+        },
+        {
+          "name": "i_RptSignWork_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_trail_clearing",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrailClearingID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumCleared",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumLeft",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptTrailClearing_TrailClearingID",
+          "type": "(`TrailClearingID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptTrailClearing_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptTrailClearing_LUTtrailClearing",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID",
+        "TrailClearingID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "TrailClearingID",
+          "references": "lu_trail_clearing.TrailClearingID",
+          "constraintName": "fk_RptTrailClearing_LUTtrailClearing"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptTrailClearing_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptTrailClearing_TrailClearingID",
+          "columns": [
+            "TrailClearingID"
+          ]
+        },
+        {
+          "name": "i_RptTrailClearing_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_trail_work",
+      "columns": [
+        {
+          "name": "RptTrailWkID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrailWorkID",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrailMatlID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumConstructed",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumRepaired",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptTrailWork_TrailWorkID",
+          "type": "(`TrailWorkID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptTrailWork_TrailMatlID",
+          "type": "(`TrailMatlID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptTrailWork_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptTrailWork_LUTrailMatl",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptTrailWork_LUTrailWork",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "RptTrailWkID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "TrailMatlID",
+          "references": "lu_trail_matl.TrailMatlID",
+          "constraintName": "fk_RptTrailWork_LUTrailMatl"
+        },
+        {
+          "column": "TrailWorkID",
+          "references": "lu_trail_work.TrailWorkID",
+          "constraintName": "fk_RptTrailWork_LUTrailWork"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptTrailWork_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptTrailWork_TrailWorkID",
+          "columns": [
+            "TrailWorkID"
+          ]
+        },
+        {
+          "name": "i_RptTrailWork_TrailMatlID",
+          "columns": [
+            "TrailMatlID"
+          ]
+        },
+        {
+          "name": "i_RptTrailWork_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_tree_down",
+      "columns": [
+        {
+          "name": "RptTreeDownID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TreeSize",
+          "type": "tinyint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GPS",
+          "type": "varchar(25)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Location",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(1024)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ReportTreeClearing_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "RptTreeDownID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptTreeDown_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_ReportTreeClearing_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_violation",
+      "columns": [
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ViolTypeID",
+          "type": "tinyint(3)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumSeen",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumContacted",
+          "type": "smallint(3)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptViolation_LUViolType",
+          "type": "(`ViolTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptViolation_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptViolation_LUViolType",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ReportID",
+        "ViolTypeID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ViolTypeID",
+          "references": "lu_viol_type.ViolTypeID",
+          "constraintName": "fk_RptViolation_LUViolType"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptViolation_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptViolation_LUViolType",
+          "columns": [
+            "ViolTypeID"
+          ]
+        },
+        {
+          "name": "i_RptViolation_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_rpt_weed",
+      "columns": [
+        {
+          "name": "RptWeedID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "WeedID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "GPS",
+          "type": "varchar(25)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Location",
+          "type": "varchar(240)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ZoneID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "AbundanceID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "WeedActionID",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "varchar(1024)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptWeed_WeedID",
+          "type": "(`WeedID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptWeed_WeedActionID",
+          "type": "(`WeedActionID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptWeed_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptWeed_ZoneID",
+          "type": "(`ZoneID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_RptWeed_AbundanceID",
+          "type": "(`AbundanceID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptWeed_LUAbundance",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptWeed_LUWeed",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptWeed_LUWeedAction",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_RptWeed_LUZone",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "RptWeedID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "AbundanceID",
+          "references": "lu_abundance.AbundanceID",
+          "constraintName": "fk_RptWeed_LUAbundance"
+        },
+        {
+          "column": "WeedID",
+          "references": "lu_weed.WeedID",
+          "constraintName": "fk_RptWeed_LUWeed"
+        },
+        {
+          "column": "WeedActionID",
+          "references": "lu_weed_action.WeedActionID",
+          "constraintName": "fk_RptWeed_LUWeedAction"
+        },
+        {
+          "column": "ZoneID",
+          "references": "lu_zone.ZoneID",
+          "constraintName": "fk_RptWeed_LUZone"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_RptWeed_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_RptWeed_WeedID",
+          "columns": [
+            "WeedID"
+          ]
+        },
+        {
+          "name": "i_RptWeed_WeedActionID",
+          "columns": [
+            "WeedActionID"
+          ]
+        },
+        {
+          "name": "i_RptWeed_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        },
+        {
+          "name": "i_RptWeed_ZoneID",
+          "columns": [
+            "ZoneID"
+          ]
+        },
+        {
+          "name": "i_RptWeed_AbundanceID",
+          "columns": [
+            "AbundanceID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_schedule",
+      "columns": [
+        {
+          "name": "ScheduleID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActTypeID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "WksiteID",
+          "type": "smallint(5)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActivityDate",
+          "type": "date",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SchedStartID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActMethodID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TrngTypeID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumGuests",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NeedsPartner",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "OpenSignup",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "text",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ScheduleDate",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SchedulerID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Schedule_ActTypeID",
+          "type": "(`ActTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Schedule_WksiteID",
+          "type": "(`WksiteID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Schedule_ActMethodID",
+          "type": "(`ActMethodID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Schedule_SchedulerID",
+          "type": "(`SchedulerID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Schedule_ReportID",
+          "type": "(`ReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Schedule_SchedStartID",
+          "type": "(`SchedStartID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Schedule_GroupID",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_Schedule_TrngTypeID",
+          "type": "(`TrngTypeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Schedule_LUActivityMethod",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Schedule_LUActivityType",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Schedule_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Schedule_LUScheduleStart",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Schedule_LUTrngType",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Schedule_LUWorksite",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_Schedule_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ScheduleID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "ActMethodID",
+          "references": "lu_activity_method.ActMethodID",
+          "constraintName": "fk_Schedule_LUActivityMethod"
+        },
+        {
+          "column": "ActTypeID",
+          "references": "lu_activity_type.ActTypeID",
+          "constraintName": "fk_Schedule_LUActivityType"
+        },
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_Schedule_LUGroup"
+        },
+        {
+          "column": "SchedStartID",
+          "references": "lu_schedule_start.SchedStartID",
+          "constraintName": "fk_Schedule_LUScheduleStart"
+        },
+        {
+          "column": "TrngTypeID",
+          "references": "lu_trng_type.TrngTypeID",
+          "constraintName": "fk_Schedule_LUTrngType"
+        },
+        {
+          "column": "WksiteID",
+          "references": "lu_worksite.WksiteID",
+          "constraintName": "fk_Schedule_LUWorksite"
+        },
+        {
+          "column": "SchedulerID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_Schedule_Member"
+        },
+        {
+          "column": "ReportID",
+          "references": "t_report.ReportID",
+          "constraintName": "fk_Schedule_Report"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_Schedule_ActTypeID",
+          "columns": [
+            "ActTypeID"
+          ]
+        },
+        {
+          "name": "i_Schedule_WksiteID",
+          "columns": [
+            "WksiteID"
+          ]
+        },
+        {
+          "name": "i_Schedule_ActMethodID",
+          "columns": [
+            "ActMethodID"
+          ]
+        },
+        {
+          "name": "i_Schedule_SchedulerID",
+          "columns": [
+            "SchedulerID"
+          ]
+        },
+        {
+          "name": "i_Schedule_ReportID",
+          "columns": [
+            "ReportID"
+          ]
+        },
+        {
+          "name": "i_Schedule_SchedStartID",
+          "columns": [
+            "SchedStartID"
+          ]
+        },
+        {
+          "name": "i_Schedule_GroupID",
+          "columns": [
+            "GroupID"
+          ]
+        },
+        {
+          "name": "i_Schedule_TrngTypeID",
+          "columns": [
+            "TrngTypeID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_schedule_member",
+      "columns": [
+        {
+          "name": "ScheduleID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "IsMentor",
+          "type": "tinyint(1)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ScheduleMember_ScheduleID",
+          "type": "(`ScheduleID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_ScheduleMember_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_ScheduleMember_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "ScheduleID",
+        "PersonID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_ScheduleMember_Member"
+        },
+        {
+          "column": "ScheduleID",
+          "references": "t_schedule.ScheduleID",
+          "constraintName": "fk_ScheduleMember_Schedule"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_ScheduleMember_ScheduleID",
+          "columns": [
+            "ScheduleID"
+          ]
+        },
+        {
+          "name": "i_ScheduleMember_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_vis_report",
+      "columns": [
+        {
+          "name": "VisReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisCenterID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActivityDate",
+          "type": "date",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportDate",
+          "type": "date",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ReportWriterID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MinutesWorked",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "NumVisitors",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "text",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisScheduleID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisReport_VisCenterID",
+          "type": "(`VisCenterID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisReport_ReportWriterID",
+          "type": "(`ReportWriterID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisReport_VisScheduleID",
+          "type": "(`VisScheduleID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisReport_LUGroup",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisReport_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisReport_LUVisCenter",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisReport_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "VisReportID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_VisReport_LUGroup"
+        },
+        {
+          "column": "VisCenterID",
+          "references": "lu_vis_center.VisCenterID",
+          "constraintName": "fk_VisReport_LUVisCenter"
+        },
+        {
+          "column": "ReportWriterID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_VisReport_Member"
+        },
+        {
+          "column": "VisScheduleID",
+          "references": "t_vis_schedule.VisScheduleID",
+          "constraintName": "fk_VisReport_VisSchedule"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_VisReport_VisCenterID",
+          "columns": [
+            "VisCenterID"
+          ]
+        },
+        {
+          "name": "i_VisReport_ReportWriterID",
+          "columns": [
+            "ReportWriterID"
+          ]
+        },
+        {
+          "name": "i_VisReport_VisScheduleID",
+          "columns": [
+            "VisScheduleID"
+          ]
+        },
+        {
+          "name": "fk_VisReport_LUGroup",
+          "columns": [
+            "GroupID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_vis_report_member",
+      "columns": [
+        {
+          "name": "VisReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "MinutesWorked",
+          "type": "mediumint(8)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "TravelMinutes",
+          "type": "smallint(5)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisReportMember_VisReportID",
+          "type": "(`VisReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisReportMember_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisReportMember_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "VisReportID",
+        "PersonID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_VisReportMember_Member"
+        },
+        {
+          "column": "VisReportID",
+          "references": "t_vis_report.VisReportID",
+          "constraintName": "fk_VisReportMember_VisReport"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_VisReportMember_VisReportID",
+          "columns": [
+            "VisReportID"
+          ]
+        },
+        {
+          "name": "i_VisReportMember_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_vis_rpt_comment",
+      "columns": [
+        {
+          "name": "VisReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisCommentID",
+          "type": "tinyint(3)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Count",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisRptComment_VisReportID",
+          "type": "(`VisReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisRptComment_VisCommentID",
+          "type": "(`VisCommentID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisRptComment_LUVisComment",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "VisReportID",
+        "VisCommentID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "VisCommentID",
+          "references": "lu_vis_comment.VisCommentID",
+          "constraintName": "fk_VisRptComment_LUVisComment"
+        },
+        {
+          "column": "VisReportID",
+          "references": "t_vis_report.VisReportID",
+          "constraintName": "fk_VisRptComment_VisReport"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_VisRptComment_VisReportID",
+          "columns": [
+            "VisReportID"
+          ]
+        },
+        {
+          "name": "i_VisRptComment_VisCommentID",
+          "columns": [
+            "VisCommentID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_vis_rpt_home",
+      "columns": [
+        {
+          "name": "VisReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisHomeID",
+          "type": "smallint(3)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Count",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisRptHome_VisReportID",
+          "type": "(`VisReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisRptHome_VisHomeID",
+          "type": "(`VisHomeID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisRptHome_LUVisHome",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "VisReportID",
+        "VisHomeID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "VisHomeID",
+          "references": "lu_vis_home.VisHomeID",
+          "constraintName": "fk_VisRptHome_LUVisHome"
+        },
+        {
+          "column": "VisReportID",
+          "references": "t_vis_report.VisReportID",
+          "constraintName": "fk_VisRptHome_VisReport"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_VisRptHome_VisReportID",
+          "columns": [
+            "VisReportID"
+          ]
+        },
+        {
+          "name": "i_VisRptHome_VisHomeID",
+          "columns": [
+            "VisHomeID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_vis_rpt_request",
+      "columns": [
+        {
+          "name": "VisReportID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisRequestID",
+          "type": "tinyint(3)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Count",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisRptRequest_VisReportID",
+          "type": "(`VisReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisRptRequest_VisRequestID",
+          "type": "(`VisRequestID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisRptRequest_LUVisRequest",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "VisReportID",
+        "VisRequestID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "VisRequestID",
+          "references": "lu_vis_request.VisRequestID",
+          "constraintName": "fk_VisRptRequest_LUVisRequest"
+        },
+        {
+          "column": "VisReportID",
+          "references": "t_vis_report.VisReportID",
+          "constraintName": "fk_VisRptRequest_VisReport"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_VisRptRequest_VisReportID",
+          "columns": [
+            "VisReportID"
+          ]
+        },
+        {
+          "name": "i_VisRptRequest_VisRequestID",
+          "columns": [
+            "VisRequestID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_vis_schedule",
+      "columns": [
+        {
+          "name": "VisScheduleID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "YES"
+        },
+        {
+          "name": "GroupID",
+          "type": "tinyint(2)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisCenterID",
+          "type": "tinyint(2)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ActivityDate",
+          "type": "date",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "ScheduleDate",
+          "type": "date",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "SchedulerID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "Comment",
+          "type": "text",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "VisReportID",
+          "type": "int(10)",
+          "nullable": "YES",
+          "default": "NULL",
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisSchedule_VisCenterID",
+          "type": "(`VisCenterID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisSchedule_SchedulerID",
+          "type": "(`SchedulerID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisSchedule_VisReportID",
+          "type": "(`VisReportID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisSchedule_LUGroup",
+          "type": "(`GroupID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisSchedule_LUGroup",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisSchedule_LUVisCenter",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisSchedule_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "VisScheduleID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "GroupID",
+          "references": "lu_group.GroupID",
+          "constraintName": "fk_VisSchedule_LUGroup"
+        },
+        {
+          "column": "VisCenterID",
+          "references": "lu_vis_center.VisCenterID",
+          "constraintName": "fk_VisSchedule_LUVisCenter"
+        },
+        {
+          "column": "SchedulerID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_VisSchedule_Member"
+        },
+        {
+          "column": "VisReportID",
+          "references": "t_vis_report.VisReportID",
+          "constraintName": "fk_VisSchedule_VisReport"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_VisSchedule_VisCenterID",
+          "columns": [
+            "VisCenterID"
+          ]
+        },
+        {
+          "name": "i_VisSchedule_SchedulerID",
+          "columns": [
+            "SchedulerID"
+          ]
+        },
+        {
+          "name": "i_VisSchedule_VisReportID",
+          "columns": [
+            "VisReportID"
+          ]
+        },
+        {
+          "name": "fk_VisSchedule_LUGroup",
+          "columns": [
+            "GroupID"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "t_vis_schedule_member",
+      "columns": [
+        {
+          "name": "VisScheduleID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "PersonID",
+          "type": "int(10)",
+          "nullable": "NO",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisScheduleMember_VisScheduleID",
+          "type": "(`VisScheduleID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "i_VisScheduleMember_PersonID",
+          "type": "(`PersonID`)",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        },
+        {
+          "name": "fk_VisScheduleMember_Member",
+          "type": "FOREIGN",
+          "nullable": "YES",
+          "default": null,
+          "autoIncrement": "NO"
+        }
+      ],
+      "primaryKey": [
+        "VisScheduleID",
+        "PersonID"
+      ],
+      "uniqueKeys": [],
+      "foreignKeys": [
+        {
+          "column": "PersonID",
+          "references": "t_member.PersonID",
+          "constraintName": "fk_VisScheduleMember_Member"
+        },
+        {
+          "column": "VisScheduleID",
+          "references": "t_vis_schedule.VisScheduleID",
+          "constraintName": "fk_VisScheduleMember_VisSchedule"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "i_VisScheduleMember_VisScheduleID",
+          "columns": [
+            "VisScheduleID"
+          ]
+        },
+        {
+          "name": "i_VisScheduleMember_PersonID",
+          "columns": [
+            "PersonID"
+          ]
+        }
+      ]
+    }
+  ],
+  "foreignKeyTargets": [
+    "lu_abundance",
+    "lu_activity_method",
+    "lu_activity_type",
+    "lu_address_locale",
+    "lu_age",
+    "lu_campsite",
+    "lu_dept",
+    "lu_devicetype",
+    "lu_gender",
+    "lu_group",
+    "lu_nontrail_activity_type",
+    "lu_obs_type",
+    "lu_org_status",
+    "lu_organization",
+    "lu_parking_lot",
+    "lu_phone_locale",
+    "lu_plot_cond",
+    "lu_race",
+    "lu_review_status",
+    "lu_schedule_start",
+    "lu_sign_matl",
+    "lu_toilet_cond",
+    "lu_trail_clearing",
+    "lu_trail_matl",
+    "lu_trail_work",
+    "lu_trng_type",
+    "lu_viol_type",
+    "lu_vis_center",
+    "lu_vis_comment",
+    "lu_vis_home",
+    "lu_vis_request",
+    "lu_visa_type",
+    "lu_weed",
+    "lu_weed_action",
+    "lu_worksite",
+    "lu_zone",
+    "t_member",
+    "t_non_trail_activity",
+    "t_project",
+    "t_project_report",
+    "t_report",
+    "t_schedule",
+    "t_vis_report",
+    "t_vis_schedule"
+  ]
+}
