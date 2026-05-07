@@ -55,14 +55,18 @@ function authLoginLogEnsureTable(PDO $db): void {
   } catch (Throwable $e) {
     error_log('auth_login_log ensure table: ' . $e->getMessage());
   }
-  // Migrate existing tables that predate the login_type column
+  // Migrate existing tables that predate the login_type column (MySQL 5.7 compatible)
   try {
-    $db->exec(
-      "ALTER TABLE auth_login_log ADD COLUMN IF NOT EXISTS
-       login_type ENUM('OTC','ACCESS') NOT NULL DEFAULT 'OTC'"
+    $has = $db->prepare(
+      "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'auth_login_log' AND COLUMN_NAME = 'login_type'"
     );
+    $has->execute();
+    if ((int) $has->fetchColumn() === 0) {
+      $db->exec("ALTER TABLE auth_login_log ADD COLUMN login_type ENUM('OTC','ACCESS') NOT NULL DEFAULT 'OTC'");
+    }
   } catch (Throwable $e) {
-    // Swallow — column already exists or DB version doesn't support IF NOT EXISTS
+    error_log('auth_login_log add login_type: ' . $e->getMessage());
   }
 }
 
