@@ -107,7 +107,7 @@ export function AdminPage() {
               </p>
             ) : (
               <div className="overflow-x-auto -mx-1">
-                <table className="w-full min-w-[28rem] text-sm">
+                <table className="w-full min-w-[34rem] text-sm">
                   <thead>
                     <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/50">
                       <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
@@ -121,6 +121,9 @@ export function AdminPage() {
                       </th>
                       <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[10rem]">
                         Member name
+                      </th>
+                      <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                        Type
                       </th>
                     </tr>
                   </thead>
@@ -141,6 +144,17 @@ export function AdminPage() {
                         </td>
                         <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">
                           {memberNameLastFirst(row)}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          {row.loginType === 'ACCESS' ? (
+                            <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                              Access
+                            </span>
+                          ) : (
+                            <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                              OTC
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

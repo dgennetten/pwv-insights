@@ -62,7 +62,7 @@ if ($preferredId !== $sessionPersonId) {
 }
 
 // Remember-this-device restores hit session.php, not verify-otp.php — log those too.
-authLoginLogRecord($db, $sessionPersonId);
+authLoginLogRecord($db, $sessionPersonId, 'ACCESS');
 memberLastLoginTouch($db, $sessionPersonId);
 syncRequestPullFromAwsIfStale($db);
 

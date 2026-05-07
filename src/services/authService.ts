@@ -16,6 +16,7 @@ export interface AdminLoginRow {
   lastName: string
   firstName: string
   loggedInAtMs: number
+  loginType: 'OTC' | 'ACCESS'
 }
 
 /** Recent sign-ins (admin only). */

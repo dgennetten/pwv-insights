@@ -41,31 +41,43 @@ function getDb(): PDO {
 function authLoginLogEnsureTable(PDO $db): void {
   try {
     $db->exec(
-      'CREATE TABLE IF NOT EXISTS auth_login_log (
+      "CREATE TABLE IF NOT EXISTS auth_login_log (
         id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         person_id     INT UNSIGNED NOT NULL,
+        login_type    ENUM('OTC','ACCESS') NOT NULL DEFAULT 'OTC',
         logged_in_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_logged_in (logged_in_at),
         INDEX idx_person_time (person_id, logged_in_at),
         CONSTRAINT fk_auth_login_person
           FOREIGN KEY (person_id) REFERENCES t_member(PersonID) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
   } catch (Throwable $e) {
     error_log('auth_login_log ensure table: ' . $e->getMessage());
+  }
+  // Migrate existing tables that predate the login_type column
+  try {
+    $db->exec(
+      "ALTER TABLE auth_login_log ADD COLUMN IF NOT EXISTS
+       login_type ENUM('OTC','ACCESS') NOT NULL DEFAULT 'OTC'"
+    );
+  } catch (Throwable $e) {
+    // Swallow — column already exists or DB version doesn't support IF NOT EXISTS
   }
 }
 
 /**
  * Records a successful auth (OTP verification or remembered-device session check).
+ * @param string $loginType 'OTC' for a new one-time-code login, 'ACCESS' for a remembered-device session.
  */
-function authLoginLogRecord(PDO $db, int $personId): void {
+function authLoginLogRecord(PDO $db, int $personId, string $loginType = 'OTC'): void {
   if ($personId < 1) {
     return;
   }
+  $type = ($loginType === 'ACCESS') ? 'ACCESS' : 'OTC';
   authLoginLogEnsureTable($db);
   try {
-    $db->prepare('INSERT INTO auth_login_log (person_id) VALUES (?)')->execute([$personId]);
+    $db->prepare('INSERT INTO auth_login_log (person_id, login_type) VALUES (?, ?)')->execute([$personId, $type]);
   } catch (PDOException $e) {
     $driver = $e->errorInfo !== null ? json_encode($e->errorInfo) : '';
     error_log('auth_login_log insert person_id=' . $personId . ': ' . $e->getMessage() . ' ' . $driver);

@@ -55,7 +55,7 @@ $expiresAt = date('Y-m-d H:i:s', strtotime('+365 days'));
 $db->prepare('INSERT INTO auth_sessions (person_id, token, expires_at) VALUES (?, ?, ?)')
    ->execute([$member['PersonID'], $token, $expiresAt]);
 
-authLoginLogRecord($db, (int) $member['PersonID']);
+authLoginLogRecord($db, (int) $member['PersonID'], 'OTC');
 
 $role = (strtolower($email) === strtolower(ADMIN_EMAIL)) ? 'admin' : 'member';
 

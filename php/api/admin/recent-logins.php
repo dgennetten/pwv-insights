@@ -53,12 +53,13 @@ authLoginLogEnsureTable($db);
 
 try {
   $q = $db->query(
-    'SELECT l.person_id AS memberId, m.LastName AS lastName, m.FirstName AS firstName,
-            UNIX_TIMESTAMP(l.logged_in_at) * 1000 AS loggedInAtMs
+    "SELECT l.person_id AS memberId, m.LastName AS lastName, m.FirstName AS firstName,
+            UNIX_TIMESTAMP(l.logged_in_at) * 1000 AS loggedInAtMs,
+            COALESCE(l.login_type, 'OTC') AS loginType
      FROM auth_login_log l
      INNER JOIN t_member m ON m.PersonID = l.person_id
      ORDER BY l.logged_in_at DESC, l.id DESC
-     LIMIT 500'
+     LIMIT 500"
   );
   $rows = $q->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
@@ -77,6 +78,7 @@ foreach ($rows as $r) {
     'lastName'     => (string) $r['lastName'],
     'firstName'    => (string) $r['firstName'],
     'loggedInAtMs' => (int) $r['loggedInAtMs'],
+    'loginType'    => $r['loginType'] === 'ACCESS' ? 'ACCESS' : 'OTC',
   ];
 }
 
