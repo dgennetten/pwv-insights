@@ -119,19 +119,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false
 
     void (async () => {
+      const token = localStorage.getItem(TOKEN_KEY)
+      const remember = localStorage.getItem(REMEMBER_KEY) === '1'
+
       const raw = localStorage.getItem(SESSION_KEY)
       if (raw) {
         try {
           const u = JSON.parse(raw) as Record<string, unknown>
           const pid = Math.trunc(Number(u.personId))
-          if (Number.isFinite(pid) && pid >= 1) return
+          if (Number.isFinite(pid) && pid >= 1) {
+            // Valid local session — ping session.php to log the ACCESS event, ignore result
+            if (token && remember) void validateStoredSession(token)
+            return
+          }
         } catch {
           /* try token restore */
         }
       }
 
-      const token = localStorage.getItem(TOKEN_KEY)
-      if (token && localStorage.getItem(REMEMBER_KEY) === '1') {
+      if (token && remember) {
         const r = await validateStoredSession(token)
         if (cancelled) return
         if (r?.success && r.personId != null && r.token != null) {
