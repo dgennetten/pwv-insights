@@ -66,7 +66,12 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 shrink-0">Reports</h2>
+          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 shrink-0">
+            Reports
+            <span className="ml-2 text-sm font-normal text-stone-500 dark:text-stone-400 tabular-nums">
+              ({formatInteger(totalCount)})
+            </span>
+          </h2>
           {/* Season toggle — matches TrailList styling exactly */}
           <div className="flex gap-1">
             {(['current', 'last'] as const).map(s => (
