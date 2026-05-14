@@ -30,9 +30,23 @@ function reportsPersonIdColumn(PDO $db): string {
     return $resolved = 'PersonID';
 }
 
+/** Returns the report-writer PersonID column name on t_report, or null if absent. */
+function reportsWriterIdColumn(PDO $db): ?string {
+    static $resolved = 'unset';
+    if ($resolved !== 'unset') return $resolved;
+    foreach (['ReportWriterID', 'ReporterID', 'WriterPersonID', 'SubmittedByPersonID'] as $c) {
+        try {
+            $db->query("SELECT `$c` FROM `t_report` LIMIT 0");
+            return $resolved = $c;
+        } catch (Throwable $e) { /* try next */ }
+    }
+    return $resolved = null;
+}
+
 try {
-    $db    = getDb();
-    $rmPid = reportsPersonIdColumn($db);
+    $db       = getDb();
+    $rmPid    = reportsPersonIdColumn($db);
+    $writerCol = reportsWriterIdColumn($db); // null when column absent (e.g. local dev schema)
 
     // Resolve memberContext: 'all' or a positive integer PersonID
     $rawCtx   = $_GET['memberContext'] ?? 'all';
@@ -67,34 +81,54 @@ try {
     $baseParams = [REPORTS_PWV_GROUP, $startDate, $endDate];
 
     // When a PersonID is supplied, restrict to reports where that person is either
-    // the report writer OR appears in t_report_member.
+    // the report writer (when the column exists) OR appears in t_report_member.
     if ($personId !== null) {
-        $baseWhere .= "
-            AND (
-                r.ReportWriterID = ?
-                OR EXISTS (
+        if ($writerCol !== null) {
+            $baseWhere .= "
+                AND (
+                    r.`$writerCol` = ?
+                    OR EXISTS (
+                        SELECT 1 FROM t_report_member mx
+                        WHERE mx.ReportID = r.ReportID AND mx.$rmPid = ?
+                    )
+                )
+            ";
+            $baseParams[] = $personId;
+            $baseParams[] = $personId;
+        } else {
+            $baseWhere .= "
+                AND EXISTS (
                     SELECT 1 FROM t_report_member mx
                     WHERE mx.ReportID = r.ReportID AND mx.$rmPid = ?
                 )
-            )
-        ";
-        $baseParams[] = $personId;
-        $baseParams[] = $personId;
+            ";
+            $baseParams[] = $personId;
+        }
     }
+
+    // Build SELECT and JOIN fragments that depend on the writer column
+    $writerSelect = $writerCol !== null
+        ? "CASE WHEN w.PersonID IS NOT NULL THEN CONCAT(w.FirstName, ' ', w.LastName) ELSE NULL END AS WriterName,"
+        : "NULL AS WriterName,";
+    $writerJoin = $writerCol !== null
+        ? "LEFT JOIN t_member w ON w.PersonID = r.`$writerCol`"
+        : '';
+    $writerExclude = $writerCol !== null
+        ? "m.PersonID != COALESCE(r.`$writerCol`, -1)"
+        : '1=1';
+    $groupByWriter = $writerCol !== null
+        ? ", r.`$writerCol`, w.PersonID, w.FirstName, w.LastName"
+        : '';
 
     $brushIds = reportsBrushIdList();
     $stmt = $db->prepare("
         SELECT
             r.ReportID,
             r.ActivityDate,
-            CASE
-                WHEN w.PersonID IS NOT NULL
-                THEN CONCAT(w.FirstName, ' ', w.LastName)
-                ELSE NULL
-            END AS WriterName,
+            $writerSelect
             GROUP_CONCAT(
                 DISTINCT CASE
-                    WHEN m.PersonID IS NOT NULL AND m.PersonID != COALESCE(r.ReportWriterID, -1)
+                    WHEN m.PersonID IS NOT NULL AND $writerExclude
                     THEN CONCAT(m.FirstName, ' ', m.LastName)
                     ELSE NULL
                 END
@@ -110,14 +144,11 @@ try {
              WHERE tc.ReportID = r.ReportID
                AND tc.TrailClearingID NOT IN ($brushIds)) AS TreesCleared
         FROM t_report r
-        LEFT JOIN t_member w
-               ON w.PersonID = r.ReportWriterID
-        LEFT JOIN t_report_member rm
-               ON rm.ReportID = r.ReportID
-        LEFT JOIN t_member m
-               ON m.PersonID = rm.$rmPid
+        $writerJoin
+        LEFT JOIN t_report_member rm ON rm.ReportID = r.ReportID
+        LEFT JOIN t_member m         ON m.PersonID  = rm.$rmPid
         WHERE $baseWhere
-        GROUP BY r.ReportID, r.ActivityDate, r.ReportWriterID, w.PersonID, w.FirstName, w.LastName
+        GROUP BY r.ReportID, r.ActivityDate $groupByWriter
         ORDER BY r.ReportID DESC
     ");
     $stmt->execute($baseParams);

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDown, ArrowUp, ClipboardList, Eye, MessageSquare, TreePine } from 'lucide-react'
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import type { Report } from '../../types/reports'
 import { formatInteger } from '../../lib/formatNumber'
 
@@ -12,22 +12,6 @@ export interface ReportsProps {
   refreshing?: boolean
   onMemberContextChange: (ctx: 'all' | number) => void
   onSeasonChange: (s: 'current' | 'last') => void
-}
-
-function KpiCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border px-4 py-4 flex flex-col gap-3 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-          {label}
-        </span>
-        <span className="text-emerald-500 dark:text-emerald-400">{icon}</span>
-      </div>
-      <div className="text-3xl font-bold tabular-nums tracking-tight text-emerald-900 dark:text-emerald-100">
-        {formatInteger(value)}
-      </div>
-    </div>
-  )
 }
 
 type SortCol = 'reportId' | 'writerName' | 'hikersSeen' | 'hikersContacted' | 'treesCleared'
@@ -44,10 +28,6 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
   const isLoggedIn = currentUserId != null && currentUserId >= 1
   const isAll = memberContext === 'all'
   const isMe = isLoggedIn && !isAll
-
-  const totalHikersSeen      = reports.reduce((s, r) => s + r.hikersSeen,      0)
-  const totalHikersContacted = reports.reduce((s, r) => s + r.hikersContacted, 0)
-  const totalTreesCleared    = reports.reduce((s, r) => s + r.treesCleared,    0)
 
   function handleSortClick(col: SortCol) {
     if (sortCol === col) {
@@ -126,30 +106,6 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
             </button>
           </div>
         )}
-      </div>
-
-      {/* KPI */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard
-          label="Reports Filed"
-          value={totalCount}
-          icon={<ClipboardList className="w-4 h-4" strokeWidth={1.5} />}
-        />
-        <KpiCard
-          label="Hikers Seen"
-          value={totalHikersSeen}
-          icon={<Eye className="w-4 h-4" strokeWidth={1.5} />}
-        />
-        <KpiCard
-          label="Hikers Contacted"
-          value={totalHikersContacted}
-          icon={<MessageSquare className="w-4 h-4" strokeWidth={1.5} />}
-        />
-        <KpiCard
-          label="Trees Cleared"
-          value={totalTreesCleared}
-          icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
-        />
       </div>
 
       {/* Table */}
