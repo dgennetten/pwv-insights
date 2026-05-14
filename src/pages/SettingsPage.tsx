@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredAuthToken } from '../services/authService'
+import { version } from '../../package.json'
 import { fetchUserPreferences, getLocalPreferences, saveUserPreferences } from '../services/settingsService'
 import {
   type UserPreferences,
@@ -147,7 +148,7 @@ export function SettingsPage() {
         <div className="mb-5">
           <div className="flex items-baseline gap-2">
             <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Settings</h2>
-            <span className="text-xs text-stone-400 dark:text-stone-500">v1.0.0</span>
+            <span className="text-xs text-stone-400 dark:text-stone-500">v{version}</span>
           </div>
           <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
             Personalize your dashboard experience
