@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { ChevronUp, ChevronDown, ChevronsUpDown, AlertTriangle, TreePine } from 'lucide-react'
 import type { TrailCoverageRow, TrailCoverageSortKey } from '../../types/activity-dashboard'
-import type { TrailDetailPrefs } from '../../types/settings'
+import type { DashboardKpiPrefs } from '../../types/settings'
 import { formatInteger } from '../../lib/formatNumber'
 
 const DEFAULT_PAGE_SIZE = 50
@@ -9,7 +9,7 @@ const DEFAULT_PAGE_SIZE = 50
 interface TrailCoverageListProps {
   data: TrailCoverageRow[]
   pageSize?: number
-  trailDetailPrefs?: TrailDetailPrefs
+  dashboardKpiPrefs?: DashboardKpiPrefs
   onTrailSelect?: (trailId: number) => void
   onSortChange?: (key: TrailCoverageSortKey, direction: 'asc' | 'desc') => void
 }
@@ -31,11 +31,14 @@ function SortIcon({ col, sort }: { col: TrailCoverageSortKey; sort: SortState })
 export function TrailCoverageList({
   data,
   pageSize: pageSizeProp = DEFAULT_PAGE_SIZE,
-  trailDetailPrefs,
+  dashboardKpiPrefs,
   onTrailSelect,
   onSortChange,
 }: TrailCoverageListProps) {
-  const showEfficiency = trailDetailPrefs?.patrolEfficiency ?? false
+  const showPatrols    = dashboardKpiPrefs?.patrols         ?? true
+  const showSeen       = dashboardKpiPrefs?.hikersSeen      ?? true
+  const showContacted  = dashboardKpiPrefs?.hikersContacted ?? false
+  const showEfficiency = dashboardKpiPrefs?.patrolEfficiency ?? false
   const pageSize = Math.max(1, pageSizeProp)
   const [sort, setSort] = useState<SortState>({ key: 'patrols', dir: 'desc' })
   const [loadedCount, setLoadedCount] = useState(() => Math.min(pageSize, data.length))
@@ -52,6 +55,7 @@ export function TrailCoverageList({
         case 'trailName':        aVal = a.trailName; bVal = b.trailName; break
         case 'patrols':          aVal = a.patrols; bVal = b.patrols; break
         case 'hikersSeen':       aVal = a.hikersSeen; bVal = b.hikersSeen; break
+        case 'hikersContacted':  aVal = a.hikersContacted; bVal = b.hikersContacted; break
         case 'patrolEfficiency': aVal = a.patrols > 0 ? a.hikersSeen / a.patrols : -1; bVal = b.patrols > 0 ? b.hikersSeen / b.patrols : -1; break
       }
       const cmp = typeof aVal === 'string'
@@ -120,16 +124,27 @@ export function TrailCoverageList({
                   Trail <SortIcon col="trailName" sort={sort} />
                 </button>
               </th>
-              <th className="text-right pb-2 pt-2 px-1">
-                <button type="button" onClick={() => handleSort('patrols')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
-                  Patrols <SortIcon col="patrols" sort={sort} />
-                </button>
-              </th>
-              <th className="text-right pb-2 pt-2 px-1 hidden md:table-cell">
-                <button type="button" onClick={() => handleSort('hikersSeen')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
-                  Seen <SortIcon col="hikersSeen" sort={sort} />
-                </button>
-              </th>
+              {showPatrols && (
+                <th className="text-right pb-2 pt-2 px-1">
+                  <button type="button" onClick={() => handleSort('patrols')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
+                    Patrols <SortIcon col="patrols" sort={sort} />
+                  </button>
+                </th>
+              )}
+              {showSeen && (
+                <th className="text-right pb-2 pt-2 px-1 hidden md:table-cell">
+                  <button type="button" onClick={() => handleSort('hikersSeen')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
+                    Seen <SortIcon col="hikersSeen" sort={sort} />
+                  </button>
+                </th>
+              )}
+              {showContacted && (
+                <th className="text-right pb-2 pt-2 px-1 hidden md:table-cell">
+                  <button type="button" onClick={() => handleSort('hikersContacted')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
+                    Contacted <SortIcon col="hikersContacted" sort={sort} />
+                  </button>
+                </th>
+              )}
               {showEfficiency && (
                 <th className="text-right pb-2 pt-2 px-1 hidden md:table-cell">
                   <button type="button" onClick={() => handleSort('patrolEfficiency')} className="flex items-center gap-1 ml-auto text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 uppercase tracking-wider font-semibold">
@@ -161,14 +176,23 @@ export function TrailCoverageList({
                     </div>
                     <div className="text-stone-400 dark:text-stone-500 mt-0.5">#{trail.trailNumber} · {trail.lengthMiles} mi</div>
                   </td>
-                  <td className="py-2 px-1 text-right">
-                    <span className={`font-semibold tabular-nums ${trail.patrols > 0 ? 'text-stone-800 dark:text-stone-200' : 'text-stone-400 dark:text-stone-600'}`}>
-                      {formatInteger(trail.patrols)}
-                    </span>
-                  </td>
-                  <td className="py-2 px-1 text-right hidden md:table-cell">
-                    <span className="tabular-nums text-stone-600 dark:text-stone-400">{formatInteger(trail.hikersSeen)}</span>
-                  </td>
+                  {showPatrols && (
+                    <td className="py-2 px-1 text-right">
+                      <span className={`font-semibold tabular-nums ${trail.patrols > 0 ? 'text-stone-800 dark:text-stone-200' : 'text-stone-400 dark:text-stone-600'}`}>
+                        {formatInteger(trail.patrols)}
+                      </span>
+                    </td>
+                  )}
+                  {showSeen && (
+                    <td className="py-2 px-1 text-right hidden md:table-cell">
+                      <span className="tabular-nums text-stone-600 dark:text-stone-400">{formatInteger(trail.hikersSeen)}</span>
+                    </td>
+                  )}
+                  {showContacted && (
+                    <td className="py-2 px-1 text-right hidden md:table-cell">
+                      <span className="tabular-nums text-stone-600 dark:text-stone-400">{formatInteger(trail.hikersContacted)}</span>
+                    </td>
+                  )}
                   {showEfficiency && (
                     <td className="py-2 px-1 text-right hidden md:table-cell">
                       <span className="tabular-nums text-stone-600 dark:text-stone-400">
@@ -181,7 +205,7 @@ export function TrailCoverageList({
             })}
             {hasMore && (
               <tr aria-hidden>
-                <td colSpan={showEfficiency ? 4 : 3} className="p-0 border-0">
+                <td colSpan={1 + Number(showPatrols) + Number(showSeen) + Number(showContacted) + Number(showEfficiency)} className="p-0 border-0">
                   <div ref={sentinelRef} className="h-1 w-full" />
                 </td>
               </tr>

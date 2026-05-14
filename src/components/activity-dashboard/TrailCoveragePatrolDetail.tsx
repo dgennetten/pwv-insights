@@ -57,7 +57,7 @@ export function TrailCoveragePatrolDetail({
               <span className="font-medium text-stone-600 dark:text-stone-400">{memberScopeLabel}</span>
             </p>
           </div>
-          <div className="flex gap-3 shrink-0">
+          <div className="flex gap-3 shrink-0 flex-wrap">
             <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-center min-w-[5rem]">
               <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">In period</div>
               <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">
@@ -77,6 +77,16 @@ export function TrailCoveragePatrolDetail({
                 <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">Contacted</div>
                 <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">
                   {formatInteger(trail.hikersContacted)}
+                </div>
+              </div>
+            )}
+            {td.patrolEfficiency && (
+              <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-center min-w-[5rem]">
+                <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">Contact Rate</div>
+                <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">
+                  {trail.hikersSeen > 0
+                    ? `${Math.round(trail.hikersContacted / trail.hikersSeen * 100)}%`
+                    : '—'}
                 </div>
               </div>
             )}
@@ -124,6 +134,11 @@ export function TrailCoveragePatrolDetail({
                       Contacted
                     </th>
                   )}
+                  {td.patrolEfficiency && (
+                    <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
+                      Contact Rate
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
@@ -149,6 +164,13 @@ export function TrailCoveragePatrolDetail({
                     {td.hikersContacted && (
                       <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
                         {formatInteger(row.hikersContacted)}
+                      </td>
+                    )}
+                    {td.patrolEfficiency && (
+                      <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
+                        {row.hikersSeen > 0
+                          ? `${Math.round(row.hikersContacted / row.hikersSeen * 100)}%`
+                          : '—'}
                       </td>
                     )}
                   </tr>

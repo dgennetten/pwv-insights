@@ -8,12 +8,17 @@ export interface DashboardKpiPrefs {
   daysPatrolling: boolean
   daysWeeding: boolean
   hikersContacted: boolean
+  /** Trail coverage table: contact efficiency column (hikersSeen / patrols). */
+  patrolEfficiency: boolean
+  /** Suggested: total volunteer hours in scope. */
+  volunteerHours: boolean
 }
 
 export interface TrailDetailPrefs {
   treesCleared: boolean
   hikersSeen: boolean
   hikersContacted: boolean
+  /** Per-patrol contact efficiency (contacted ÷ seen) shown as a column and summary box. */
   patrolEfficiency: boolean
 }
 
@@ -31,6 +36,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     daysPatrolling: false,
     daysWeeding: false,
     hikersContacted: false,
+    patrolEfficiency: false,
+    volunteerHours: false,
   },
   trailDetail: {
     treesCleared: true,

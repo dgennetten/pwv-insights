@@ -3,9 +3,8 @@ import { Check } from 'lucide-react'
 import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredAuthToken } from '../services/authService'
-import { fetchUserPreferences, saveUserPreferences } from '../services/settingsService'
+import { fetchUserPreferences, getLocalPreferences, saveUserPreferences } from '../services/settingsService'
 import {
-  DEFAULT_PREFERENCES,
   type UserPreferences,
   type DashboardKpiPrefs,
   type TrailDetailPrefs,
@@ -54,12 +53,6 @@ function PrefRow({ label, checked, onChange, afterLabel }: PrefRowProps) {
   )
 }
 
-const notImplementedNotice = (
-  <span className="text-[10px] font-medium text-red-600 dark:text-red-400 normal-case tracking-normal">
-    not yet implemented
-  </span>
-)
-
 // ─── Section card ─────────────────────────────────────────────────────────────
 
 function SectionCard({
@@ -90,7 +83,7 @@ function SectionCard({
 
 export function SettingsPage() {
   const { user } = useAuth()
-  const [prefs, setPrefs] = useState<UserPreferences>(DEFAULT_PREFERENCES)
+  const [prefs, setPrefs] = useState<UserPreferences>(getLocalPreferences)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
@@ -165,29 +158,31 @@ export function SettingsPage() {
           <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">Loading…</p>
         ) : (
           <>
-            {/* ── Activity Dashboard — Key Metrics ─────────────────────── */}
+            {/* ── Activity Dashboard ────────────────────────────────────── */}
             <SectionCard
-              title="Activity Dashboard — Key Metrics"
-              description="Choose which KPI cards appear at the top of the Activity Dashboard."
+              title="Activity Dashboard"
+              description="Choose which KPI cards appear at the top of the Activity Dashboard and row details."
             >
-              <PrefRow label="Patrols"         checked={prefs.dashboardKpi.patrols}         onChange={v => updateKpi('patrols', v)} />
-              <PrefRow label="Trails Covered"  checked={prefs.dashboardKpi.trailsCovered}   onChange={v => updateKpi('trailsCovered', v)} />
-              <PrefRow label="Trees Cleared"   checked={prefs.dashboardKpi.treesCleared}    onChange={v => updateKpi('treesCleared', v)} />
-              <PrefRow label="Hikers Seen"     checked={prefs.dashboardKpi.hikersSeen}      onChange={v => updateKpi('hikersSeen', v)} />
-              <PrefRow label="Hikers Contacted" checked={prefs.dashboardKpi.hikersContacted} onChange={v => updateKpi('hikersContacted', v)} />
-              <PrefRow label="Days Patrolling" checked={prefs.dashboardKpi.daysPatrolling} onChange={v => updateKpi('daysPatrolling', v)} afterLabel={notImplementedNotice} />
-              <PrefRow label="Days Weeding" checked={prefs.dashboardKpi.daysWeeding} onChange={v => updateKpi('daysWeeding', v)} afterLabel={notImplementedNotice} />
+              <PrefRow label="Patrols"            checked={prefs.dashboardKpi.patrols}          onChange={v => updateKpi('patrols', v)} />
+              <PrefRow label="Trails Covered"     checked={prefs.dashboardKpi.trailsCovered}    onChange={v => updateKpi('trailsCovered', v)} />
+              <PrefRow label="Trees Cleared"      checked={prefs.dashboardKpi.treesCleared}     onChange={v => updateKpi('treesCleared', v)} />
+              <PrefRow label="Hikers Seen"        checked={prefs.dashboardKpi.hikersSeen}       onChange={v => updateKpi('hikersSeen', v)} />
+              <PrefRow label="Hikers Contacted"   checked={prefs.dashboardKpi.hikersContacted}  onChange={v => updateKpi('hikersContacted', v)} />
+              <PrefRow label="Days Patrolling"    checked={prefs.dashboardKpi.daysPatrolling}   onChange={v => updateKpi('daysPatrolling', v)} />
+              <PrefRow label="Days Weeding"       checked={prefs.dashboardKpi.daysWeeding}      onChange={v => updateKpi('daysWeeding', v)} />
+              <PrefRow label="Contact Efficiency" checked={prefs.dashboardKpi.patrolEfficiency} onChange={v => updateKpi('patrolEfficiency', v)} />
+              <PrefRow label="Volunteer Hours"    checked={prefs.dashboardKpi.volunteerHours}   onChange={v => updateKpi('volunteerHours', v)} />
             </SectionCard>
 
-            {/* ── Trail Lists ───────────────────────────────────────────── */}
+            {/* ── Trails ────────────────────────────────────────────────── */}
             <SectionCard
-              title="Trail Lists"
-              description="Choose which columns appear in trail coverage lists and drill-downs."
+              title="Trails"
+              description="Choose which metrics appear as KPI cards on the trail detail and in patrol rows."
             >
-              <PrefRow label="Trees Cleared"    checked={prefs.trailDetail.treesCleared}    onChange={v => updateTrailDetail('treesCleared', v)} />
-              <PrefRow label="Hikers Seen"      checked={prefs.trailDetail.hikersSeen}      onChange={v => updateTrailDetail('hikersSeen', v)} />
-              <PrefRow label="Hikers Contacted" checked={prefs.trailDetail.hikersContacted} onChange={v => updateTrailDetail('hikersContacted', v)} />
-              <PrefRow label="Contact Efficiency" checked={prefs.trailDetail.patrolEfficiency} onChange={v => updateTrailDetail('patrolEfficiency', v)} />
+              <PrefRow label="Trees Cleared"      checked={prefs.trailDetail.treesCleared}      onChange={v => updateTrailDetail('treesCleared', v)} />
+              <PrefRow label="Hikers Seen"        checked={prefs.trailDetail.hikersSeen}        onChange={v => updateTrailDetail('hikersSeen', v)} />
+              <PrefRow label="Hikers Contacted"   checked={prefs.trailDetail.hikersContacted}   onChange={v => updateTrailDetail('hikersContacted', v)} />
+              <PrefRow label="Contact Efficiency" checked={prefs.trailDetail.patrolEfficiency}  onChange={v => updateTrailDetail('patrolEfficiency', v)} />
             </SectionCard>
 
             {/* ── Save bar ──────────────────────────────────────────────── */}

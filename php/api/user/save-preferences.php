@@ -59,18 +59,21 @@ $trailRaw   = $raw['trailDetail']  ?? [];
 
 $prefs = [
   'dashboardKpi' => [
-    'patrols'         => $bool($dashKpiRaw['patrols']         ?? true),
-    'trailsCovered'   => $bool($dashKpiRaw['trailsCovered']   ?? true),
-    'treesCleared'    => $bool($dashKpiRaw['treesCleared']    ?? true),
-    'hikersSeen'      => $bool($dashKpiRaw['hikersSeen']      ?? true),
-    'daysPatrolling'  => $bool($dashKpiRaw['daysPatrolling']  ?? false),
-    'daysWeeding'     => $bool($dashKpiRaw['daysWeeding']     ?? false),
-    'hikersContacted' => $bool($dashKpiRaw['hikersContacted'] ?? false),
+    'patrols'          => $bool($dashKpiRaw['patrols']          ?? true),
+    'trailsCovered'    => $bool($dashKpiRaw['trailsCovered']    ?? true),
+    'treesCleared'     => $bool($dashKpiRaw['treesCleared']     ?? true),
+    'hikersSeen'       => $bool($dashKpiRaw['hikersSeen']       ?? true),
+    'daysPatrolling'   => $bool($dashKpiRaw['daysPatrolling']   ?? false),
+    'daysWeeding'      => $bool($dashKpiRaw['daysWeeding']      ?? false),
+    'hikersContacted'  => $bool($dashKpiRaw['hikersContacted']  ?? false),
+    'patrolEfficiency' => $bool($dashKpiRaw['patrolEfficiency'] ?? false),
+    'volunteerHours'   => $bool($dashKpiRaw['volunteerHours']   ?? false),
   ],
   'trailDetail' => [
     'treesCleared'    => $bool($trailRaw['treesCleared']    ?? true),
     'hikersSeen'      => $bool($trailRaw['hikersSeen']      ?? true),
     'hikersContacted' => $bool($trailRaw['hikersContacted'] ?? true),
+    'patrolEfficiency'=> $bool($trailRaw['patrolEfficiency'] ?? false),
   ],
 ];
 

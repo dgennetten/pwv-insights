@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CalendarDays,
   ChevronDown,
+  Clock,
   Eye,
   Footprints,
   Map,
@@ -417,6 +418,9 @@ export function ActivityDashboard({
         {kpi.daysWeeding && (
           <KpiCard label="Days Weeding" value={summary.daysWeeding ?? 0} delta={summary.daysWeedingDelta ?? 0} icon={<Scissors className="w-4 h-4" strokeWidth={1.5} />} />
         )}
+        {kpi.volunteerHours && (
+          <KpiCard label="Volunteer Hours" value={Math.round(summary.volunteerHours)} delta={Math.round(summary.volunteerHoursDelta ?? 0)} icon={<Clock className="w-4 h-4" strokeWidth={1.5} />} />
+        )}
       </div>
 
       {/* ── Patrol Activity ────────────────────────────────────────── */}
@@ -456,7 +460,7 @@ export function ActivityDashboard({
         <TrailCoverageList
           data={trailCoverage}
           pageSize={trailCoveragePageSize}
-          trailDetailPrefs={trailDetailPrefs}
+          dashboardKpiPrefs={kpi}
           onTrailSelect={handleTrailRowSelect}
           onSortChange={onTrailCoverageSortChange}
         />

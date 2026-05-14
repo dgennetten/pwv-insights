@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { ActivityDashboard } from '../components/activity-dashboard/ActivityDashboard'
 import { roundTreesClearedForScope } from '../components/activity-dashboard/formatTreesCleared'
 import { getStoredAuthToken } from '../services/authService'
-import { fetchUserPreferences } from '../services/settingsService'
+import { fetchUserPreferences, getLocalPreferences } from '../services/settingsService'
 import { DEFAULT_PREFERENCES, type UserPreferences } from '../types/settings'
 import type {
   DashboardScope,
@@ -151,7 +151,7 @@ export function ActivityDashboardPage() {
   const [data, setData]       = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
-  const [userPrefs, setUserPrefs] = useState<UserPreferences>(DEFAULT_PREFERENCES)
+  const [userPrefs, setUserPrefs] = useState<UserPreferences>(getLocalPreferences)
 
   const fetchData = useCallback(async (s: DashboardScope) => {
     setLoading(true)

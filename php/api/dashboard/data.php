@@ -128,19 +128,25 @@ try {
 
   jsonOut([
     'summary'              => [
-      'patrols'              => $cur['patrols'],
-      'patrolsDelta'         => $prev ? $cur['patrols']         - $prev['patrols']         : 0,
-      'trailsCovered'        => $cur['trailsCovered'],
-      'trailsCoveredDelta'   => $prev ? $cur['trailsCovered']   - $prev['trailsCovered']   : 0,
-      'treesCleared'         => $cur['treesCleared'],
-      'treesClearedDelta'    => $prev ? $cur['treesCleared']    - $prev['treesCleared']    : 0,
-      'hikersSeen'              => $hikersSeenCur,
-      'hikersSeenDelta'         => $prevStart ? ($hikersSeenCur      - $hikersSeenPrev)      : 0,
-      'hikersContacted'         => $hikersContactedCur,
-      'hikersContactedDelta'    => $prevStart ? ($hikersContactedCur - $hikersContactedPrev) : 0,
-      'volunteerHours'       => $cur['volunteerHours'],
-      'totalActiveMembers'   => $cur['totalActiveMembers'],
-      'periodLabel'          => periodLabel($start, $end),
+      'patrols'                   => $cur['patrols'],
+      'patrolsDelta'              => $prev ? $cur['patrols']            - $prev['patrols']            : 0,
+      'daysPatrolling'            => $cur['daysPatrolling'],
+      'daysPatrollingDelta'       => $prev ? $cur['daysPatrolling']     - $prev['daysPatrolling']     : 0,
+      'daysWeeding'               => $cur['daysWeeding'],
+      'daysWeedingDelta'          => $prev ? $cur['daysWeeding']        - $prev['daysWeeding']        : 0,
+      'trailsCovered'             => $cur['trailsCovered'],
+      'trailsCoveredDelta'        => $prev ? $cur['trailsCovered']      - $prev['trailsCovered']      : 0,
+      'treesCleared'              => $cur['treesCleared'],
+      'treesClearedDelta'         => $prev ? $cur['treesCleared']       - $prev['treesCleared']       : 0,
+      'hikersSeen'                => $hikersSeenCur,
+      'hikersSeenDelta'           => $prevStart ? ($hikersSeenCur      - $hikersSeenPrev)              : 0,
+      'hikersContacted'           => $hikersContactedCur,
+      'hikersContactedDelta'      => $prevStart ? ($hikersContactedCur - $hikersContactedPrev)         : 0,
+      'volunteerHours'            => $cur['volunteerHours'],
+      'volunteerHoursDelta'       => $prev ? round($cur['volunteerHours']      - $prev['volunteerHours'],      1) : 0,
+      'totalActiveMembers'        => $cur['totalActiveMembers'],
+      'totalActiveMembersDelta'   => $prev ? $cur['totalActiveMembers'] - $prev['totalActiveMembers']  : 0,
+      'periodLabel'               => periodLabel($start, $end),
     ],
     'patrolActivity'       => $patrolActivity,
     'trailCoverage'        => $trailCoverage,
@@ -880,9 +886,10 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
 
   $row = $db->prepare("
     SELECT
-      COUNT(DISTINCT r.ReportID) AS patrols,
-      COUNT(DISTINCT wt.TrailID) AS trailsCovered,
-      COUNT(DISTINCT rm.$rmPid) AS totalActiveMembers,
+      COUNT(DISTINCT r.ReportID)   AS patrols,
+      COUNT(DISTINCT r.ActivityDate) AS daysPatrolling,
+      COUNT(DISTINCT wt.TrailID)   AS trailsCovered,
+      COUNT(DISTINCT rm.$rmPid)    AS totalActiveMembers,
       ROUND(SUM(
         CASE WHEN r.TimeStarted IS NOT NULL AND r.TimeEnded IS NOT NULL
              THEN TIMESTAMPDIFF(MINUTE, r.TimeStarted, r.TimeEnded) / 60.0
@@ -914,8 +921,22 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
     $tc = round(treesClearedMemberTotal($db, $s, $e, (int)$ctx), 2);
   }
 
+  // days weeding: distinct activity dates where trail clearing work was recorded
+  [$wt, $pt] = scopeWhereTrees($db, $s, $e, $ctx);
+  $tcf = treesClearedTableRef();
+  $weedStmt = $db->prepare("
+    SELECT COUNT(DISTINCT r.ActivityDate) AS n
+    FROM $tcf tc
+    JOIN t_report r ON r.ReportID = tc.ReportID
+    WHERE $wt
+  ");
+  $weedStmt->execute($pt);
+  $daysWeeding = (int)$weedStmt->fetchColumn();
+
   return [
     'patrols'            => (int)$d['patrols'],
+    'daysPatrolling'     => (int)($d['daysPatrolling'] ?? 0),
+    'daysWeeding'        => $daysWeeding,
     'trailsCovered'      => (int)$d['trailsCovered'],
     'totalActiveMembers' => (int)$d['totalActiveMembers'],
     'volunteerHours'     => (float)($d['volunteerHours'] ?? 0),
