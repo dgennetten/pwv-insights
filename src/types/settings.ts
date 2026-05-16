@@ -22,9 +22,19 @@ export interface TrailDetailPrefs {
   patrolEfficiency: boolean
 }
 
+export interface ScheduleColumnsPrefs {
+  scheduleId: boolean
+  trail: boolean
+  activityType: boolean
+  activityMethod: boolean
+  members: boolean
+  author: boolean
+}
+
 export interface UserPreferences {
   dashboardKpi: DashboardKpiPrefs
   trailDetail: TrailDetailPrefs
+  scheduleColumns: ScheduleColumnsPrefs
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -45,12 +55,21 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     hikersContacted: true,
     patrolEfficiency: false,
   },
+  scheduleColumns: {
+    scheduleId: true,
+    trail: true,
+    activityType: true,
+    activityMethod: true,
+    members: true,
+    author: false,
+  },
 }
 
 /** Deep-merges a partial prefs payload with defaults so missing keys are always filled. */
 export function mergeWithDefaults(partial: Partial<UserPreferences>): UserPreferences {
   return {
     dashboardKpi: { ...DEFAULT_PREFERENCES.dashboardKpi, ...partial.dashboardKpi },
-    trailDetail: { ...DEFAULT_PREFERENCES.trailDetail, ...partial.trailDetail },
+    trailDetail:  { ...DEFAULT_PREFERENCES.trailDetail,  ...partial.trailDetail },
+    scheduleColumns: { ...DEFAULT_PREFERENCES.scheduleColumns, ...partial.scheduleColumns },
   }
 }

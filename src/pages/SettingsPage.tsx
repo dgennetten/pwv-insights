@@ -9,6 +9,7 @@ import {
   type UserPreferences,
   type DashboardKpiPrefs,
   type TrailDetailPrefs,
+  type ScheduleColumnsPrefs,
 } from '../types/settings'
 
 // ─── Checkbox row ─────────────────────────────────────────────────────────────
@@ -122,6 +123,14 @@ export function SettingsPage() {
     }))
   }
 
+  const updateScheduleColumns = (key: keyof ScheduleColumnsPrefs, value: boolean) => {
+    setSavedAt(null)
+    setPrefs(prev => ({
+      ...prev,
+      scheduleColumns: { ...prev.scheduleColumns, [key]: value },
+    }))
+  }
+
   const handleSave = async () => {
     const token = getStoredAuthToken()
     if (!token) {
@@ -184,6 +193,19 @@ export function SettingsPage() {
               <PrefRow label="Hikers Seen"        checked={prefs.trailDetail.hikersSeen}        onChange={v => updateTrailDetail('hikersSeen', v)} />
               <PrefRow label="Hikers Contacted"   checked={prefs.trailDetail.hikersContacted}   onChange={v => updateTrailDetail('hikersContacted', v)} />
               <PrefRow label="Contact Efficiency" checked={prefs.trailDetail.patrolEfficiency}  onChange={v => updateTrailDetail('patrolEfficiency', v)} />
+            </SectionCard>
+
+            {/* ── My Schedule ───────────────────────────────────────────── */}
+            <SectionCard
+              title="My Schedule"
+              description="Choose which columns appear in the My Schedule table."
+            >
+              <PrefRow label="Schedule #"    checked={prefs.scheduleColumns.scheduleId}      onChange={v => updateScheduleColumns('scheduleId', v)} />
+              <PrefRow label="Trail"         checked={prefs.scheduleColumns.trail}           onChange={v => updateScheduleColumns('trail', v)} />
+              <PrefRow label="Type"          checked={prefs.scheduleColumns.activityType}    onChange={v => updateScheduleColumns('activityType', v)} />
+              <PrefRow label="Method"        checked={prefs.scheduleColumns.activityMethod}  onChange={v => updateScheduleColumns('activityMethod', v)} />
+              <PrefRow label="Members"       checked={prefs.scheduleColumns.members}         onChange={v => updateScheduleColumns('members', v)} />
+              <PrefRow label="Author"        checked={prefs.scheduleColumns.author}          onChange={v => updateScheduleColumns('author', v)} />
             </SectionCard>
 
             {/* ── Save bar ──────────────────────────────────────────────── */}

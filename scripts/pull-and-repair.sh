@@ -127,9 +127,11 @@ echo "   ✓ repair-data.sql written"
 
 echo "▶  Current pwvinsights state:"
 mysql_cmd "$DB_NAME" --table -e "
-  SELECT 't_member'        AS \`table\`, COUNT(*) AS \`rows\` FROM t_member
-  UNION ALL SELECT 't_report',        COUNT(*) FROM t_report
-  UNION ALL SELECT 't_report_member', COUNT(*) FROM t_report_member;
+  SELECT 't_member'          AS \`table\`, COUNT(*) AS \`rows\` FROM t_member
+  UNION ALL SELECT 't_report',          COUNT(*) FROM t_report
+  UNION ALL SELECT 't_report_member',   COUNT(*) FROM t_report_member
+  UNION ALL SELECT 't_schedule',        COUNT(*) FROM t_schedule
+  UNION ALL SELECT 't_schedule_member', COUNT(*) FROM t_schedule_member;
 " 2>/dev/null || echo "   (could not query — continuing anyway)"
 
 # ── Step 6: apply repair SQL ──────────────────────────────────────────────────
@@ -152,9 +154,11 @@ done
 echo ""
 echo "▶  New pwvinsights state:"
 mysql_cmd "$DB_NAME" --table -e "
-  SELECT 't_member'        AS \`table\`, COUNT(*) AS \`rows\` FROM t_member
-  UNION ALL SELECT 't_report',        COUNT(*) FROM t_report
-  UNION ALL SELECT 't_report_member', COUNT(*) FROM t_report_member;
+  SELECT 't_member'          AS \`table\`, COUNT(*) AS \`rows\` FROM t_member
+  UNION ALL SELECT 't_report',          COUNT(*) FROM t_report
+  UNION ALL SELECT 't_report_member',   COUNT(*) FROM t_report_member
+  UNION ALL SELECT 't_schedule',        COUNT(*) FROM t_schedule
+  UNION ALL SELECT 't_schedule_member', COUNT(*) FROM t_schedule_member;
   SELECT CONCAT('Last t_report ID: ', MAX(ReportID)) AS info FROM t_report;
 "
 

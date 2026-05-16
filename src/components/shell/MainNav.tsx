@@ -1,4 +1,4 @@
-import { LayoutDashboard, Map, Trophy, BarChart3, Settings, HelpCircle, Mountain, FileText } from 'lucide-react'
+import { LayoutDashboard, Map, Trophy, BarChart3, Settings, HelpCircle, Mountain, FileText, CalendarDays } from 'lucide-react'
 import { canAccessAdminPage } from '../../lib/adminAccess'
 
 export interface NavItem {
@@ -19,6 +19,7 @@ interface MainNavProps {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Activity Dashboard', href: '/dashboard', icon: LayoutDashboard, group: 'main' },
+  { label: 'My Schedule', href: '/schedule', icon: CalendarDays, group: 'main' },
   { label: 'Trails', href: '/trails', icon: Map, group: 'main' },
   { label: 'Reports', href: '/reports', icon: FileText, group: 'main' },
   { label: 'Leaderboards', href: '/leaderboards', icon: Trophy, group: 'main' },

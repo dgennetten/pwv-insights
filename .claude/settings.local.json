@@ -47,7 +47,8 @@
       "Bash(do:*)",
       "Bash(cp:*)",
       "Bash(echo:*)",
-      "Bash(pwd:*)"
+      "Bash(pwd:*)",
+      "PowerShell(ls *)"
     ]
   }
 }

@@ -205,6 +205,16 @@ HEADER
   echo "COMMIT;"
 
   echo ""
+  echo "-- ── t_schedule ──────────────────────────────────────────────────────────────"
+  emit_upsert "t_schedule"
+  echo "COMMIT;"
+
+  echo ""
+  echo "-- ── t_schedule_member ───────────────────────────────────────────────────────"
+  emit_upsert "t_schedule_member"
+  echo "COMMIT;"
+
+  echo ""
   echo "-- ── t_rpt_* detail tables ───────────────────────────────────────────────────"
   for tbl in \
     t_rpt_campsite \
@@ -255,6 +265,8 @@ SELECT CONCAT(
   't_member: ',             (SELECT COUNT(*) FROM t_member),             ' rows. ',
   't_report: ',             (SELECT COUNT(*) FROM t_report),             ' rows. ',
   't_report_member: ',      (SELECT COUNT(*) FROM t_report_member),      ' rows. ',
+  't_schedule: ',           (SELECT COUNT(*) FROM t_schedule),           ' rows. ',
+  't_schedule_member: ',    (SELECT COUNT(*) FROM t_schedule_member),    ' rows. ',
   't_rpt_observation: ',    (SELECT COUNT(*) FROM t_rpt_observation),    ' rows. ',
   't_rpt_trail_clearing: ', (SELECT COUNT(*) FROM t_rpt_trail_clearing), ' rows.'
 ) AS result;
@@ -309,6 +321,8 @@ DELETE FROM t_rpt_violation;
 DELETE FROM t_rpt_weed;
 DELETE FROM t_report_member;
 DELETE FROM t_report;
+DELETE FROM t_schedule_member;
+DELETE FROM t_schedule;
 DELETE FROM t_member;
 
 -- Drop app-only column so the 22-column dump INSERT rows match.
@@ -337,6 +351,14 @@ HEADER
   echo ""
   echo "-- ── t_report_member ─────────────────────────────────────────────────────────"
   extract_table "t_report_member"
+
+  echo ""
+  echo "-- ── t_schedule ──────────────────────────────────────────────────────────────"
+  extract_table "t_schedule"
+
+  echo ""
+  echo "-- ── t_schedule_member ───────────────────────────────────────────────────────"
+  extract_table "t_schedule_member"
 
   echo ""
   echo "-- ── t_rpt_* detail tables ───────────────────────────────────────────────────"
@@ -381,6 +403,8 @@ SELECT CONCAT(
   't_member: ',           (SELECT COUNT(*) FROM t_member),           ' rows. ',
   't_report: ',           (SELECT COUNT(*) FROM t_report),           ' rows. ',
   't_report_member: ',    (SELECT COUNT(*) FROM t_report_member),    ' rows. ',
+  't_schedule: ',         (SELECT COUNT(*) FROM t_schedule),         ' rows. ',
+  't_schedule_member: ',  (SELECT COUNT(*) FROM t_schedule_member),  ' rows. ',
   't_rpt_observation: ',  (SELECT COUNT(*) FROM t_rpt_observation),  ' rows. ',
   't_rpt_trail_clearing: ',(SELECT COUNT(*) FROM t_rpt_trail_clearing),' rows.'
 ) AS result;
