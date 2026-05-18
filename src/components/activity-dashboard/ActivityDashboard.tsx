@@ -21,6 +21,7 @@ import type {
   MemberContext,
 } from '../../types/activity-dashboard'
 import { DEFAULT_PREFERENCES } from '../../types/settings'
+import { useAuth } from '../../contexts/AuthContext'
 import { PatrolActivityChart } from './PatrolActivityChart'
 import { TrailCoverageList } from './TrailCoverageList'
 import { ViolationsChart } from './ViolationsChart'
@@ -270,6 +271,7 @@ export function ActivityDashboard({
   onTrailCoverageSortChange,
   trailCoveragePageSize,
 }: ActivityDashboardProps) {
+  const { openLogin } = useAuth()
   const kpi = { ...DEFAULT_PREFERENCES.dashboardKpi, ...userPrefs?.dashboardKpi }
   const trailDetailPrefs = { ...DEFAULT_PREFERENCES.trailDetail, ...userPrefs?.trailDetail }
   const navigate = useNavigate()
@@ -394,7 +396,14 @@ export function ActivityDashboard({
         <div className="flex items-center gap-3 mb-5 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300">
           <Users className="w-4 h-4 shrink-0" strokeWidth={2} />
           <p className="text-sm font-medium">
-            Log in to see your personal stats and track your own patrol activity.
+            <button
+              type="button"
+              onClick={openLogin}
+              className="underline underline-offset-2 hover:opacity-75 transition-opacity"
+            >
+              Log in
+            </button>
+            {' '}to see your personal stats and track your own patrol activity.
           </p>
         </div>
       )}
