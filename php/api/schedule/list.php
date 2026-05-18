@@ -94,11 +94,11 @@ try {
         JOIN (
             SELECT sm.PersonID, sm.ScheduleID
             FROM t_schedule_member sm
-            JOIN t_schedule s ON s.ScheduleID = sm.ScheduleID AND s.GroupID = ?
+            JOIN t_schedule s ON s.ScheduleID = sm.ScheduleID AND s.GroupID = ? AND s.ActivityDate $dateOp CURDATE()
             UNION
             SELECT s.SchedulerID AS PersonID, s.ScheduleID
             FROM t_schedule s
-            WHERE s.GroupID = ?
+            WHERE s.GroupID = ? AND s.ActivityDate $dateOp CURDATE()
         ) combined ON combined.PersonID = m.PersonID
         GROUP BY m.PersonID, m.FirstName, m.LastName
         ORDER BY scheduleCount DESC, m.LastName, m.FirstName
