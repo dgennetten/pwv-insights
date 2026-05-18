@@ -16,7 +16,7 @@ export interface AdminLoginRow {
   lastName: string
   firstName: string
   loggedInAtMs: number
-  loginType: 'OTC' | 'ACCESS'
+  loginType: 'OTC' | 'ACCESS' | 'AUTO'
 }
 
 /** Recent sign-ins (admin only). */
@@ -96,6 +96,18 @@ export async function devAutoLogin(): Promise<VerifyResult | null> {
   } catch {
     return null
   }
+}
+
+/** Auto-login via PWV.ORG link token (YYYYMMDD + PersonID). Issues a 365-day remembered session. */
+export async function autoLogin(id: string): Promise<VerifyResult> {
+  const res = await fetch(`${AUTH_BASE}/auto-login.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })
+  const data = await res.json()
+  if (!data.success) throw new Error(data.error ?? 'Auto-login failed')
+  return data as VerifyResult
 }
 
 export async function verifyOtp(email: string, code: string, remember: boolean): Promise<VerifyResult> {

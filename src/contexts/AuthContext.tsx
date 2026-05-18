@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useLayoutEffect, type ReactNode } from 'react'
-import { AUTH_TOKEN_STORAGE_KEY, devAutoLogin, validateStoredSession } from '../services/authService'
+import { AUTH_TOKEN_STORAGE_KEY, autoLogin, devAutoLogin, validateStoredSession } from '../services/authService'
 
 function isLocalhostHostname(): boolean {
   const h = window.location.hostname
@@ -118,6 +118,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     let cancelled = false
 
+    // Strip ?id= from the URL immediately so it never lingers in history,
+    // but save the value for use below if there is no valid stored session.
+    const params = new URLSearchParams(window.location.search)
+    const autoId = params.get('id') ?? null
+    if (autoId !== null) {
+      params.delete('id')
+      const newSearch = params.toString()
+      window.history.replaceState(null, '', window.location.pathname + (newSearch ? '?' + newSearch : ''))
+    }
+
     void (async () => {
       const token = localStorage.getItem(TOKEN_KEY)
       const remember = localStorage.getItem(REMEMBER_KEY) === '1'
@@ -145,6 +155,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         clearRememberedCredentials()
+      }
+
+      // No valid stored session — try auto-login from PWV.ORG link token
+      if (autoId !== null && /^\d{9,}$/.test(autoId)) {
+        try {
+          const a = await autoLogin(autoId)
+          if (cancelled) return
+          login(a.token, a.email ?? '', a.name ?? '', a.role ?? 'member', a.personId, true, a.expiresAt)
+          return
+        } catch {
+          /* bad token — fall through to OTP */
+        }
       }
 
       if (import.meta.env.DEV && isLocalhostHostname()) {

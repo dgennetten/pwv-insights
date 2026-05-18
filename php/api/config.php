@@ -44,7 +44,7 @@ function authLoginLogEnsureTable(PDO $db): void {
       "CREATE TABLE IF NOT EXISTS auth_login_log (
         id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         person_id     INT UNSIGNED NOT NULL,
-        login_type    ENUM('OTC','ACCESS') NOT NULL DEFAULT 'OTC',
+        login_type    ENUM('OTC','ACCESS','AUTO') NOT NULL DEFAULT 'OTC',
         logged_in_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_logged_in (logged_in_at),
         INDEX idx_person_time (person_id, logged_in_at),
@@ -63,22 +63,32 @@ function authLoginLogEnsureTable(PDO $db): void {
     );
     $has->execute();
     if ((int) $has->fetchColumn() === 0) {
-      $db->exec("ALTER TABLE auth_login_log ADD COLUMN login_type ENUM('OTC','ACCESS') NOT NULL DEFAULT 'OTC'");
+      $db->exec("ALTER TABLE auth_login_log ADD COLUMN login_type ENUM('OTC','ACCESS','AUTO') NOT NULL DEFAULT 'OTC'");
     }
   } catch (Throwable $e) {
     error_log('auth_login_log add login_type: ' . $e->getMessage());
+  }
+  // Migrate: expand ENUM to include 'AUTO' (PWV.ORG link auto-login)
+  try {
+    $col = $db->query("SHOW COLUMNS FROM auth_login_log LIKE 'login_type'")->fetch(PDO::FETCH_ASSOC);
+    if ($col && strpos($col['Type'] ?? '', 'AUTO') === false) {
+      $db->exec("ALTER TABLE auth_login_log MODIFY COLUMN login_type ENUM('OTC','ACCESS','AUTO') NOT NULL DEFAULT 'OTC'");
+    }
+  } catch (Throwable $e) {
+    error_log('auth_login_log expand login_type enum: ' . $e->getMessage());
   }
 }
 
 /**
  * Records a successful auth (OTP verification or remembered-device session check).
- * @param string $loginType 'OTC' for a new one-time-code login, 'ACCESS' for a remembered-device session.
+ * @param string $loginType 'OTC' for a new one-time-code login, 'ACCESS' for a remembered-device session, 'AUTO' for PWV.ORG link auto-login.
  */
 function authLoginLogRecord(PDO $db, int $personId, string $loginType = 'OTC'): void {
   if ($personId < 1) {
     return;
   }
-  $type = ($loginType === 'ACCESS') ? 'ACCESS' : 'OTC';
+  $allowed = ['OTC', 'ACCESS', 'AUTO'];
+  $type = in_array($loginType, $allowed, true) ? $loginType : 'OTC';
   authLoginLogEnsureTable($db);
   try {
     $db->prepare('INSERT INTO auth_login_log (person_id, login_type) VALUES (?, ?)')->execute([$personId, $type]);
