@@ -24,7 +24,7 @@ define('MAIL_FROM',    'noreply@gennetten.org');
 define('MAIL_FROM_NAME', 'Gennetten Auth');
 
 // OTP expires after this many minutes
-define('OTP_TTL_MINUTES', 10);
+define('OTP_TTL_MINUTES', 30);
 
 function authDb(): PDO {
   static $pdo = null;

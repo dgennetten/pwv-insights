@@ -16,7 +16,7 @@ define('DB_PASS', $secrets['db_pass']);
 
 define('MAIL_FROM',       'noreply@gennetten.org');
 define('MAIL_FROM_NAME',  'PWV Insights');
-define('OTP_TTL_MINUTES', 10);
+define('OTP_TTL_MINUTES', 30);
 
 // Hardcoded admin — expand to a DB table when needed
 define('ADMIN_EMAIL', 'douglas@gennetten.com');
