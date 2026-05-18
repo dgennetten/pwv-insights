@@ -39,6 +39,16 @@ export function HelpPage() {
           </p>
         </div>
       </div>
+
+      <p className="mt-6 text-xs text-stone-400 dark:text-stone-500">
+        PWV Insights is in early beta. Send corrections, suggestions or other feedback to{' '}
+        <a
+          href="mailto:douglas@gennetten.com"
+          className="underline underline-offset-2 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
+        >
+          Douglas Gennetten
+        </a>
+      </p>
     </div>
   )
 }

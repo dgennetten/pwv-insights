@@ -389,6 +389,16 @@ export function ActivityDashboard({
         </div>
       </div>
 
+      {/* ── Login notice ──────────────────────────────────────────── */}
+      {currentUserId === undefined && (
+        <div className="flex items-center gap-3 mb-5 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300">
+          <Users className="w-4 h-4 shrink-0" strokeWidth={2} />
+          <p className="text-sm font-medium">
+            Log in to see your personal stats and track your own patrol activity.
+          </p>
+        </div>
+      )}
+
       {/* ── KPI Cards ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {kpi.patrols && (
