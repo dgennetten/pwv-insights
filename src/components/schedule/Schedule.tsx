@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { ArrowDown, ArrowUp, ChevronDown, Users } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarDays, ChevronDown, Clock, Users } from 'lucide-react'
 import type { ScheduleEntry, ScheduleMemberOption } from '../../types/schedule'
 import type { ScheduleColumnsPrefs } from '../../types/settings'
 import { DEFAULT_PREFERENCES } from '../../types/settings'
@@ -24,6 +24,27 @@ type SortDir = 'asc' | 'desc'
 const segmentBase = 'px-3 py-1.5 text-xs font-medium transition-colors rounded-md'
 const segmentActive = 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
 const segmentInactive = 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800'
+
+// ─── KPI helpers ─────────────────────────────────────────────────────────────
+
+function daysUntil(dateStr: string): number {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(dateStr + 'T00:00:00')
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function ScheduleKpi({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
+  return (
+    <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3 flex items-center gap-3 min-w-0">
+      <div className="text-emerald-600 dark:text-emerald-400 shrink-0">{icon}</div>
+      <div className="min-w-0">
+        <div className="text-xl font-bold tabular-nums text-stone-900 dark:text-stone-100 leading-tight">{value}</div>
+        <div className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{label}</div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Member selector ─────────────────────────────────────────────────────────
 
@@ -243,6 +264,27 @@ export function Schedule({
           />
         </div>
       </div>
+
+      {/* KPI row */}
+      {(() => {
+        const nextDate = view === 'upcoming' ? schedules[0]?.activityDate ?? null : null
+        const days = nextDate !== null ? daysUntil(nextDate) : null
+        const nextLabel = days === null ? '—' : days === 0 ? 'Today' : days === 1 ? '1 day' : `${formatInteger(days)} days`
+        return (
+          <div className="flex gap-3 mb-5">
+            <ScheduleKpi
+              label="Scheduled"
+              value={formatInteger(totalCount)}
+              icon={<CalendarDays className="w-5 h-5" strokeWidth={1.5} />}
+            />
+            <ScheduleKpi
+              label="Next Activity"
+              value={nextLabel}
+              icon={<Clock className="w-5 h-5" strokeWidth={1.5} />}
+            />
+          </div>
+        )
+      })()}
 
       {/* Table */}
       <div className="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden">

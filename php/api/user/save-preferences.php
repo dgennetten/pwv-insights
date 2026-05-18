@@ -54,8 +54,9 @@ if (!is_array($raw)) {
 
 $bool = fn($v) => (bool) $v;
 
-$dashKpiRaw = $raw['dashboardKpi'] ?? [];
-$trailRaw   = $raw['trailDetail']  ?? [];
+$dashKpiRaw  = $raw['dashboardKpi']    ?? [];
+$trailRaw    = $raw['trailDetail']     ?? [];
+$schedColRaw = $raw['scheduleColumns'] ?? [];
 
 $prefs = [
   'dashboardKpi' => [
@@ -70,10 +71,18 @@ $prefs = [
     'volunteerHours'   => $bool($dashKpiRaw['volunteerHours']   ?? false),
   ],
   'trailDetail' => [
-    'treesCleared'    => $bool($trailRaw['treesCleared']    ?? true),
-    'hikersSeen'      => $bool($trailRaw['hikersSeen']      ?? true),
-    'hikersContacted' => $bool($trailRaw['hikersContacted'] ?? true),
+    'treesCleared'    => $bool($trailRaw['treesCleared']     ?? true),
+    'hikersSeen'      => $bool($trailRaw['hikersSeen']       ?? true),
+    'hikersContacted' => $bool($trailRaw['hikersContacted']  ?? true),
     'patrolEfficiency'=> $bool($trailRaw['patrolEfficiency'] ?? false),
+  ],
+  'scheduleColumns' => [
+    'scheduleId'     => $bool($schedColRaw['scheduleId']     ?? true),
+    'trail'          => $bool($schedColRaw['trail']          ?? true),
+    'activityType'   => $bool($schedColRaw['activityType']   ?? true),
+    'activityMethod' => $bool($schedColRaw['activityMethod'] ?? false),
+    'members'        => $bool($schedColRaw['members']        ?? false),
+    'author'         => $bool($schedColRaw['author']         ?? false),
   ],
 ];
 

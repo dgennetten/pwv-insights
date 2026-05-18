@@ -82,21 +82,28 @@ try {
         ];
     }, $rows);
 
-    // Members list for dropdown — all members with any schedule entries in the group
+    // Members list for dropdown — everyone who appears as a scheduler OR a listed member
     $membersStmt = $db->prepare("
         SELECT
             m.PersonID  AS personId,
             m.FirstName AS firstName,
             m.LastName  AS lastName,
             CONCAT(m.FirstName, ' ', m.LastName) AS fullName,
-            COUNT(DISTINCT sm.ScheduleID) AS scheduleCount
+            COUNT(DISTINCT combined.ScheduleID) AS scheduleCount
         FROM t_member m
-        JOIN t_schedule_member sm ON sm.PersonID  = m.PersonID
-        JOIN t_schedule s         ON s.ScheduleID = sm.ScheduleID AND s.GroupID = ?
+        JOIN (
+            SELECT sm.PersonID, sm.ScheduleID
+            FROM t_schedule_member sm
+            JOIN t_schedule s ON s.ScheduleID = sm.ScheduleID AND s.GroupID = ?
+            UNION
+            SELECT s.SchedulerID AS PersonID, s.ScheduleID
+            FROM t_schedule s
+            WHERE s.GroupID = ?
+        ) combined ON combined.PersonID = m.PersonID
         GROUP BY m.PersonID, m.FirstName, m.LastName
         ORDER BY scheduleCount DESC, m.LastName, m.FirstName
     ");
-    $membersStmt->execute([SCHEDULE_PWV_GROUP]);
+    $membersStmt->execute([SCHEDULE_PWV_GROUP, SCHEDULE_PWV_GROUP]);
     $members = array_map(static function (array $m): array {
         return [
             'personId'      => (int) $m['personId'],

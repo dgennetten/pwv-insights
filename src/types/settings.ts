@@ -59,8 +59,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     scheduleId: true,
     trail: true,
     activityType: true,
-    activityMethod: true,
-    members: true,
+    activityMethod: false,
+    members: false,
     author: false,
   },
 }
