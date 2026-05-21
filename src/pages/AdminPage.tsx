@@ -3,7 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
 import { canAccessAdminPage } from '../lib/adminAccess'
-import { fetchAdminRecentLogins, getStoredAuthToken, type AdminLoginRow } from '../services/authService'
+import {
+  fetchAdminMemberSearch,
+  fetchAdminRecentLogins,
+  getStoredAuthToken,
+  type AdminLoginRow,
+  type MemberSearchResult,
+} from '../services/authService'
 
 function formatLoginDate(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return '—'
@@ -29,12 +35,28 @@ function memberNameLastFirst(row: AdminLoginRow): string {
   return last || first || '—'
 }
 
+function filterLogins(rows: AdminLoginRow[]): AdminLoginRow[] {
+  const seenAccess = new Set<number>()
+  return rows.filter(row => {
+    if (row.loginType !== 'ACCESS') return true
+    if (seenAccess.has(row.memberId)) return false
+    seenAccess.add(row.memberId)
+    return true
+  })
+}
+
 export function AdminPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [logins, setLogins] = useState<AdminLoginRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [authQuery, setAuthQuery] = useState('')
+  const [authResults, setAuthResults] = useState<MemberSearchResult[]>([])
+  const [selectedMember, setSelectedMember] = useState<MemberSearchResult | null>(null)
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const allowed = canAccessAdminPage(user?.email)
 
@@ -68,6 +90,21 @@ export function AdminPage() {
     void loadLogins()
   }, [loadLogins])
 
+  useEffect(() => {
+    if (selectedMember !== null || authQuery.trim().length < 2) {
+      setAuthResults([])
+      return
+    }
+    const timer = setTimeout(() => {
+      const token = getStoredAuthToken()
+      if (!token) return
+      void fetchAdminMemberSearch(token, authQuery.trim())
+        .then(setAuthResults)
+        .catch(() => setAuthResults([]))
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [authQuery, selectedMember])
+
   return (
     <MemberGate>
       <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
@@ -79,6 +116,92 @@ export function AdminPage() {
         </div>
 
         {allowed ? (
+          <>
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3">
+              Create Auth Link
+            </h3>
+            <div className="flex items-start gap-2">
+              <div className="relative flex-1 max-w-sm">
+                <input
+                  type="text"
+                  value={authQuery}
+                  onChange={e => {
+                    setAuthQuery(e.target.value)
+                    setSelectedMember(null)
+                    setGeneratedLink(null)
+                    setCopied(false)
+                  }}
+                  placeholder="Member name or email…"
+                  className="w-full text-sm border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-1.5 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+                {authResults.length > 0 && selectedMember === null && (
+                  <ul className="absolute z-10 mt-1 w-full bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg shadow-lg overflow-hidden">
+                    {authResults.map(m => (
+                      <li key={m.memberId}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedMember(m)
+                            setAuthQuery(`${m.lastName}, ${m.firstName}`)
+                            setAuthResults([])
+                            setGeneratedLink(null)
+                            setCopied(false)
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700/60"
+                        >
+                          {m.lastName}, {m.firstName}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <button
+                type="button"
+                disabled={selectedMember === null}
+                onClick={() => {
+                  if (!selectedMember) return
+                  setGeneratedLink(
+                    `http://pwv-insights.gennetten.org?id=${selectedMember.dob}${selectedMember.memberId}`
+                  )
+                  setCopied(false)
+                }}
+                className="text-sm font-medium px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Create
+              </button>
+            </div>
+            {generatedLink && (
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-mono text-stone-600 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2 py-1.5 rounded select-all break-all">
+                  {generatedLink}
+                </span>
+                <button
+                  type="button"
+                  title={copied ? 'Copied!' : 'Copy link'}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(generatedLink)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                  className="flex-shrink-0 p-1.5 rounded text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors"
+                >
+                  {copied ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-emerald-500">
+                      <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                      <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4">
             <div className="flex items-start justify-between gap-3 mb-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
@@ -128,7 +251,7 @@ export function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-                    {logins.map((row, i) => (
+                    {filterLogins(logins).map((row, i) => (
                       <tr
                         key={`${row.memberId}-${row.loggedInAtMs}-${i}`}
                         className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
@@ -163,6 +286,7 @@ export function AdminPage() {
               </div>
             )}
           </div>
+          </>
         ) : null}
       </div>
     </MemberGate>

@@ -38,6 +38,30 @@ export async function fetchAdminRecentLogins(token: string): Promise<AdminLoginR
   return Array.isArray(data.logins) ? data.logins : []
 }
 
+export interface MemberSearchResult {
+  memberId: number
+  firstName: string
+  lastName: string
+  dob: string // YYYYMMDD
+}
+
+export async function fetchAdminMemberSearch(token: string, query: string): Promise<MemberSearchResult[]> {
+  const res = await fetch('/api/admin/member-search.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, query }),
+  })
+  const data = (await res.json()) as {
+    success?: boolean
+    members?: MemberSearchResult[]
+    error?: string
+  }
+  if (!res.ok || !data.success) {
+    throw new Error(data.error ?? `HTTP ${res.status}`)
+  }
+  return Array.isArray(data.members) ? data.members : []
+}
+
 export async function requestOtp(email: string): Promise<void> {
   const res = await fetch(`${AUTH_BASE}/request-otp.php`, {
     method: 'POST',
