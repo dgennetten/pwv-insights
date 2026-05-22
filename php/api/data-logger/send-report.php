@@ -133,8 +133,8 @@ $hikerTotal = $hikerSeen;  // seen already includes auto-increments from contact
 $startTime  = $sessionStart ? date('g:i A', intdiv($sessionStart, 1000)) : '—';
 $sentTime   = date('g:i A');
 
-$div  = str_repeat('═', 45);
-$divs = str_repeat('─', 45);
+$div  = str_repeat('═', 22);
+$divs = str_repeat('─', 22);
 
 $lines = [
   'PWV Trail Patrol — Data Logger Report',
