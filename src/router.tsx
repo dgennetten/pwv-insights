@@ -5,6 +5,7 @@ import { AdminPage } from "./pages/AdminPage";
 import { HelpPage } from "./pages/HelpPage";
 import { LeaderboardsPage } from "./pages/LeaderboardsPage";
 import { ReportsPage } from "./pages/ReportsPage";
+import { DataLoggerPage } from "./pages/DataLoggerPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TrailsPage } from "./pages/TrailsPage";
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "dashboard", element: <ActivityDashboardPage /> },
       { path: "schedule", element: <SchedulePage /> },
+      { path: "data-logger", element: <DataLoggerPage /> },
       { path: "trails", element: <TrailsPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "leaderboards", element: <LeaderboardsPage /> },
