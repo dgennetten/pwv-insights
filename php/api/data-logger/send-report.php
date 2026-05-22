@@ -53,6 +53,7 @@ $trees = [
 ];
 $sessionStart = null;
 $detailRows   = [];  // chronological list for the detail section
+$summaryNotes = [];  // time + text only, for the summary block
 
 $fmtCoords = function (?float $lat, ?float $lng): string {
   if ($lat === null || $lng === null) return 'GPS unavailable    ';
@@ -93,7 +94,8 @@ foreach ($entries as $e) {
   } elseif ($type === 'note') {
     $text = trim((string) ($e['noteText'] ?? ''));
     if ($text === '') continue;
-    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => 'note', 'line' => "  [{$time} | {$coords}] Note: {$text}"];
+    $summaryNotes[] = ['ts' => $ts ?? 0, 'line' => "  [{$time}] {$text}"];
+    $detailRows[]   = ['ts' => $ts ?? 0, 'subtype' => 'note', 'line' => "  [{$time} | {$coords}] Note: {$text}"];
   }
 }
 
@@ -152,6 +154,15 @@ $lines = [
   '  Noted:    ' . $fmtRow($trees['noted']),
 ];
 
+if (!empty($summaryNotes)) {
+  usort($summaryNotes, fn($a, $b) => $a['ts'] <=> $b['ts']);
+  $lines[] = '';
+  $lines[] = 'FIELD NOTES';
+  foreach ($summaryNotes as $n) {
+    $lines[] = $n['line'];
+  }
+}
+
 if ($includeLocations && !empty($detailRows)) {
   $lines[] = '';
   $lines[] = $div;
@@ -167,7 +178,7 @@ $lines[] = "Session started: {$startTime}";
 $lines[] = "Report sent:     {$sentTime}";
 
 $reportBody = implode("\n", $lines);
-$subject    = "PWV Data Logger Report — {$reportDate}";
+$subject    = "PWV Data Logger Report - {$reportDate}";
 
 sendOtpMail($memberEmail, $subject, $reportBody);
 
