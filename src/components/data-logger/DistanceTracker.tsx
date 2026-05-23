@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { saveTracker, getSessionTrackers } from '../../services/dataLoggerService'
-import { getLoggerSettings } from '../../lib/loggerSettings'
 import type { Tracker, TrackerSegment, TrackerState, GpsPoint, Waypoint } from '../../types/dataLogger'
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -68,9 +67,6 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
   const lastPointsRef   = useRef<Map<string, GpsPoint>>(new Map())
   const trackersRef     = useRef<TrackerUi[]>([])
 
-  // Maps tracker ID → { segDistM, ts } at the last waypoint for that tracker
-  const lastWaypointRef = useRef<Map<string, { segDistM: number; ts: number }>>(new Map())
-
   // Sync ref and notify parent after every commit where trackers change
   useEffect(() => {
     trackersRef.current = trackers
@@ -90,8 +86,6 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
       accuracy: pos.coords.accuracy ?? undefined,
     }
 
-    const settings = getLoggerSettings()
-
     setTrackers(prev => {
       const updated = prev.map(tracker => {
         if (tracker.state !== 'tracking') return tracker
@@ -109,37 +103,11 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
 
         const newSegDistM = cur.distanceM + distAdd
 
-        // ── Waypoint check ──────────────────────────────────────────────────
-        let newWaypoints: Waypoint[] = cur.waypoints ? [...cur.waypoints] : []
-        if (settings.waypointsEnabled && distAdd > 0) {
-          const lastWp       = lastWaypointRef.current.get(tracker.id)
-          const lastWpDistM  = lastWp?.segDistM ?? 0
-          const lastWpTs     = lastWp?.ts ?? cur.startAt
-
-          let shouldAdd = false
-          if (settings.waypointMode === 'distance') {
-            const thresholdM = settings.waypointDistanceMi * 1609.344
-            shouldAdd = (newSegDistM - lastWpDistM) >= thresholdM
-          } else {
-            const thresholdMs = settings.waypointTimeMin * 60 * 1000
-            shouldAdd = (point.ts - lastWpTs) >= thresholdMs
-          }
-
-          if (shouldAdd) {
-            newWaypoints = [...newWaypoints, {
-              lat: point.lat, lng: point.lng, ts: point.ts,
-              segmentDistanceM: newSegDistM,
-            }]
-            lastWaypointRef.current.set(tracker.id, { segDistM: newSegDistM, ts: point.ts })
-          }
-        }
-
         segs[segs.length - 1] = {
           ...cur,
           distanceM:  newSegDistM,
           startPoint: cur.startPoint ?? point,
           endPoint:   point,
-          waypoints:  newWaypoints.length > 0 ? newWaypoints : undefined,
         }
         return { ...tracker, totalDistanceM: tracker.totalDistanceM + distAdd, segments: segs }
       })
@@ -180,7 +148,6 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
     stopWatch()
     if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
     lastPointsRef.current.clear()
-    lastWaypointRef.current.clear()
     setTrackers([])
 
     if (!sessionId) return
@@ -253,7 +220,6 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
 
   const resumeTracker = useCallback(async (id: string) => {
     const now = Date.now()
-    lastWaypointRef.current.delete(id)  // new segment — reset waypoint baseline
     await update(prev => prev.map(t => {
       if (t.id !== id || t.state !== 'paused') return t
       const seg: TrackerSegment = { startAt: now, distanceM: 0 }
@@ -312,7 +278,6 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
       segmentDistanceM: seg.distanceM,
       name:             name.trim() || undefined,
     }
-    lastWaypointRef.current.set(id, { segDistM: seg.distanceM, ts: now })
     await update(prev => prev.map(t => {
       if (t.id !== id || t.state !== 'tracking') return t
       const segs = [...t.segments]
