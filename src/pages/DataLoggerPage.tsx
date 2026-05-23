@@ -54,6 +54,7 @@ export function DataLoggerPage() {
   const isAuthenticated = !!user?.personId
 
   const [isOnline,      setIsOnline]      = useState(navigator.onLine)
+  const [showTips,      setShowTips]      = useState(false)
   const [session,       setSession]       = useState<LogSession | null>(null)
   const [entries,       setEntries]       = useState<LogEntry[]>([])
   const [treeMode,      setTreeMode]      = useState<TreeSubtype>('cleared')
@@ -274,7 +275,15 @@ export function DataLoggerPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-base font-semibold text-stone-900 dark:text-stone-100">Data Logger</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-base font-semibold text-stone-900 dark:text-stone-100">Data Logger</h1>
+          <button
+            onClick={() => setShowTips(true)}
+            className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
+          >
+            Usage tips
+          </button>
+        </div>
         <div className="flex items-center gap-1.5">
           <div className={`w-2 h-2 rounded-full transition-colors ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
           <span className="text-xs text-stone-500 dark:text-stone-400">
@@ -282,6 +291,8 @@ export function DataLoggerPage() {
           </span>
         </div>
       </div>
+
+      {showTips && <UsageTipsModal onClose={() => setShowTips(false)} />}
 
       {/* GPS warning */}
       {gpsStatus !== 'ok' && (
@@ -498,6 +509,104 @@ export function DataLoggerPage() {
         )}
       </div>
 
+    </div>
+  )
+}
+
+// ── Usage Tips Modal ───────────────────────────────────────────
+
+function TipSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-2">
+        {title}
+      </h3>
+      <ul className="space-y-2">{children}</ul>
+    </div>
+  )
+}
+
+function Tip({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2 text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
+      <span className="text-emerald-500 shrink-0 mt-0.5">▸</span>
+      <span>{children}</span>
+    </li>
+  )
+}
+
+function UsageTipsModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="w-full max-w-lg max-h-[85dvh] bg-white dark:bg-stone-900 rounded-t-2xl sm:rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-stone-100 dark:border-stone-800 shrink-0">
+          <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Usage Tips</h2>
+          <button
+            onClick={onClose}
+            className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors text-lg leading-none px-1"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="overflow-y-auto px-4 py-4 space-y-5">
+
+          <TipSection title="iPhone / iPad (iOS)">
+            <Tip>
+              <strong>Install to Home Screen</strong> — In Safari, tap the Share button then "Add to Home Screen." The installed app gets slightly better background behavior and a persistent icon — use this instead of opening it from the browser tab every time.
+            </Tip>
+            <Tip>
+              <strong>Allow location access</strong> — When prompted, choose "Allow While Using App." For the installed Home Screen version, go to <em>Settings → Privacy & Security → Location Services → Safari Websites</em> (or the app name) and set it to "While Using."
+            </Tip>
+            <Tip>
+              <strong>Disable Low Power Mode during patrols</strong> — Low Power Mode throttles background processes and can delay GPS fixes. Turn it off at <em>Settings → Battery → Low Power Mode</em> before you head out.
+            </Tip>
+            <Tip>
+              <strong>Keep the screen on</strong> — iOS aggressively suspends web apps when the screen locks. Enable "Keep screen awake while tracking" in Settings to prevent auto-lock, or manually lock your screen only when you don't need continuous waypoints.
+            </Tip>
+            <Tip>
+              <strong>Don't switch away from the app</strong> — Switching to another app or returning to the home screen will suspend GPS tracking within seconds on iOS. If you need to check something, do it quickly and return.
+            </Tip>
+          </TipSection>
+
+          <TipSection title="Android">
+            <Tip>
+              <strong>Install the app</strong> — In Chrome, tap the menu (⋮) and choose "Add to Home screen" or "Install app." Installed PWAs are treated more like native apps by Android and are less likely to be suspended.
+            </Tip>
+            <Tip>
+              <strong>Disable battery optimization for Chrome</strong> — Go to <em>Settings → Apps → Chrome → Battery</em> and set it to <strong>Unrestricted</strong> (the label varies by manufacturer). This tells Android not to throttle or kill the browser in the background.
+            </Tip>
+            <Tip>
+              <strong>Disable battery optimization for the installed app</strong> — If you've installed it to your home screen, find the PWA entry in <em>Settings → Apps</em> and set its battery to Unrestricted as well.
+            </Tip>
+            <Tip>
+              <strong>Keep the screen on</strong> — Enable "Keep screen awake while tracking" in Settings. Android is generally more permissive than iOS when the screen is on, but will still throttle background JS when it locks.
+            </Tip>
+            <Tip>
+              <strong>Avoid Power Saving / Battery Saver modes</strong> — These modes aggressively limit background activity. Turn them off before a patrol if you want reliable continuous tracking.
+            </Tip>
+          </TipSection>
+
+          <TipSection title="General">
+            <Tip>
+              <strong>Time-mode waypoints are more reliable than distance-mode</strong> — If your screen might lock, switch waypoints to "time" mode in Settings. Each GPS fix that does come through — even if infrequent — is evaluated against the elapsed time threshold, so waypoints will still fire when you re-open the app.
+            </Tip>
+            <Tip>
+              <strong>Manual waypoints always work</strong> — Tap "Add Waypoint" while tracking to drop a named point at your current location. These require the screen to be on but are not affected by auto-lock settings.
+            </Tip>
+            <Tip>
+              <strong>Distance tracking resumes automatically</strong> — If GPS drops and comes back (e.g. after you unlock), the tracker picks up from where it left off. The distance gap during the lock period won't be counted, but the time will still accumulate.
+            </Tip>
+          </TipSection>
+
+        </div>
+      </div>
     </div>
   )
 }
