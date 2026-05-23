@@ -2,14 +2,18 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { MemberGate } from '../components/MemberGate'
+import { DistanceTracker } from '../components/data-logger/DistanceTracker'
 import {
   getOrCreateSession,
   addEntry,
   getSessionEntries,
   markSessionEmailed,
+  clearSessionEntries,
+  clearSessionTrackers,
+  resetSession,
 } from '../services/dataLoggerService'
 import { getStoredAuthToken } from '../services/authService'
-import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize } from '../types/dataLogger'
+import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, Tracker } from '../types/dataLogger'
 
 const TREE_SIZES: { key: TreeSize; label: string; range: string }[] = [
   { key: 'small',  label: 'Small',  range: '< 8"'   },
@@ -49,17 +53,20 @@ export function DataLoggerPage() {
   const navigate  = useNavigate()
   const isAuthenticated = !!user?.personId
 
-  const [isOnline,   setIsOnline]   = useState(navigator.onLine)
-  const [session,    setSession]    = useState<LogSession | null>(null)
-  const [entries,    setEntries]    = useState<LogEntry[]>([])
-  const [treeMode,   setTreeMode]   = useState<TreeSubtype>('cleared')
-  const [noteText,   setNoteText]   = useState('')
-  const [sending,          setSending]         = useState(false)
-  const [sentOk,           setSentOk]          = useState(false)
+  const [isOnline,      setIsOnline]      = useState(navigator.onLine)
+  const [session,       setSession]       = useState<LogSession | null>(null)
+  const [entries,       setEntries]       = useState<LogEntry[]>([])
+  const [treeMode,      setTreeMode]      = useState<TreeSubtype>('cleared')
+  const [noteText,      setNoteText]      = useState('')
+  const [sending,          setSending]          = useState(false)
+  const [sentOk,           setSentOk]           = useState(false)
   const [sendError,        setSendError]        = useState<string | null>(null)
   const [includeLocations, setIncludeLocations] = useState(true)
-  const [gpsStatus,  setGpsStatus]  = useState<'ok' | 'denied' | 'unavailable'>('ok')
-  const [loading,    setLoading]    = useState(true)
+  const [trackers,         setTrackers]         = useState<Tracker[]>([])
+  const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
+  const [loading,       setLoading]       = useState(true)
+  const [confirmClear,  setConfirmClear]  = useState(false)
+  const [trackerResetKey, setTrackerResetKey] = useState(0)
 
   // Online / offline tracking
   useEffect(() => {
@@ -161,6 +168,21 @@ export function DataLoggerPage() {
           reportDate:       session.id,
           entries,
           includeLocations,
+          trackers:         trackers.map(t => ({
+            name:            t.name || 'Unnamed',
+            state:           t.state,
+            totalDistanceM:  t.totalDistanceM,
+            activeDurationMs: t.activeDurationMs,
+            startedAt:       t.startedAt,
+            segments:        t.segments.map(s => ({
+              startAt:    s.startAt,
+              endAt:      s.endAt,
+              distanceM:  s.distanceM,
+              startPoint: s.startPoint ?? null,
+              endPoint:   s.endPoint ?? null,
+              waypoints:  s.waypoints ?? [],
+            })),
+          })),
         }),
       })
       const data = (await res.json()) as { success?: boolean; error?: string }
@@ -173,16 +195,32 @@ export function DataLoggerPage() {
     } finally {
       setSending(false)
     }
-  }, [session, user, entries])
+  }, [session, user, entries, trackers, includeLocations])
 
   const handleNewSession = useCallback(async () => {
-    const newKey = new Date().toISOString().slice(0, 16) // "YYYY-MM-DDTHH:MM"
+    const newKey = new Date().toISOString().slice(0, 16)
     const s = await getOrCreateSession(newKey)
     setSession(s)
     setEntries([])
+    setTrackers([])
     setSentOk(false)
     setSendError(null)
+    setTrackerResetKey(k => k + 1)
   }, [])
+
+  const handleClearData = useCallback(async () => {
+    if (!session) return
+    await clearSessionEntries(session.id)
+    await clearSessionTrackers(session.id)
+    const fresh = await resetSession(session.id)
+    setSession(fresh)
+    setEntries([])
+    setTrackers([])
+    setSentOk(false)
+    setSendError(null)
+    setConfirmClear(false)
+    setTrackerResetKey(k => k + 1)
+  }, [session])
 
   // Computed aggregates
   const hikerCounts = useMemo(() => {
@@ -225,11 +263,11 @@ export function DataLoggerPage() {
     )
   }
 
-  const hikerTotal = hikerCounts.seen   // seen already includes auto-increments from contacted taps
+  const hikerTotal = hikerCounts.seen
   const treeTotal  = TREE_SIZES.reduce(
     (sum, s) => sum + treeCounts.cleared[s.key] + treeCounts.noted[s.key], 0
   )
-  const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0
+  const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
@@ -345,6 +383,13 @@ export function DataLoggerPage() {
         </div>
       </div>
 
+      {/* ── DISTANCE TRACKER ────────────────────────────── */}
+      <DistanceTracker
+        key={trackerResetKey}
+        sessionId={session?.id ?? null}
+        onTrackersChange={setTrackers}
+      />
+
       {/* ── NOTES ───────────────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
         <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
@@ -386,7 +431,7 @@ export function DataLoggerPage() {
       </div>
 
       {/* ── EMAIL REPORT ────────────────────────────────── */}
-      <div className="space-y-2 pb-6">
+      <div className="space-y-2 pb-2">
         {sendError && (
           <p className="text-xs text-red-500 text-center">{sendError}</p>
         )}
@@ -405,7 +450,7 @@ export function DataLoggerPage() {
               onChange={e => setIncludeLocations(e.target.checked)}
               className="w-4 h-4 rounded accent-emerald-600"
             />
-            <span className="text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap">Include Locations</span>
+            <span className="text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap">Include GPS data</span>
           </label>
         </div>
         {!isOnline && (
@@ -418,6 +463,38 @@ export function DataLoggerPage() {
           <p className="text-xs text-stone-400 dark:text-stone-500 text-center">
             Session {session.id} · started {fmtTime(session.startedAt)}
           </p>
+        )}
+      </div>
+
+      {/* ── CLEAR DATA ──────────────────────────────────── */}
+      <div className="pb-6 flex flex-col items-center gap-2">
+        {confirmClear ? (
+          <div className="w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 space-y-2">
+            <p className="text-xs text-red-700 dark:text-red-400 text-center">
+              Are you sure you want to delete all data from the current session?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmClear(false)}
+                className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleClearData()}
+                className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmClear(true)}
+            className="text-xs text-stone-400 dark:text-stone-500 hover:text-red-500 dark:hover:text-red-400 underline underline-offset-2 transition-colors"
+          >
+            Clear all data
+          </button>
         )}
       </div>
 

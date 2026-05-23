@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode — JS sets/removes .dark on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Design Tokens — PWV Insights */
 :root {
   --font-heading: "Inter", system-ui, sans-serif;

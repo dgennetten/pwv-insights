@@ -16,6 +16,7 @@ $entries          = is_array($body['entries'] ?? null) ? $body['entries'] : [];
 $memberName       = trim($body['memberName'] ?? '');
 $reportDate       = trim($body['reportDate'] ?? date('Y-m-d'));
 $includeLocations = !empty($body['includeLocations']);
+$trackers         = is_array($body['trackers'] ?? null) ? $body['trackers'] : [];
 
 if ($token === '' || strlen($token) !== 64 || !ctype_xdigit($token)) {
   jsonOut(['success' => false, 'error' => 'Invalid token'], 401);
@@ -163,12 +164,105 @@ if (!empty($summaryNotes)) {
   }
 }
 
+// ── Distance tracker summary ───────────────────────────────────────
+$fmtMi = function (float $m): string {
+  return number_format($m / 1609.344, 2) . ' mi';
+};
+$fmtDur = function (int $ms): string {
+  $s = intdiv($ms, 1000);
+  $h = intdiv($s, 3600);
+  $m = intdiv($s % 3600, 60);
+  $sec = $s % 60;
+  if ($h > 0) return "{$h}:" . str_pad((string)$m, 2, '0', STR_PAD_LEFT) . ':' . str_pad((string)$sec, 2, '0', STR_PAD_LEFT);
+  return "{$m}:" . str_pad((string)$sec, 2, '0', STR_PAD_LEFT);
+};
+$fmtPt = function (?array $pt): string {
+  if (!$pt || !isset($pt['lat'], $pt['lng'])) return 'GPS unavailable';
+  $ns = (float)$pt['lat'] >= 0 ? 'N' : 'S';
+  $ew = (float)$pt['lng'] >= 0 ? 'E' : 'W';
+  return number_format(abs((float)$pt['lat']), 4) . "°{$ns} " . number_format(abs((float)$pt['lng']), 4) . "°{$ew}";
+};
+
+$fmtPace = function (float $distM, int $durationMs): string {
+  if ($distM <= 0) return '—';
+  $minPerMile = ($durationMs / 1000 / 60) / ($distM / 1609.344);
+  $m = (int) $minPerMile;
+  $s = (int) round(($minPerMile - $m) * 60);
+  if ($s === 60) { $m++; $s = 0; }
+  return "{$m}:" . str_pad((string)$s, 2, '0', STR_PAD_LEFT) . ' min/mi';
+};
+
+if (!empty($trackers)) {
+  $lines[] = '';
+  $lines[] = $div;
+  $lines[] = 'DISTANCE TRACKERS';
+  $totalTrackerM  = 0.0;
+  $totalTrackerMs = 0;
+  foreach ($trackers as $tr) {
+    if (!is_array($tr)) continue;
+    $tName = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
+    $tDist = (float)($tr['totalDistanceM']  ?? 0);
+    $tDur  = (int)  ($tr['activeDurationMs'] ?? 0);
+    $totalTrackerM  += $tDist;
+    $totalTrackerMs += $tDur;
+    $lines[] = sprintf('  %-20s  %s  ·  %s  ·  %s', $tName . ':', $fmtMi($tDist), $fmtDur($tDur), $fmtPace($tDist, $tDur));
+  }
+  if (count($trackers) > 1) {
+    $lines[] = '  ' . str_repeat('-', 18);
+    $lines[] = sprintf('  %-20s  %s  ·  %s  ·  %s', 'Total:', $fmtMi($totalTrackerM), $fmtDur($totalTrackerMs), $fmtPace($totalTrackerM, $totalTrackerMs));
+  }
+}
+
 if ($includeLocations && !empty($detailRows)) {
   $lines[] = '';
   $lines[] = $div;
   $lines[] = 'DETAILED LOG';
   foreach ($detailRows as $row) {
     $lines[] = $row['line'];
+  }
+}
+
+// ── Tracker detail ────────────────────────────────────────────────
+if ($includeLocations && !empty($trackers)) {
+  foreach ($trackers as $idx => $tr) {
+    if (!is_array($tr)) continue;
+    $tName    = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
+    $tDist    = (float)($tr['totalDistanceM']  ?? 0);
+    $tDur     = (int)  ($tr['activeDurationMs'] ?? 0);
+    $tStart   = isset($tr['startedAt']) ? date('g:i A', intdiv((int)$tr['startedAt'], 1000)) : '—';
+    $segments = is_array($tr['segments'] ?? null) ? $tr['segments'] : [];
+    $lines[] = '';
+    $lines[] = $div;
+    $lines[] = "TRACKER: {$tName}";
+    $lines[] = "  Distance:  {$fmtMi($tDist)}    Duration: {$fmtDur($tDur)}    Pace: {$fmtPace($tDist, $tDur)}";
+    $lines[] = "  Started:   {$tStart}   (" . count($segments) . ' segment' . (count($segments) !== 1 ? 's' : '') . ')';
+    $prev_end = null;
+    foreach ($segments as $si => $seg) {
+      if (!is_array($seg)) continue;
+      $segStart = isset($seg['startAt'])  ? date('g:i A', intdiv((int)$seg['startAt'], 1000)) : '—';
+      $segEnd   = isset($seg['endAt'])    ? date('g:i A', intdiv((int)$seg['endAt'],   1000)) : '(active)';
+      $segDist  = (float)($seg['distanceM'] ?? 0);
+      $segDurMs = isset($seg['startAt'], $seg['endAt'])
+        ? (int)$seg['endAt'] - (int)$seg['startAt']
+        : (isset($seg['startAt']) ? (int)(microtime(true) * 1000) - (int)$seg['startAt'] : 0);
+      if ($prev_end !== null && isset($seg['startAt'])) {
+        $breakMs  = (int)$seg['startAt'] - $prev_end;
+        $lines[] = "    [Break: {$fmtDur($breakMs)}]";
+      }
+      $lines[] = "  Segment " . ($si + 1) . ": {$segStart} - {$segEnd}  ({$fmtDur($segDurMs)})  |  {$fmtMi($segDist)}";
+      $lines[] = "    From: " . $fmtPt(is_array($seg['startPoint'] ?? null) ? $seg['startPoint'] : null);
+      $waypoints = is_array($seg['waypoints'] ?? null) ? $seg['waypoints'] : [];
+      foreach ($waypoints as $wi => $wp) {
+        if (!is_array($wp)) continue;
+        $wpDist = (float)($wp['segmentDistanceM'] ?? 0);
+        $wpTs   = isset($wp['ts']) ? date('g:i A', intdiv((int)$wp['ts'], 1000)) : '--:--';
+        $wpName = trim((string)($wp['name'] ?? ''));
+        $nameStr = $wpName !== '' ? " \"{$wpName}\"" : '';
+        $lines[] = "    Waypoint " . ($wi + 1) . "{$nameStr} [{$wpTs}] (" . $fmtMi($wpDist) . "): " . $fmtPt($wp);
+      }
+      $lines[] = "    To:   " . $fmtPt(is_array($seg['endPoint']   ?? null) ? $seg['endPoint']   : null);
+      $prev_end = $seg['endAt'] ?? null;
+    }
   }
 }
 

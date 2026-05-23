@@ -1,19 +1,22 @@
-import type { LogEntry, LogSession } from '../types/dataLogger'
+import type { LogEntry, LogSession, Tracker } from '../types/dataLogger'
 
 const DB_NAME    = 'pwv_data_logger'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = (e) => {
-      const db = (e.target as IDBOpenDBRequest).result
-      if (!db.objectStoreNames.contains('sessions')) {
+      const db  = (e.target as IDBOpenDBRequest).result
+      const old = e.oldVersion
+      if (old < 1) {
         db.createObjectStore('sessions', { keyPath: 'id' })
+        const es = db.createObjectStore('entries', { keyPath: 'id', autoIncrement: true })
+        es.createIndex('sessionId', 'sessionId', { unique: false })
       }
-      if (!db.objectStoreNames.contains('entries')) {
-        const store = db.createObjectStore('entries', { keyPath: 'id', autoIncrement: true })
-        store.createIndex('sessionId', 'sessionId', { unique: false })
+      if (old < 2) {
+        const ts = db.createObjectStore('trackers', { keyPath: 'id' })
+        ts.createIndex('sessionId', 'sessionId', { unique: false })
       }
     }
     req.onsuccess = (e) => resolve((e.target as IDBOpenDBRequest).result)
@@ -56,6 +59,81 @@ export async function getSessionEntries(sessionId: string): Promise<LogEntry[]> 
     const req   = index.getAll(sessionId)
     req.onsuccess = () => resolve(req.result as LogEntry[])
     req.onerror   = () => reject(req.error)
+  })
+}
+
+export async function saveTracker(tracker: Tracker): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('trackers', 'readwrite').objectStore('trackers').put(tracker)
+    req.onsuccess = () => resolve()
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+export async function getSessionTrackers(sessionId: string): Promise<Tracker[]> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const index = db.transaction('trackers', 'readonly').objectStore('trackers').index('sessionId')
+    const req   = index.getAll(sessionId)
+    req.onsuccess = () => resolve(req.result as Tracker[])
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+export async function resetSession(sessionId: string): Promise<LogSession> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction('sessions', 'readwrite')
+    const store = tx.objectStore('sessions')
+    const get   = store.get(sessionId)
+    get.onsuccess = () => {
+      const fresh: LogSession = { id: sessionId, startedAt: Date.now() }
+      const put = store.put(fresh)
+      put.onsuccess = () => resolve(fresh)
+      put.onerror   = () => reject(put.error)
+    }
+    get.onerror = () => reject(get.error)
+  })
+}
+
+export async function clearSessionEntries(sessionId: string): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction('entries', 'readwrite')
+    const store = tx.objectStore('entries')
+    const req   = store.index('sessionId').getAllKeys(sessionId)
+    req.onsuccess = () => {
+      const keys = req.result as IDBValidKey[]
+      if (keys.length === 0) { resolve(); return }
+      let remaining = keys.length
+      keys.forEach(key => {
+        const del = store.delete(key)
+        del.onsuccess = () => { if (--remaining === 0) resolve() }
+        del.onerror   = () => reject(del.error)
+      })
+    }
+    req.onerror = () => reject(req.error)
+  })
+}
+
+export async function clearSessionTrackers(sessionId: string): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction('trackers', 'readwrite')
+    const store = tx.objectStore('trackers')
+    const req   = store.index('sessionId').getAllKeys(sessionId)
+    req.onsuccess = () => {
+      const keys = req.result as IDBValidKey[]
+      if (keys.length === 0) { resolve(); return }
+      let remaining = keys.length
+      keys.forEach(key => {
+        const del = store.delete(key)
+        del.onsuccess = () => { if (--remaining === 0) resolve() }
+        del.onerror   = () => reject(del.error)
+      })
+    }
+    req.onerror = () => reject(req.error)
   })
 }
 

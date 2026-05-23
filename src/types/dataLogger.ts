@@ -21,3 +21,42 @@ export interface LogSession {
   startedAt: number
   emailedAt?: number
 }
+
+// ── Distance Tracker ───────────────────────────────────────────────
+
+export interface GpsPoint {
+  lat: number
+  lng: number
+  ts: number
+  accuracy?: number
+}
+
+export interface Waypoint {
+  lat: number | null
+  lng: number | null
+  ts: number
+  segmentDistanceM: number  // cumulative distance within this segment at the waypoint
+  name?: string             // only present for manually added waypoints
+}
+
+export interface TrackerSegment {
+  startAt: number
+  endAt?: number
+  distanceM: number
+  startPoint?: GpsPoint
+  endPoint?: GpsPoint
+  waypoints?: Waypoint[]
+}
+
+export type TrackerState = 'tracking' | 'paused' | 'ended' | 'saved'
+
+export interface Tracker {
+  id: string
+  sessionId: string
+  name: string
+  state: TrackerState
+  startedAt: number
+  segments: TrackerSegment[]
+  totalDistanceM: number
+  activeDurationMs: number  // sum of completed segment durations
+}
