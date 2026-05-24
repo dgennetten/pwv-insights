@@ -13,6 +13,7 @@ import {
   resetSession,
 } from '../services/dataLoggerService'
 import { getStoredAuthToken } from '../services/authService'
+import { getLoggerSettings } from '../lib/loggerSettings'
 import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, Tracker } from '../types/dataLogger'
 
 const TREE_SIZES: { key: TreeSize; label: string; range: string }[] = [
@@ -167,6 +168,7 @@ export function DataLoggerPage() {
           sessionId:        session.id,
           memberName:       user.name,
           reportDate:       session.id,
+          emailFormat:      getLoggerSettings().emailFormat,
           entries,
           includeLocations,
           trackers:         trackers.map(t => ({

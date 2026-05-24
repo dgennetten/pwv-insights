@@ -17,6 +17,7 @@ $memberName       = trim($body['memberName'] ?? '');
 $reportDate       = trim($body['reportDate'] ?? date('Y-m-d'));
 $includeLocations = !empty($body['includeLocations']);
 $trackers         = is_array($body['trackers'] ?? null) ? $body['trackers'] : [];
+$emailFormat      = (string)($body['emailFormat'] ?? 'text');
 
 if ($token === '' || strlen($token) !== 64 || !ctype_xdigit($token)) {
   jsonOut(['success' => false, 'error' => 'Invalid token'], 401);
@@ -271,8 +272,28 @@ $lines[] = $divs;
 $lines[] = "Session started: {$startTime}";
 $lines[] = "Report sent:     {$sentTime}";
 
-$reportBody = implode("\n", $lines);
-$subject    = "PWV Data Logger Report - {$reportDate}";
+$subject = "PWV Data Logger Report - {$reportDate}";
+
+if ($emailFormat === 'json') {
+  $jsonPayload = [
+    'member'     => $memberName,
+    'date'       => $reportDate,
+    'reportSent' => date('Y-m-d H:i:s'),
+    'summary' => [
+      'hikers' => [
+        'seen'      => $hikerSeen,
+        'contacted' => $hikerContacted,
+        'total'     => $hikerTotal,
+      ],
+      'trees' => $trees,
+    ],
+    'trackers' => array_values(array_filter($trackers, 'is_array')),
+    'entries'  => $includeLocations ? array_values(array_filter($entries, 'is_array')) : [],
+  ];
+  $reportBody = json_encode($jsonPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+} else {
+  $reportBody = implode("\n", $lines);
+}
 
 sendOtpMail($memberEmail, $subject, $reportBody);
 
