@@ -13,7 +13,6 @@ import {
   resetSession,
 } from '../services/dataLoggerService'
 import { getStoredAuthToken } from '../services/authService'
-import { getLoggerSettings } from '../lib/loggerSettings'
 import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, Tracker } from '../types/dataLogger'
 
 const TREE_SIZES: { key: TreeSize; label: string; range: string }[] = [
@@ -65,6 +64,7 @@ export function DataLoggerPage() {
   const [sendError,        setSendError]        = useState<string | null>(null)
   const [includeLocations, setIncludeLocations] = useState(true)
   const [trackers,         setTrackers]         = useState<Tracker[]>([])
+  const [logId,            setLogId]            = useState<string | null>(null)
   const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
   const [loading,       setLoading]       = useState(true)
   const [confirmClear,  setConfirmClear]  = useState(false)
@@ -123,6 +123,21 @@ export function DataLoggerPage() {
     await refreshEntries(session.id)
   }, [session, capturePosition, refreshEntries])
 
+  // Logs contacted only — for a hiker already counted as seen
+  const logHikerContactOnly = useCallback(async () => {
+    if (!session) return
+    const pos = await capturePosition()
+    await addEntry({
+      sessionId:    session.id,
+      timestamp:    Date.now(),
+      lat:          pos?.lat ?? null,
+      lng:          pos?.lng ?? null,
+      type:         'hiker' as const,
+      hikerSubtype: 'contacted',
+    })
+    await refreshEntries(session.id)
+  }, [session, capturePosition, refreshEntries])
+
   const logTree = useCallback(async (size: TreeSize) => {
     if (!session) return
     const pos = await capturePosition()
@@ -168,7 +183,7 @@ export function DataLoggerPage() {
           sessionId:        session.id,
           memberName:       user.name,
           reportDate:       session.id,
-          emailFormat:      getLoggerSettings().emailFormat,
+          emailFormat:      'text',
           entries,
           includeLocations,
           trackers:         trackers.map(t => ({
@@ -188,8 +203,9 @@ export function DataLoggerPage() {
           })),
         }),
       })
-      const data = (await res.json()) as { success?: boolean; error?: string }
+      const data = (await res.json()) as { success?: boolean; error?: string; logId?: string }
       if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
+      if (data.logId) setLogId(data.logId)
       await markSessionEmailed(session.id)
       setSession(prev => (prev ? { ...prev, emailedAt: Date.now() } : prev))
       setSentOk(true)
@@ -210,6 +226,14 @@ export function DataLoggerPage() {
     setSendError(null)
     setTrackerResetKey(k => k + 1)
   }, [])
+
+  const handleMapReport = useCallback(() => {
+    if (logId) {
+      navigate(`/trail-log/${logId}`)
+    } else {
+      navigate('/trail-log', { state: { sessionId: session?.id } })
+    }
+  }, [logId, session, navigate])
 
   const handleClearData = useCallback(async () => {
     if (!session) return
@@ -332,20 +356,39 @@ export function DataLoggerPage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          {(['seen', 'contacted'] as HikerSubtype[]).map(subtype => (
-            <button
-              key={subtype}
-              onClick={() => void logHiker(subtype)}
-              className="flex flex-col items-center py-5 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
-            >
-              <span className="text-5xl font-bold tabular-nums text-stone-800 dark:text-stone-100">
-                {hikerCounts[subtype]}
-              </span>
-              <div className="mt-1 text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500">Tap to log</div>
-              <div className="text-sm font-medium capitalize text-stone-600 dark:text-stone-400">{subtype}</div>
-            </button>
-          ))}
+        <div className="flex items-stretch gap-2">
+          {/* Seen */}
+          <button
+            onClick={() => void logHiker('seen')}
+            className="flex-1 flex flex-col items-center py-5 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
+          >
+            <span className="text-5xl font-bold tabular-nums text-stone-800 dark:text-stone-100">
+              {hikerCounts.seen}
+            </span>
+            <div className="mt-1 text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500">Tap to log</div>
+            <div className="text-sm font-medium capitalize text-stone-600 dark:text-stone-400">Seen</div>
+          </button>
+
+          {/* Contact-only arrow — seen already counted */}
+          <button
+            onClick={() => void logHikerContactOnly()}
+            title="Contact (seen already logged)"
+            className="w-8 flex flex-col items-center justify-center gap-0.5 bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:border-amber-300 dark:hover:border-amber-700 active:scale-[0.97] transition-all select-none"
+          >
+            <span className="text-base leading-none text-stone-400 dark:text-stone-500">→</span>
+          </button>
+
+          {/* Contacted */}
+          <button
+            onClick={() => void logHiker('contacted')}
+            className="flex-1 flex flex-col items-center py-5 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
+          >
+            <span className="text-5xl font-bold tabular-nums text-stone-800 dark:text-stone-100">
+              {hikerCounts.contacted}
+            </span>
+            <div className="mt-1 text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500">Tap to log</div>
+            <div className="text-sm font-medium capitalize text-stone-600 dark:text-stone-400">Contacted</div>
+          </button>
         </div>
       </div>
 
@@ -448,24 +491,31 @@ export function DataLoggerPage() {
         {sendError && (
           <p className="text-xs text-red-500 text-center">{sendError}</p>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex gap-2">
           <button
             onClick={() => void handleSendReport()}
             disabled={!isOnline || sending || !hasData || sentOk}
             className="flex-1 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {sending ? 'Sending…' : sentOk ? 'Report Sent ✓' : 'Email Report'}
+            {sending ? 'Sending…' : sentOk ? 'Report Sent ✓' : 'Email Report to Me'}
           </button>
-          <label className="flex items-center gap-1.5 shrink-0 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={includeLocations}
-              onChange={e => setIncludeLocations(e.target.checked)}
-              className="w-4 h-4 rounded accent-emerald-600"
-            />
-            <span className="text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap">Include GPS data</span>
-          </label>
+          <button
+            onClick={handleMapReport}
+            disabled={!hasData}
+            className="flex-1 py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Map this Report
+          </button>
         </div>
+        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={includeLocations}
+            onChange={e => setIncludeLocations(e.target.checked)}
+            className="w-4 h-4 rounded accent-emerald-600"
+          />
+          <span className="text-xs text-stone-600 dark:text-stone-400">Include GPS data in emailed report</span>
+        </label>
         {!isOnline && (
           <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Connect to network to send report</p>
         )}

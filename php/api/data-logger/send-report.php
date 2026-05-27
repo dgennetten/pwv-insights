@@ -274,8 +274,59 @@ $lines[] = "Report sent:     {$sentTime}";
 
 $subject = "PWV Data Logger Report - {$reportDate}";
 
+// ── Generate unique log ID and save to file ───────────────────────
+$logDate  = date('Ymd');
+$logTime  = date('Hi');
+$personId = (int) $row['person_id'];
+$logId    = "trailLog.{$personId}{$logDate}{$logTime}";
+
+$protocol   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host       = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$spaUrl     = "{$protocol}://{$host}/trail-log/{$logId}";
+
+$logPayload = [
+  'logId'      => $logId,
+  'member'     => $memberName,
+  'email'      => $memberEmail,
+  'reportDate' => $reportDate,
+  'savedAt'    => date('Y-m-d H:i:s'),
+  'summary'    => [
+    'hikers' => [
+      'seen'      => $hikerSeen,
+      'contacted' => $hikerContacted,
+      'total'     => $hikerTotal,
+    ],
+    'trees' => $trees,
+  ],
+  'trackers' => array_values(array_filter($trackers, 'is_array')),
+  'entries'  => array_values(array_filter($entries,  'is_array')),
+];
+
+$savedLogId = null;
+$dataLoggerDir = dirname(dirname(dirname(__DIR__))) . '/data-logger';
+if (!is_dir($dataLoggerDir)) {
+  @mkdir($dataLoggerDir, 0755, true);
+}
+if (is_dir($dataLoggerDir)) {
+  $written = @file_put_contents(
+    $dataLoggerDir . '/' . $logId . '.json',
+    json_encode($logPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+  );
+  if ($written !== false) {
+    $savedLogId = $logId;
+  }
+}
+
+// ── Prepend prominent map link to email body ──────────────────────
+$linkBlock =
+  "═══════════════════════════════════════════════════════\n" .
+  "  VIEW INTERACTIVE TRAIL MAP REPORT\n\n" .
+  "  {$spaUrl}\n\n" .
+  "═══════════════════════════════════════════════════════\n\n\n";
+
 if ($emailFormat === 'json') {
   $jsonPayload = [
+    'mapUrl'     => $spaUrl,
     'member'     => $memberName,
     'date'       => $reportDate,
     'reportSent' => date('Y-m-d H:i:s'),
@@ -290,11 +341,11 @@ if ($emailFormat === 'json') {
     'trackers' => array_values(array_filter($trackers, 'is_array')),
     'entries'  => $includeLocations ? array_values(array_filter($entries, 'is_array')) : [],
   ];
-  $reportBody = json_encode($jsonPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+  $reportBody = $linkBlock . json_encode($jsonPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 } else {
-  $reportBody = implode("\n", $lines);
+  $reportBody = $linkBlock . implode("\n", $lines);
 }
 
 sendOtpMail($memberEmail, $subject, $reportBody);
 
-jsonOut(['success' => true]);
+jsonOut(['success' => true, 'logId' => $savedLogId]);

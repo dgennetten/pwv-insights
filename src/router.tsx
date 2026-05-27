@@ -9,8 +9,11 @@ import { DataLoggerPage } from "./pages/DataLoggerPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TrailsPage } from "./pages/TrailsPage";
+import { TrailLogMapPage } from "./pages/TrailLogMapPage";
 
 export const router = createBrowserRouter([
+  { path: "/trail-log",        element: <TrailLogMapPage /> },
+  { path: "/trail-log/:logId", element: <TrailLogMapPage /> },
   {
     path: "/",
     element: <AppLayout />,

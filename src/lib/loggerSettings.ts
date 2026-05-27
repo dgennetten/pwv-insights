@@ -4,7 +4,6 @@ export interface LoggerSettings {
   waypointDistanceMi: number
   waypointTimeMin: number
   wakeLockEnabled: boolean
-  emailFormat: 'text' | 'json'
 }
 
 const STORAGE_KEY = 'pwv_logger_settings'
@@ -15,7 +14,6 @@ const DEFAULTS: LoggerSettings = {
   waypointDistanceMi: 0.1,
   waypointTimeMin: 10,
   wakeLockEnabled: true,
-  emailFormat: 'text',
 }
 
 export function getLoggerSettings(): LoggerSettings {
