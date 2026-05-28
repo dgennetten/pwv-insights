@@ -45,6 +45,30 @@ export interface MemberSearchResult {
   dob: string // YYYYMMDD
 }
 
+export interface TrailLogRow {
+  logId: string
+  memberId: string
+  memberName: string
+  date: string
+  time: string
+  sortKey: string
+}
+
+export async function fetchAdminTrailLogs(token: string): Promise<TrailLogRow[]> {
+  const res = await fetch('/api/data-logger/list-logs.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  })
+  const data = (await res.json()) as {
+    success?: boolean
+    logs?: TrailLogRow[]
+    error?: string
+  }
+  if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
+  return Array.isArray(data.logs) ? data.logs : []
+}
+
 export async function fetchAdminMemberSearch(token: string, query: string): Promise<MemberSearchResult[]> {
   const res = await fetch('/api/admin/member-search.php', {
     method: 'POST',

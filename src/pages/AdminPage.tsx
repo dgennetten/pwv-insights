@@ -6,9 +6,11 @@ import { canAccessAdminPage } from '../lib/adminAccess'
 import {
   fetchAdminMemberSearch,
   fetchAdminRecentLogins,
+  fetchAdminTrailLogs,
   getStoredAuthToken,
   type AdminLoginRow,
   type MemberSearchResult,
+  type TrailLogRow,
 } from '../services/authService'
 
 function formatLoginDate(ms: number): string {
@@ -48,9 +50,16 @@ function filterLogins(rows: AdminLoginRow[]): AdminLoginRow[] {
 export function AdminPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<'logins' | 'logs'>('logins')
+
   const [logins, setLogins] = useState<AdminLoginRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [trailLogs, setTrailLogs] = useState<TrailLogRow[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logsError, setLogsError] = useState<string | null>(null)
+  const [logsLoaded, setLogsLoaded] = useState(false)
 
   const [authQuery, setAuthQuery] = useState('')
   const [authResults, setAuthResults] = useState<MemberSearchResult[]>([])
@@ -89,6 +98,23 @@ export function AdminPage() {
   useEffect(() => {
     void loadLogins()
   }, [loadLogins])
+
+  const loadTrailLogs = useCallback(async () => {
+    if (!canAccessAdminPage(user?.email)) return
+    const token = getStoredAuthToken()
+    if (!token) return
+    setLogsLoading(true)
+    setLogsError(null)
+    try {
+      const rows = await fetchAdminTrailLogs(token)
+      setTrailLogs(rows)
+      setLogsLoaded(true)
+    } catch (e) {
+      setLogsError(e instanceof Error ? e.message : 'Failed to load trail logs')
+    } finally {
+      setLogsLoading(false)
+    }
+  }, [user?.email])
 
   useEffect(() => {
     if (selectedMember !== null || authQuery.trim().length < 2) {
@@ -202,89 +228,165 @@ export function AdminPage() {
             )}
           </div>
 
-          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4">
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                Recent logins
-              </h3>
-              <button
-                type="button"
-                onClick={() => void loadLogins()}
-                disabled={loading}
-                className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 disabled:opacity-50"
-              >
-                Refresh
-              </button>
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden">
+
+            {/* Sub-tab bar */}
+            <div className="flex border-b border-stone-200 dark:border-stone-800">
+              {(['logins', 'logs'] as const).map(tab => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab)
+                    if (tab === 'logs' && !logsLoaded) void loadTrailLogs()
+                  }}
+                  className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-px ${
+                    activeTab === tab
+                      ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 dark:border-emerald-500'
+                      : 'border-transparent text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300'
+                  }`}
+                >
+                  {tab === 'logins' ? 'Recent Logins' : 'Recent Trail Logs'}
+                </button>
+              ))}
             </div>
 
-            {error && (
-              <p className="text-xs text-red-600 dark:text-red-400 mb-3">{error}</p>
-            )}
+            <div className="p-4">
 
-            {loading && logins.length === 0 && !error ? (
-              <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">Loading…</p>
-            ) : logins.length === 0 ? (
-              <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">
-                No login events recorded yet. Successful sign-ins are logged after you run{' '}
-                <code className="text-stone-600 dark:text-stone-400">sql/03-auth-login-log.sql</code>.
-              </p>
-            ) : (
-              <div className="overflow-x-auto -mx-1">
-                <table className="w-full min-w-[34rem] text-sm">
-                  <thead>
-                    <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/50">
-                      <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
-                        Date
-                      </th>
-                      <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
-                        Time
-                      </th>
-                      <th className="text-right px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
-                        Member ID
-                      </th>
-                      <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[10rem]">
-                        Member name
-                      </th>
-                      <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
-                        Type
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-                    {filterLogins(logins).map((row, i) => (
-                      <tr
-                        key={`${row.memberId}-${row.loggedInAtMs}-${i}`}
-                        className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
-                      >
-                        <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">
-                          {formatLoginDate(row.loggedInAtMs)}
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">
-                          {formatLoginTime(row.loggedInAtMs)}
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">
-                          {Number.isFinite(row.memberId) ? String(Math.trunc(row.memberId)) : '—'}
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">
-                          {memberNameLastFirst(row)}
-                        </td>
-                        <td className="px-3 py-2.5 whitespace-nowrap">
-                          {row.loginType === 'ACCESS' ? (
-                            <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                              Access
-                            </span>
-                          ) : (
-                            <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-                              OTC
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+              {/* ── Recent Logins tab ── */}
+              {activeTab === 'logins' && (
+                <>
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                      Recent Logins
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void loadLogins()}
+                      disabled={loading}
+                      className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 disabled:opacity-50"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  {error && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mb-3">{error}</p>
+                  )}
+
+                  {loading && logins.length === 0 && !error ? (
+                    <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">Loading…</p>
+                  ) : logins.length === 0 ? (
+                    <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">
+                      No login events recorded yet. Successful sign-ins are logged after you run{' '}
+                      <code className="text-stone-600 dark:text-stone-400">sql/03-auth-login-log.sql</code>.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto -mx-1">
+                      <table className="w-full min-w-[34rem] text-sm">
+                        <thead>
+                          <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/50">
+                            <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">Date</th>
+                            <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">Time</th>
+                            <th className="text-right px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">Member ID</th>
+                            <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[10rem]">Member Name</th>
+                            <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">Type</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
+                          {filterLogins(logins).map((row, i) => (
+                            <tr key={`${row.memberId}-${row.loggedInAtMs}-${i}`} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
+                              <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{formatLoginDate(row.loggedInAtMs)}</td>
+                              <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{formatLoginTime(row.loggedInAtMs)}</td>
+                              <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">
+                                {Number.isFinite(row.memberId) ? String(Math.trunc(row.memberId)) : '—'}
+                              </td>
+                              <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">{memberNameLastFirst(row)}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap">
+                                {row.loginType === 'ACCESS' ? (
+                                  <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Access</span>
+                                ) : (
+                                  <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">OTC</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── Recent Trail Logs tab ── */}
+              {activeTab === 'logs' && (
+                <>
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                      Recent Trail Logs
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void loadTrailLogs()}
+                      disabled={logsLoading}
+                      className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 disabled:opacity-50"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  {logsError && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mb-3">{logsError}</p>
+                  )}
+
+                  {logsLoading && trailLogs.length === 0 ? (
+                    <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">Loading…</p>
+                  ) : trailLogs.length === 0 ? (
+                    <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">
+                      No saved trail logs yet. Logs are created when a report is emailed from the Data Logger.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto -mx-1">
+                      <table className="w-full min-w-[36rem] text-sm">
+                        <thead>
+                          <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/50">
+                            <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">Date</th>
+                            <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">Time</th>
+                            <th className="text-right px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">Member ID</th>
+                            <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[10rem]">Member Name</th>
+                            <th className="text-left px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">Map</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
+                          {trailLogs.map(row => (
+                            <tr key={row.logId} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
+                              <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{row.date}</td>
+                              <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{row.time}</td>
+                              <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">{row.memberId}</td>
+                              <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">{row.memberName || '—'}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap">
+                                <a
+                                  href={`/trail-log/${row.logId}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:hover:bg-emerald-900/60 transition-colors"
+                                >
+                                  View Map
+                                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                                  </svg>
+                                </a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+
+            </div>
           </div>
           </>
         ) : null}

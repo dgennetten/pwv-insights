@@ -256,24 +256,6 @@ export function SettingsPage() {
                 <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Email format, screen wake lock, and auto-waypoint recording for distance tracking. All settings are saved locally.</p>
               </div>
               <div className="divide-y divide-stone-100 dark:divide-stone-800">
-                <div className="flex items-center justify-between py-2.5">
-                  <span className="text-sm text-stone-800 dark:text-stone-200">Email format</span>
-                  <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
-                    {(['text', 'json'] as const).map(fmt => (
-                      <button
-                        key={fmt}
-                        onClick={() => updateLoggerSettings({ emailFormat: fmt })}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                          loggerSettings.emailFormat === fmt
-                            ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
-                            : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
-                        }`}
-                      >
-                        {fmt === 'text' ? 'Normal text' : 'JSON'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <PrefRow
                   label="Keep screen awake while tracking"
                   checked={loggerSettings.wakeLockEnabled}
