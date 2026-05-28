@@ -10,7 +10,8 @@ import { SchedulePage } from "./pages/SchedulePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TrailsPage } from "./pages/TrailsPage";
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
   {
     path: "/",
     element: <AppLayout />,
@@ -27,4 +28,6 @@ export const router = createBrowserRouter([
       { path: "help", element: <HelpPage /> },
     ],
   },
-]);
+  ],
+  { basename: "/data-logger" }
+);

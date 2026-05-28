@@ -253,7 +253,7 @@ export function SettingsPage() {
             <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
               <div className="mb-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Data Logger</h3>
-                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Configure waypoint recording during distance tracking. Saved locally, no sync needed.</p>
+                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Email format, screen wake lock, and auto-waypoint recording for distance tracking. All settings are saved locally.</p>
               </div>
               <div className="divide-y divide-stone-100 dark:divide-stone-800">
                 <div className="flex items-center justify-between py-2.5">
