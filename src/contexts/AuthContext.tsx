@@ -105,11 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(() => {
-    const remember = localStorage.getItem(REMEMBER_KEY) === '1'
     localStorage.removeItem(SESSION_KEY)
-    if (!remember) {
-      clearRememberedCredentials()
-    }
+    clearRememberedCredentials()
     sessionStorage.removeItem(SESSION_KEY)
     sessionStorage.removeItem(TOKEN_KEY)
     setUser(undefined)
