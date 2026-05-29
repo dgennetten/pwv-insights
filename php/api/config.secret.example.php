@@ -56,4 +56,12 @@ return [
    */
   // 'aws_sync_session_nudge' => true,
   // 'aws_sync_min_interval_seconds' => 3600,
+
+  /**
+   * Required for SSO from PWV.ORG (php/api/auth/sso.php).
+   * Must match the shared secret Kirk configures when generating the SSO URI.
+   * The URI format Kirk sends: ?username=<username>&group=PWV&ticket=<md4_hash>
+   * Ticket = md4("$username $group $secret $timestamp") where timestamp = time() & 0xFFFFFFF0
+   */
+  // 'pwv_sso_secret' => 'YOUR_PWV_SSO_SECRET',
 ];

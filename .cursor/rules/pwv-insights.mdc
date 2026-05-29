@@ -1,0 +1,29 @@
+---
+description: PWV Insights project conventions and dev workflow
+alwaysApply: true
+---
+
+# PWV Insights
+
+Analytics dashboard for Poudre Wilderness Volunteers (patrol reports, trails, schedules).
+
+## Dev servers (both required locally)
+
+1. `npm run dev:api` — Node dev API on port 3001 (`.env.local` from `.env.example`)
+2. `npm run dev` — Vite on port 5173; proxies `/api` to the dev API
+
+## Stack
+
+React 19, Vite 6, TypeScript (strict), Tailwind CSS 4, React Router 7, Leaflet. Prod API is PHP in `php/api/`; schema in `sql/`.
+
+## Code layout
+
+- `src/pages/` — one file per route; owns route-level state
+- `src/components/` — feature-scoped; no cross-domain imports
+- `src/services/` — all `fetch` to `/api/...`
+- `src/contexts/` — `AuthContext` only for global state
+- `src/types/` — one file per feature domain
+
+## Quality
+
+No automated tests. Run `npm run lint` after substantive changes. Design tokens in `product-plan/design-system/` (Emerald/Amber/Stone, Inter + JetBrains Mono).

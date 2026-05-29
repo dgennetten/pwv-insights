@@ -68,7 +68,7 @@ const rsyncSshOpt = SSH_MUX ? ['-e', `ssh ${SSH_MUX}`] : []
 
 if (useRsync) {
   console.log(`▶ Uploading frontend → ${SSH_TARGET}:${REMOTE_WEB_ROOT}/`)
-  run('rsync', ['-az', '--delete', ...rsyncSshOpt, '--exclude', '.htaccess',
+  run('rsync', ['-az', '--delete', ...rsyncSshOpt,
     'dist/', `${SSH_TARGET}:${REMOTE_WEB_ROOT}/`])
   console.log('  ✓ Frontend deployed\n')
 
@@ -95,7 +95,7 @@ if (useRsync) {
   console.log('  Note: stale hashed files may linger — prefer rsync when possible')
   const sshCmd = SSH_MUX ? `ssh ${SSH_MUX}` : 'ssh'
   run(bash, ['-c',
-    `cd dist && tar cf - --exclude='./.htaccess' . ` +
+    `cd dist && tar cf - . ` +
     `| ${sshCmd} "${SSH_TARGET}" "mkdir -p ${REMOTE_WEB_ROOT} && cd ${REMOTE_WEB_ROOT} && tar xf -"`])
   console.log('  ✓ Frontend deployed\n')
 

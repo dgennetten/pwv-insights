@@ -118,12 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     let cancelled = false
 
-    // Strip ?id= from the URL immediately so it never lingers in history,
-    // but save the value for use below if there is no valid stored session.
+    // Strip ?id= and ?sso_token= from the URL immediately so they never linger in history,
+    // but save the values for use below if there is no valid stored session.
     const params = new URLSearchParams(window.location.search)
-    const autoId = params.get('id') ?? null
-    if (autoId !== null) {
+    const autoId   = params.get('id')        ?? null
+    const ssoToken = params.get('sso_token') ?? null
+    if (autoId !== null || ssoToken !== null) {
       params.delete('id')
+      params.delete('sso_token')
       const newSearch = params.toString()
       window.history.replaceState(null, '', window.location.pathname + (newSearch ? '?' + newSearch : ''))
     }
@@ -155,6 +157,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         clearRememberedCredentials()
+      }
+
+      // No valid stored session — try SSO token from PWV.ORG redirect
+      if (ssoToken !== null && /^[0-9a-f]{64}$/.test(ssoToken)) {
+        try {
+          const r = await validateStoredSession(ssoToken)
+          if (cancelled) return
+          if (r?.success && r.personId != null && r.token != null) {
+            login(r.token, r.email ?? '', r.name ?? '', r.role ?? 'member', r.personId, true, r.expiresAt)
+            return
+          }
+        } catch {
+          /* bad/expired SSO token — fall through to OTP */
+        }
       }
 
       // No valid stored session — try auto-login from PWV.ORG link token

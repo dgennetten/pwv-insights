@@ -288,9 +288,31 @@ export function TrailLogMapPage() {
     [timelineEntries]
   )
 
+  const waypointMarkers = useMemo(() => {
+    if (!log) return []
+    const result: Array<{
+      lat: number; lng: number; ts: number
+      segmentDistanceM: number; name?: string; trackerName: string
+    }> = []
+    for (const tracker of log.trackers) {
+      for (const seg of tracker.segments) {
+        for (const wp of seg.waypoints ?? []) {
+          if (wp.lat !== null && wp.lng !== null) {
+            result.push({ lat: wp.lat, lng: wp.lng, ts: wp.ts,
+              segmentDistanceM: wp.segmentDistanceM, name: wp.name, trackerName: tracker.name })
+          }
+        }
+      }
+    }
+    return result
+  }, [log])
+
   const mapPoints = useMemo(
-    () => gpsEntries.map(e => [e.lat!, e.lng!] as [number, number]),
-    [gpsEntries]
+    () => [
+      ...gpsEntries.map(e => [e.lat!, e.lng!] as [number, number]),
+      ...waypointMarkers.map(w => [w.lat, w.lng] as [number, number]),
+    ],
+    [gpsEntries, waypointMarkers]
   )
 
   const defaultCenter: [number, number] = [40.3772, -105.5217]
@@ -481,7 +503,7 @@ export function TrailLogMapPage() {
               <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-200">
                 Geographic Spatial Mapping
               </h2>
-              <div className="flex items-center gap-3 text-xs text-stone-500 dark:text-stone-400">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-amber-400 dark:bg-amber-500 inline-block" />
                   Trees
@@ -489,6 +511,14 @@ export function TrailLogMapPage() {
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-sky-500 inline-block" />
                   Hikers
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-stone-400 dark:bg-stone-500 inline-block" />
+                  Notes
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-violet-500 inline-block" />
+                  Waypoints
                 </span>
               </div>
             </div>
@@ -505,6 +535,30 @@ export function TrailLogMapPage() {
                 />
                 {mapPoints.length > 0 && <MapBoundsController points={mapPoints} />}
                 <MapFocusController center={focusCenter} />
+
+                {waypointMarkers.map((wp, i) => (
+                  <CircleMarker
+                    key={`wp-${wp.trackerName}-${wp.ts}-${i}`}
+                    center={[wp.lat, wp.lng]}
+                    radius={4}
+                    pathOptions={{
+                      color:       '#7c3aed',
+                      fillColor:   '#8b5cf6',
+                      fillOpacity: 0.75,
+                      weight:      1,
+                    }}
+                  >
+                    <Popup>
+                      <div className="text-xs space-y-0.5">
+                        <div className="font-semibold">{wp.name ?? 'Waypoint'}</div>
+                        <div className="text-stone-500">{wp.trackerName} · {fmtTime(wp.ts)}</div>
+                        <div className="text-stone-400 font-mono text-[10px]">
+                          {wp.lat.toFixed(5)}°, {wp.lng.toFixed(5)}°
+                        </div>
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                ))}
 
                 {gpsEntries.map(entry => {
                   const isTree  = entry.type === 'tree'
