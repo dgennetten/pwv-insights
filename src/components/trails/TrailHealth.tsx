@@ -1,4 +1,5 @@
-import { useState, useMemo, lazy, Suspense } from 'react'
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react'
+import { getStoredTrailsMapOpen, setStoredTrailsMapOpen } from '../../lib/trailsMapOpen'
 import { useSearchParams } from 'react-router-dom'
 import { Map, List } from 'lucide-react'
 import type { Trail } from '../../types/trails'
@@ -43,8 +44,12 @@ export function TrailHealth({
   const selectedTrailId = searchParams.get('trail')
 
   const [hoveredTrailId, setHoveredTrailId] = useState<string | null>(null)
-  const [mapOpen,        setMapOpen]        = useState(false)
+  const [mapOpen,        setMapOpen]        = useState(getStoredTrailsMapOpen)
   const [mobileView,     setMobileView]     = useState<'list' | 'map'>('list')
+
+  useEffect(() => {
+    setStoredTrailsMapOpen(mapOpen)
+  }, [mapOpen])
 
   const enriched = useMemo(() => attachGeo(trails), [trails])
   const selectedTrail = enriched.find(t => t.id === selectedTrailId) ?? null
