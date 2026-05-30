@@ -283,9 +283,11 @@ export function TrailList({ trails, mapOpen, onToggleMap, onSelectTrail, onHover
               <thead className="sticky top-0 z-10 bg-white dark:bg-stone-900">
                 <tr className="border-b border-stone-100 dark:border-stone-800">
                   <th className="px-4 py-3 text-left">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                       <SortButton sortKey="name" currentKey={sortKey} currentDir={sortDir} onSort={handleSort}>Trail</SortButton>
-                      <span className="text-xs font-normal text-stone-400 normal-case tracking-normal hidden sm:inline">— Click Row for Details</span>
+                      <span className="text-xs font-bold text-red-600 dark:text-red-400 normal-case tracking-normal">
+                        — Tap Row for Detail
+                      </span>
                     </div>
                   </th>
                   <th className="px-4 py-3 text-left hidden lg:table-cell">

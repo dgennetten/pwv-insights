@@ -469,7 +469,9 @@ export function ActivityDashboard({
         title={
           <>
             Trail Coverage
-            <span className="normal-case tracking-normal"> — <strong>Tap Row</strong> for Detail</span>
+            <span className="normal-case tracking-normal font-bold text-red-600 dark:text-red-400">
+              {' '}— Tap Row for Detail
+            </span>
           </>
         }
       >
