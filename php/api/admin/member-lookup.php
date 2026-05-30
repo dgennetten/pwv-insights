@@ -1,0 +1,143 @@
+<?php
+/**
+ * Fetch member PII + season activity figure-of-merit (admin only).
+ * POST body: { token, memberId }
+ *
+ * Address and phone live in t_mem_address / t_mem_phone, not t_member columns.
+ */
+require_once __DIR__ . '/../config.php';
+
+define('ML_PWV_GROUP', 10);
+
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Headers: Content-Type');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  jsonOut(['success' => false, 'error' => 'Method not allowed'], 405);
+}
+
+$body     = json_decode(file_get_contents('php://input'), true) ?? [];
+$token    = trim($body['token'] ?? '');
+$memberId = (int) ($body['memberId'] ?? 0);
+
+if ($token === '' || strlen($token) !== 64 || !ctype_xdigit($token)) {
+  jsonOut(['success' => false, 'error' => 'Invalid token'], 401);
+}
+if ($memberId < 1) {
+  jsonOut(['success' => false, 'error' => 'Invalid memberId'], 400);
+}
+
+$db = getDb();
+
+// ── Auth check ────────────────────────────────────────────────────────────────
+$stmt = $db->prepare(
+  'SELECT s.expires_at, m.EmailAddress
+   FROM auth_sessions s
+   JOIN t_member m ON m.PersonID = s.person_id
+   WHERE s.token = ? LIMIT 1'
+);
+$stmt->execute([$token]);
+$sess = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$sess) jsonOut(['success' => false, 'error' => 'Unknown session'], 401);
+$exp = strtotime($sess['expires_at']);
+if ($exp === false || $exp < time()) jsonOut(['success' => false, 'error' => 'Session expired'], 401);
+if (strtolower(trim($sess['EmailAddress'])) !== strtolower(ADMIN_EMAIL)) {
+  jsonOut(['success' => false, 'error' => 'Forbidden'], 403);
+}
+
+// ── Member core info ──────────────────────────────────────────────────────────
+$stmt = $db->prepare(
+  'SELECT PersonID, FirstName, LastName, BirthDate, EmailAddress
+   FROM t_member WHERE PersonID = ? LIMIT 1'
+);
+$stmt->execute([$memberId]);
+$m = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$m) jsonOut(['success' => false, 'error' => 'Member not found'], 404);
+
+// ── Address (t_mem_address — take lowest MemAddressID as primary) ─────────────
+$stmt = $db->prepare(
+  'SELECT StreetAddress, City, State, ZipCode
+   FROM t_mem_address
+   WHERE PersonID = ?
+   ORDER BY MemAddressID ASC LIMIT 1'
+);
+$stmt->execute([$memberId]);
+$addr = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+// ── Phone (t_mem_phone — prefer PhonePrimary = 1, then first row) ────────────
+$stmt = $db->prepare(
+  'SELECT PhoneNumber
+   FROM t_mem_phone
+   WHERE PersonID = ?
+   ORDER BY COALESCE(PhonePrimary, 0) DESC, MemPhoneID ASC
+   LIMIT 1'
+);
+$stmt->execute([$memberId]);
+$phoneRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+// ── Age / DOB ─────────────────────────────────────────────────────────────────
+$age = null;
+$dob = null;
+if (!empty($m['BirthDate']) && $m['BirthDate'] !== '0000-00-00') {
+  try {
+    $bd  = new DateTime($m['BirthDate']);
+    $age = (int) $bd->diff(new DateTime())->y;
+    $dob = $bd->format('F j, Y');
+  } catch (Throwable $_) {}
+}
+
+// ── Season patrol stats (Oct 1 – Sep 30) ─────────────────────────────────────
+$mo          = (int) date('n');
+$yr          = (int) date('Y');
+$seasonStart = ($mo >= 10) ? "$yr-10-01" : ($yr - 1) . '-10-01';
+$scope       = 'r.GroupID = ' . ML_PWV_GROUP
+             . ' AND (r.IsDraft IS NULL OR r.IsDraft = 0)'
+             . ' AND (r.IsUnofficial IS NULL OR r.IsUnofficial = 0)'
+             . " AND r.ActivityDate >= '$seasonStart'";
+
+$s = $db->prepare(
+  "SELECT COUNT(DISTINCT r.ReportID)
+   FROM t_report_member rm
+   JOIN t_report r ON r.ReportID = rm.ReportID
+   WHERE rm.PersonID = ? AND $scope"
+);
+$s->execute([$memberId]);
+$memberDays = (int)($s->fetchColumn() ?? 0);
+
+$s2 = $db->prepare(
+  "SELECT ROUND(AVG(cnt), 1) FROM (
+     SELECT COUNT(DISTINCT r.ReportID) AS cnt
+     FROM t_report_member rm
+     JOIN t_report r ON r.ReportID = rm.ReportID
+     WHERE $scope
+     GROUP BY rm.PersonID
+   ) sub"
+);
+$s2->execute();
+$avgDays    = (float)($s2->fetchColumn() ?? 0);
+$meritRatio = $avgDays > 0 ? round($memberDays / $avgDays, 2) : null;
+
+// ── Response ──────────────────────────────────────────────────────────────────
+jsonOut([
+  'success' => true,
+  'member'  => [
+    'memberId'    => (int)   $m['PersonID'],
+    'fullName'    => trim(($m['FirstName'] ?? '') . ' ' . ($m['LastName'] ?? '')),
+    'email'       => trim($m['EmailAddress'] ?? ''),
+    'dateOfBirth' => $dob,
+    'age'         => $age,
+    'address'     => ($addr['StreetAddress'] ?? '') !== '' ? trim($addr['StreetAddress']) : null,
+    'city'        => ($addr['City']          ?? '') !== '' ? trim($addr['City'])          : null,
+    'state'       => ($addr['State']         ?? '') !== '' ? trim($addr['State'])         : null,
+    'zip'         => ($addr['ZipCode']       ?? '') !== '' ? trim($addr['ZipCode'])       : null,
+    'phone'       => ($phoneRow['PhoneNumber'] ?? '') !== '' ? trim($phoneRow['PhoneNumber']) : null,
+    'merit' => [
+      'memberDays'  => $memberDays,
+      'avgDays'     => $avgDays,
+      'ratio'       => $meritRatio,
+      'seasonStart' => $seasonStart,
+    ],
+  ],
+]);

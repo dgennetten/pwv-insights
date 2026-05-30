@@ -4,11 +4,13 @@ import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
 import { canAccessAdminPage } from '../lib/adminAccess'
 import {
+  fetchAdminMemberLookup,
   fetchAdminMemberSearch,
   fetchAdminRecentLogins,
   fetchAdminTrailLogs,
   getStoredAuthToken,
   type AdminLoginRow,
+  type MemberLookupResult,
   type MemberSearchResult,
   type TrailLogRow,
 } from '../services/authService'
@@ -47,6 +49,63 @@ function filterLogins(rows: AdminLoginRow[]): AdminLoginRow[] {
   })
 }
 
+function meritLabel(ratio: number | null): { text: string; className: string } {
+  if (ratio === null) return { text: 'No data', className: 'text-stone-400 dark:text-stone-500' }
+  if (ratio >= 1.5) return { text: `${ratio}× avg — well above average`, className: 'text-emerald-600 dark:text-emerald-400' }
+  if (ratio >= 0.9) return { text: `${ratio}× avg — near average`, className: 'text-stone-600 dark:text-stone-300' }
+  return { text: `${ratio}× avg — below average`, className: 'text-amber-600 dark:text-amber-400' }
+}
+
+function MemberCard({ result }: { result: import('../services/authService').MemberLookupResult }) {
+  const addrLine1 = result.address ?? null
+  const addrLine2 = [result.city, result.state].filter(Boolean).join(', ')
+    + (result.zip ? ` ${result.zip}` : '')
+
+  const merit = meritLabel(result.merit.ratio)
+
+  return (
+    <div className="mt-4 border-t border-stone-100 dark:border-stone-800 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Full Name</p>
+        <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{result.fullName || '—'}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Phone</p>
+        <p className="text-sm text-stone-700 dark:text-stone-200">{result.phone ?? '—'}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Address</p>
+        {addrLine1 || addrLine2 ? (
+          <>
+            {addrLine1 && <p className="text-sm text-stone-700 dark:text-stone-200">{addrLine1}</p>}
+            {addrLine2 && <p className="text-sm text-stone-700 dark:text-stone-200">{addrLine2}</p>}
+          </>
+        ) : (
+          <p className="text-sm text-stone-700 dark:text-stone-200">—</p>
+        )}
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Date of Birth</p>
+        <p className="text-sm text-stone-700 dark:text-stone-200">
+          {result.dateOfBirth ?? '—'}
+          {result.age !== null && (
+            <span className="ml-1.5 text-stone-400 dark:text-stone-500">({result.age} yrs)</span>
+          )}
+        </p>
+      </div>
+      <div className="sm:col-span-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">
+          Figure of Merit — Season to Date
+        </p>
+        <p className={`text-sm font-medium ${merit.className}`}>{merit.text}</p>
+        <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
+          {result.merit.memberDays} patrol {result.merit.memberDays === 1 ? 'day' : 'days'} · group avg {result.merit.avgDays} days · since {result.merit.seasonStart}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function AdminPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -64,8 +123,9 @@ export function AdminPage() {
   const [authQuery, setAuthQuery] = useState('')
   const [authResults, setAuthResults] = useState<MemberSearchResult[]>([])
   const [selectedMember, setSelectedMember] = useState<MemberSearchResult | null>(null)
-  const [generatedLink, setGeneratedLink] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [lookupResult, setLookupResult] = useState<MemberLookupResult | null>(null)
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupError, setLookupError] = useState<string | null>(null)
 
   const allowed = canAccessAdminPage(user?.email)
 
@@ -145,7 +205,7 @@ export function AdminPage() {
           <>
           <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3">
-              Create Auth Link
+              Member Lookup
             </h3>
             <div className="flex items-start gap-2">
               <div className="relative flex-1 max-w-sm">
@@ -155,8 +215,8 @@ export function AdminPage() {
                   onChange={e => {
                     setAuthQuery(e.target.value)
                     setSelectedMember(null)
-                    setGeneratedLink(null)
-                    setCopied(false)
+                    setLookupResult(null)
+                    setLookupError(null)
                   }}
                   placeholder="Member name or email…"
                   className="w-full text-sm border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-1.5 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -171,8 +231,8 @@ export function AdminPage() {
                             setSelectedMember(m)
                             setAuthQuery(`${m.lastName}, ${m.firstName}`)
                             setAuthResults([])
-                            setGeneratedLink(null)
-                            setCopied(false)
+                            setLookupResult(null)
+                            setLookupError(null)
                           }}
                           className="w-full text-left px-3 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700/60"
                         >
@@ -185,46 +245,31 @@ export function AdminPage() {
               </div>
               <button
                 type="button"
-                disabled={selectedMember === null}
+                disabled={selectedMember === null || lookupLoading}
                 onClick={() => {
                   if (!selectedMember) return
-                  setGeneratedLink(
-                    `http://pwv-insights.gennetten.org?id=${selectedMember.dob}${selectedMember.memberId}`
-                  )
-                  setCopied(false)
+                  const token = getStoredAuthToken()
+                  if (!token) return
+                  setLookupLoading(true)
+                  setLookupError(null)
+                  setLookupResult(null)
+                  void fetchAdminMemberLookup(token, selectedMember.memberId)
+                    .then(r => { setLookupResult(r) })
+                    .catch(e => { setLookupError(e instanceof Error ? e.message : 'Lookup failed') })
+                    .finally(() => { setLookupLoading(false) })
                 }}
                 className="text-sm font-medium px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                Create
+                {lookupLoading ? 'Loading…' : 'Lookup'}
               </button>
             </div>
-            {generatedLink && (
-              <div className="mt-3 flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-mono text-stone-600 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2 py-1.5 rounded select-all break-all">
-                  {generatedLink}
-                </span>
-                <button
-                  type="button"
-                  title={copied ? 'Copied!' : 'Copy link'}
-                  onClick={() => {
-                    void navigator.clipboard.writeText(generatedLink)
-                    setCopied(true)
-                    setTimeout(() => setCopied(false), 2000)
-                  }}
-                  className="flex-shrink-0 p-1.5 rounded text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors"
-                >
-                  {copied ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-emerald-500">
-                      <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                      <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
-                      <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+
+            {lookupError && (
+              <p className="mt-3 text-xs text-red-600 dark:text-red-400">{lookupError}</p>
+            )}
+
+            {lookupResult && (
+              <MemberCard result={lookupResult} />
             )}
           </div>
 

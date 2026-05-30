@@ -294,6 +294,117 @@ const routes = {
     send(res, { success: true })
   },
 
+  async 'POST /api/admin/member-lookup.php'(req, res) {
+    const body = await readJson(req)
+    const token    = String(body.token ?? '').trim()
+    const memberId = Number(body.memberId ?? 0)
+
+    if (!token || token.length !== 64 || !/^[a-f0-9]+$/i.test(token)) {
+      return send(res, { success: false, error: 'Invalid token' }, 401)
+    }
+    if (!Number.isFinite(memberId) || memberId < 1) {
+      return send(res, { success: false, error: 'Invalid memberId' }, 400)
+    }
+
+    const [sess] = await pool.query(
+      `SELECT s.expires_at, m.EmailAddress
+       FROM auth_sessions s
+       JOIN t_member m ON m.PersonID = s.person_id
+       WHERE s.token = ? LIMIT 1`,
+      [token]
+    )
+    if (!sess.length) return send(res, { success: false, error: 'Unknown session' }, 401)
+    const exp = new Date(sess[0].expires_at).getTime()
+    if (!Number.isFinite(exp) || exp < Date.now()) return send(res, { success: false, error: 'Session expired' }, 401)
+    if (String(sess[0].EmailAddress ?? '').trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      return send(res, { success: false, error: 'Forbidden' }, 403)
+    }
+
+    // Fetch member core info
+    const [memberRows] = await pool.query(
+      'SELECT PersonID, FirstName, LastName, BirthDate, EmailAddress FROM t_member WHERE PersonID = ? LIMIT 1',
+      [memberId]
+    )
+    const m = memberRows[0]
+    if (!m) return send(res, { success: false, error: 'Member not found' }, 404)
+
+    // Address from t_mem_address
+    const [addrRows] = await pool.query(
+      'SELECT StreetAddress, City, State, ZipCode FROM t_mem_address WHERE PersonID = ? ORDER BY MemAddressID ASC LIMIT 1',
+      [memberId]
+    ).catch(() => [[]])
+    const addr = addrRows[0] ?? {}
+
+    // Phone from t_mem_phone (prefer PhonePrimary = 1)
+    const [phoneRows] = await pool.query(
+      'SELECT PhoneNumber FROM t_mem_phone WHERE PersonID = ? ORDER BY COALESCE(PhonePrimary, 0) DESC, MemPhoneID ASC LIMIT 1',
+      [memberId]
+    ).catch(() => [[]])
+    const phoneRow = phoneRows[0] ?? {}
+
+    // Age from BirthDate
+    let age = null, dob = null
+    if (m.BirthDate && String(m.BirthDate) !== '0000-00-00') {
+      const bd = new Date(m.BirthDate)
+      if (!isNaN(bd.getTime())) {
+        const now = new Date()
+        age = now.getFullYear() - bd.getFullYear()
+        if (now.getMonth() < bd.getMonth() || (now.getMonth() === bd.getMonth() && now.getDate() < bd.getDate())) age--
+        dob = bd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      }
+    }
+
+    // Season patrol stats (Oct 1 – Sep 30)
+    const now = new Date()
+    const mo = now.getMonth() + 1
+    const yr = now.getFullYear()
+    const seasonStart = mo >= 10 ? `${yr}-10-01` : `${yr - 1}-10-01`
+    const scope = `r.GroupID = 10 AND (r.IsDraft IS NULL OR r.IsDraft = 0)
+      AND (r.IsUnofficial IS NULL OR r.IsUnofficial = 0)
+      AND r.ActivityDate >= '${seasonStart}'`
+
+    const [[{ cnt: memberDays }]] = await pool.query(
+      `SELECT COUNT(DISTINCT r.ReportID) AS cnt
+       FROM t_report_member rm
+       JOIN t_report r ON r.ReportID = rm.ReportID
+       WHERE rm.PersonID = ? AND ${scope}`,
+      [memberId]
+    )
+    const [[{ avg_cnt: avgDays }]] = await pool.query(
+      `SELECT ROUND(AVG(cnt), 1) AS avg_cnt FROM (
+         SELECT COUNT(DISTINCT r.ReportID) AS cnt
+         FROM t_report_member rm
+         JOIN t_report r ON r.ReportID = rm.ReportID
+         WHERE ${scope}
+         GROUP BY rm.PersonID
+       ) sub`
+    )
+
+    const ratio = avgDays > 0 ? Math.round((Number(memberDays) / Number(avgDays)) * 100) / 100 : null
+
+    return send(res, {
+      success: true,
+      member: {
+        memberId:    Number(m.PersonID),
+        fullName:    `${m.FirstName ?? ''} ${m.LastName ?? ''}`.trim(),
+        email:       String(m.EmailAddress ?? '').trim(),
+        dateOfBirth: dob,
+        age,
+        address:     addr.StreetAddress ?? null,
+        city:        addr.City         ?? null,
+        state:       addr.State        ?? null,
+        zip:         addr.ZipCode      ?? null,
+        phone:       phoneRow.PhoneNumber ?? null,
+        merit: {
+          memberDays:  Number(memberDays),
+          avgDays:     Number(avgDays),
+          ratio,
+          seasonStart,
+        },
+      },
+    })
+  },
+
   async 'POST /api/admin/recent-logins.php'(req, res) {
     const body = await readJson(req)
     const token = String(body.token ?? '').trim()

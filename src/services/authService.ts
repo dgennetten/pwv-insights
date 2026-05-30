@@ -45,6 +45,47 @@ export interface MemberSearchResult {
   dob: string // YYYYMMDD
 }
 
+export interface MemberLookupMerit {
+  memberDays: number
+  avgDays: number
+  ratio: number | null
+  seasonStart: string
+}
+
+export interface MemberLookupResult {
+  memberId: number
+  fullName: string
+  email: string
+  dateOfBirth: string | null
+  age: number | null
+  address: string | null
+  city: string | null
+  state: string | null
+  zip: string | null
+  phone: string | null
+  merit: MemberLookupMerit
+}
+
+export async function fetchAdminMemberLookup(
+  token: string,
+  memberId: number
+): Promise<MemberLookupResult> {
+  const res = await fetch('/api/admin/member-lookup.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, memberId }),
+  })
+  const data = (await res.json()) as {
+    success?: boolean
+    member?: MemberLookupResult
+    error?: string
+  }
+  if (!res.ok || !data.success || !data.member) {
+    throw new Error(data.error ?? `HTTP ${res.status}`)
+  }
+  return data.member
+}
+
 export interface TrailLogRow {
   logId: string
   memberId: string
