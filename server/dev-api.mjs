@@ -282,6 +282,18 @@ const routes = {
     })
   },
 
+  async 'POST /api/feedback/send.php'(req, res) {
+    const { message = '', name = '', email = '', website = '' } = await readJson(req)
+    if (String(website).trim()) return send(res, { success: true })
+    const text = String(message).trim()
+    if (!text) return send(res, { success: false, error: 'Message is required' }, 400)
+    console.log('\n  📬 PWV Insights feedback')
+    if (name) console.log('     Name:', String(name).trim())
+    if (email) console.log('     Email:', String(email).trim())
+    console.log('     Message:', text, '\n')
+    send(res, { success: true })
+  },
+
   async 'POST /api/admin/recent-logins.php'(req, res) {
     const body = await readJson(req)
     const token = String(body.token ?? '').trim()

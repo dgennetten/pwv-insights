@@ -26,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Leaderboards', href: '/leaderboards', icon: Trophy, group: 'main' },
   { label: 'Admin', href: '/admin', icon: BarChart3, group: 'admin' },
   { label: 'Settings', href: '/settings', icon: Settings, group: 'utility' },
-  { label: 'About', href: '/help', icon: HelpCircle, group: 'utility' },
+  { label: 'About & Feedback', href: '/help', icon: HelpCircle, group: 'utility' },
 ]
 
 function NavLink({

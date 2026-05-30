@@ -1,14 +1,18 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { Send } from 'lucide-react'
+import { Loader2, Send } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-
-const FEEDBACK_EMAIL = 'douglas@gennetten.com'
+import { getStoredAuthToken } from '../services/authService'
+import { sendFeedback } from '../services/feedbackService'
 
 export function HelpPage() {
   const { user } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
+  const [honeypot, setHoneypot] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [sentOk, setSentOk] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -16,27 +20,35 @@ export function HelpPage() {
     setEmail(e => e || user.email || '')
   }, [user])
 
-  function handleFeedbackSubmit(e: FormEvent) {
+  async function handleFeedbackSubmit(e: FormEvent) {
     e.preventDefault()
     const text = message.trim()
-    if (!text) return
+    if (!text || sending) return
 
-    const lines = [text, '']
-    if (name.trim()) lines.push(`From: ${name.trim()}`)
-    if (email.trim()) lines.push(`Reply-to: ${email.trim()}`)
-
-    const subject = 'PWV Insights Feedback'
-    const params = new URLSearchParams({
-      subject,
-      body: lines.join('\n'),
-    })
-    window.location.href = `mailto:${FEEDBACK_EMAIL}?${params.toString()}`
+    setSending(true)
+    setError(null)
+    try {
+      await sendFeedback({
+        message: text,
+        name: name.trim() || undefined,
+        email: email.trim() || undefined,
+        token: getStoredAuthToken(),
+        website: honeypot,
+      })
+      setMessage('')
+      setSentOk(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send feedback')
+      setSentOk(false)
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
     <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
       <div className="mb-5">
-        <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">About</h2>
+        <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">About & Feedback</h2>
         <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
           Poudre Wilderness Volunteers
         </p>
@@ -93,6 +105,12 @@ export function HelpPage() {
           <strong className="font-medium text-stone-700 dark:text-stone-300">features you&apos;d like to see</strong>.
         </p>
 
+        {sentOk && (
+          <p className="mb-4 text-sm text-emerald-700 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2">
+            Thank you — your feedback was sent to the developer.
+          </p>
+        )}
+
         <form onSubmit={handleFeedbackSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -108,7 +126,8 @@ export function HelpPage() {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 autoComplete="name"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                disabled={sending}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 disabled:opacity-60"
                 placeholder="Pat Smith"
               />
             </div>
@@ -125,7 +144,8 @@ export function HelpPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 autoComplete="email"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                disabled={sending}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 disabled:opacity-60"
                 placeholder="you@example.com"
               />
             </div>
@@ -143,23 +163,45 @@ export function HelpPage() {
               required
               rows={5}
               value={message}
-              onChange={e => setMessage(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 resize-y min-h-[7rem]"
+              onChange={e => {
+                setMessage(e.target.value)
+                if (sentOk) setSentOk(false)
+              }}
+              disabled={sending}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 resize-y min-h-[7rem] disabled:opacity-60"
               placeholder="Example: The trail list sorts oddly on mobile… I'd love a filter for wilderness-only trails…"
             />
           </div>
 
-          <p className="text-xs text-stone-400 dark:text-stone-500">
-            Submit opens your email app with this message addressed to Douglas Gennetten — you can
-            edit before sending.
-          </p>
+          {/* Honeypot — hidden from users */}
+          <div className="absolute -left-[9999px] w-px h-px overflow-hidden" aria-hidden="true">
+            <label htmlFor="feedback-website">Website</label>
+            <input
+              id="feedback-website"
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={honeypot}
+              onChange={e => setHoneypot(e.target.value)}
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+          )}
 
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
+            disabled={sending || !message.trim()}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors disabled:opacity-60"
           >
-            <Send className="w-4 h-4" strokeWidth={2} />
-            Send feedback
+            {sending ? (
+              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
+            ) : (
+              <Send className="w-4 h-4" strokeWidth={2} />
+            )}
+            {sending ? 'Sending…' : sentOk ? 'Send more feedback' : 'Send feedback'}
           </button>
         </form>
       </div>

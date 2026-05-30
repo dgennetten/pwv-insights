@@ -235,7 +235,13 @@ function resolvePreferredPersonId(PDO $db, string $emailLower): ?int {
   return $row !== false ? (int)$row : null;
 }
 
-function sendOtpMail(string $to, string $subject, string $body): void {
+function sendOtpMail(
+  string $to,
+  string $subject,
+  string $body,
+  ?string $replyTo = null,
+  bool $bccAdmin = true
+): bool {
   $secrets = getSecrets();
   $smtp    = $secrets['smtp']          ?? null;
   $srcDir  = $secrets['phpmailer_src'] ?? '';
@@ -254,13 +260,13 @@ function sendOtpMail(string $to, string $subject, string $body): void {
   if ($srcDir && is_array($smtp) && !empty($smtp['username'])) {
     if (!file_exists($srcDir . '/PHPMailer.php')) {
       $otpLog('[OTP-SEND] FAIL to=' . $to . ' reason=PHPMailer not found at ' . $srcDir);
-      return;
+      return false;
     }
     require_once $srcDir . '/Exception.php';
     require_once $srcDir . '/PHPMailer.php';
     require_once $srcDir . '/SMTP.php';
 
-    $buildMail = static function () use ($smtp, $to, $subject, $body, $otpLog): PHPMailer\PHPMailer\PHPMailer {
+    $buildMail = static function () use ($smtp, $to, $subject, $body, $otpLog, $replyTo, $bccAdmin): PHPMailer\PHPMailer\PHPMailer {
       $mail = new PHPMailer\PHPMailer\PHPMailer(true);
       // Set smtp.debug: 1-4 in config.secret.php to capture SMTP conversation.
       // 1 = client commands only, 2 = client+server (recommended for diagnosis).
@@ -281,7 +287,12 @@ function sendOtpMail(string $to, string $subject, string $body): void {
       $mail->Timeout    = (int) ($smtp['timeout'] ?? 10);
       $mail->setFrom($smtp['from_email'] ?? MAIL_FROM, $smtp['from_name'] ?? MAIL_FROM_NAME);
       $mail->addAddress($to);
-      $mail->addBCC(ADMIN_EMAIL);
+      if ($bccAdmin) {
+        $mail->addBCC(ADMIN_EMAIL);
+      }
+      if ($replyTo !== null && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
+        $mail->addReplyTo($replyTo);
+      }
       $mail->Subject = $subject;
       $mail->Body    = $body;
       $mail->isHTML(false);
@@ -296,7 +307,7 @@ function sendOtpMail(string $to, string $subject, string $body): void {
         $ms = round((microtime(true) - $t0) * 1000);
         $suffix = $attempt > 1 ? ' attempt=' . $attempt : '';
         $otpLog('[OTP-SEND] OK to=' . $to . ' msg-id=' . $mail->MessageID . ' elapsed=' . $ms . 'ms' . $suffix);
-        return;
+        return true;
       } catch (PHPMailer\PHPMailer\Exception $e) {
         $lastException = $e;
         $lastMail      = $mail;
@@ -311,14 +322,21 @@ function sendOtpMail(string $to, string $subject, string $body): void {
     $otpLog('[OTP-SEND] FAIL to=' . $to . ' elapsed=' . $ms . 'ms'
       . ' error=' . $lastException->getMessage()
       . ' detail=' . $lastMail->ErrorInfo);
-  } else {
-    $headers = 'From: ' . MAIL_FROM_NAME . ' <' . MAIL_FROM . ">\r\n"
-             . 'Bcc: ' . ADMIN_EMAIL . "\r\n"
-             . "Content-Type: text/plain; charset=UTF-8\r\n";
-    $result = mail($to, $subject, $body, $headers);
-    $ms     = round((microtime(true) - $t0) * 1000);
-    $otpLog('[OTP-SEND] ' . ($result ? 'OK' : 'FAIL') . ' to=' . $to . ' via mail() elapsed=' . $ms . 'ms');
+    return false;
   }
+
+  $headers = 'From: ' . MAIL_FROM_NAME . ' <' . MAIL_FROM . ">\r\n"
+           . "Content-Type: text/plain; charset=UTF-8\r\n";
+  if ($bccAdmin) {
+    $headers .= 'Bcc: ' . ADMIN_EMAIL . "\r\n";
+  }
+  if ($replyTo !== null && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
+    $headers .= 'Reply-To: ' . $replyTo . "\r\n";
+  }
+  $result = mail($to, $subject, $body, $headers);
+  $ms     = round((microtime(true) - $t0) * 1000);
+  $otpLog('[OTP-SEND] ' . ($result ? 'OK' : 'FAIL') . ' to=' . $to . ' via mail() elapsed=' . $ms . 'ms');
+  return $result;
 }
 
 function jsonOut(array $data, int $status = 200): never {
