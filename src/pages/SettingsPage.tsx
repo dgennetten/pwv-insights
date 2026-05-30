@@ -13,6 +13,7 @@ import {
 } from '../types/settings'
 import { getStoredTheme, setStoredTheme, applyTheme, type Theme } from '../lib/theme'
 import { getLoggerSettings, saveLoggerSettings, type LoggerSettings } from '../lib/loggerSettings'
+import { UsageTipsModal } from './DataLoggerPage'
 
 // ─── Checkbox row ─────────────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showLoggerTips, setShowLoggerTips] = useState(false)
 
   const loadPrefs = useCallback(async () => {
     const token = getStoredAuthToken()
@@ -252,9 +254,18 @@ export function SettingsPage() {
             {/* ── Data Logger ───────────────────────────────────────────── */}
             <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
               <div className="mb-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Data Logger</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Data Logger</h3>
+                  <button
+                    onClick={() => setShowLoggerTips(true)}
+                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
+                  >
+                    Usage tips
+                  </button>
+                </div>
                 <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Email format, screen wake lock, and auto-waypoint recording for distance tracking. All settings are saved locally.</p>
               </div>
+              {showLoggerTips && <UsageTipsModal onClose={() => setShowLoggerTips(false)} />}
               <div className="divide-y divide-stone-100 dark:divide-stone-800">
                 <PrefRow
                   label="Keep screen awake while tracking"
@@ -266,58 +277,60 @@ export function SettingsPage() {
                     </span>
                   }
                 />
-                <PrefRow
-                  label="Record waypoints"
-                  checked={loggerSettings.waypointsEnabled}
-                  onChange={v => updateLoggerSettings({ waypointsEnabled: v })}
-                />
-                {loggerSettings.waypointsEnabled && (
-                  <div className="py-3 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Mode</span>
-                      <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
-                        {(['distance', 'time'] as const).map(mode => (
-                          <button
-                            key={mode}
-                            onClick={() => updateLoggerSettings({ waypointMode: mode })}
-                            className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
-                              loggerSettings.waypointMode === mode
-                                ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
-                                : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
-                            }`}
-                          >
-                            {mode}
-                          </button>
-                        ))}
+                <div>
+                  <PrefRow
+                    label="Record Auto-Waypoints"
+                    checked={loggerSettings.waypointsEnabled}
+                    onChange={v => updateLoggerSettings({ waypointsEnabled: v })}
+                  />
+                  {loggerSettings.waypointsEnabled && (
+                    <div className="pb-3 pl-2 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Mode</span>
+                        <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
+                          {(['distance', 'time'] as const).map(mode => (
+                            <button
+                              key={mode}
+                              onClick={() => updateLoggerSettings({ waypointMode: mode })}
+                              className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
+                                loggerSettings.waypointMode === mode
+                                  ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
+                                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
+                              }`}
+                            >
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Every</span>
+                        <input
+                          type="number"
+                          min={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
+                          step={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
+                          value={loggerSettings.waypointMode === 'distance'
+                            ? loggerSettings.waypointDistanceMi
+                            : loggerSettings.waypointTimeMin}
+                          onChange={e => {
+                            const v = parseFloat(e.target.value)
+                            if (!isNaN(v) && v > 0) {
+                              updateLoggerSettings(
+                                loggerSettings.waypointMode === 'distance'
+                                  ? { waypointDistanceMi: v }
+                                  : { waypointTimeMin: v }
+                              )
+                            }
+                          }}
+                          className="w-16 px-2 py-1 text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
+                        />
+                        <span className="text-xs text-stone-400 dark:text-stone-500">
+                          {loggerSettings.waypointMode === 'distance' ? 'mi' : 'min'}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Every</span>
-                      <input
-                        type="number"
-                        min={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
-                        step={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
-                        value={loggerSettings.waypointMode === 'distance'
-                          ? loggerSettings.waypointDistanceMi
-                          : loggerSettings.waypointTimeMin}
-                        onChange={e => {
-                          const v = parseFloat(e.target.value)
-                          if (!isNaN(v) && v > 0) {
-                            updateLoggerSettings(
-                              loggerSettings.waypointMode === 'distance'
-                                ? { waypointDistanceMi: v }
-                                : { waypointTimeMin: v }
-                            )
-                          }
-                        }}
-                        className="w-16 px-2 py-1 text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
-                      />
-                      <span className="text-xs text-stone-400 dark:text-stone-500">
-                        {loggerSettings.waypointMode === 'distance' ? 'mi' : 'min'}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
 
