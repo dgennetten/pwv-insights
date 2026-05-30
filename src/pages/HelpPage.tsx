@@ -10,7 +10,15 @@ export function HelpPage() {
 
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-6 max-w-2xl">
         <h3 className="text-base font-semibold text-stone-900 dark:text-stone-100 mb-4">
-          Poudre Wilderness Volunteers (PWV)
+          Poudre Wilderness Volunteers{' '}
+          <a
+            href="https://www.pwv.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
+          >
+            (PWV.ORG)
+          </a>
         </h3>
         <div className="space-y-4 text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
           <p>
