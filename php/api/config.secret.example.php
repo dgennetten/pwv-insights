@@ -78,9 +78,9 @@ return [
   //   'auth'       => true,
   //   'secure'     => 'tls',
   //   'timeout'    => 10,
-  //   'username'   => 'douglas@pwv-insights.gennetten.org',
+  //   'username'   => 'noreply@pwv-insights.gennetten.org',
   //   'password'   => 'YOUR_MAILBOX_PASSWORD',
-  //   'from_email' => 'douglas@pwv-insights.gennetten.org',
+  //   'from_email' => 'noreply@pwv-insights.gennetten.org',
   //   'from_name'  => 'PWV Insights',
   // ],
 ];
