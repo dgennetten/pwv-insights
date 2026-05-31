@@ -298,6 +298,7 @@ function sendOtpMail(
       }
       $mail->Subject = $subject;
       $mail->Body    = $body;
+      $mail->CharSet = 'UTF-8';
       $mail->isHTML(false);
       return $mail;
     };

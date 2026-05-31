@@ -65,7 +65,7 @@ $fmtCoords = function (?float $lat, ?float $lng): string {
   if ($lat === null || $lng === null) return 'GPS unavailable    ';
   $ns = $lat >= 0 ? 'N' : 'S';
   $ew = $lng >= 0 ? 'E' : 'W';
-  return number_format(abs($lat), 4) . "°{$ns} " . number_format(abs($lng), 4) . "°{$ew}";
+  return number_format(abs($lat), 4) . "{$ns} " . number_format(abs($lng), 4) . "{$ew}";
 };
 
 foreach ($entries as $e) {
@@ -86,15 +86,15 @@ foreach ($entries as $e) {
     $sub = (string) ($e['hikerSubtype'] ?? '');
     if ($sub === 'seen') $hikerSeen++;
     elseif ($sub === 'contacted') $hikerContacted++;
-    $label        = 'Hiker — ' . ucfirst($sub);
+    $label        = 'Hiker - ' . ucfirst($sub);
     $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => $sub, 'line' => "  [{$time} | {$coords}] {$label}"];
 
   } elseif ($type === 'tree') {
     $sub  = (string) ($e['treeSubtype'] ?? '');
     $size = (string) ($e['treeSize']    ?? '');
     if (isset($trees[$sub][$size])) $trees[$sub][$size]++;
-    $sizeLabel    = ['small' => 'Small (<8")', 'medium' => 'Medium (8–15")', 'large' => 'Large (16–23")', 'xl' => 'XL (24–36")'][$size] ?? $size;
-    $label        = 'Tree — ' . ucfirst($sub) . ', ' . $sizeLabel;
+    $sizeLabel    = ['small' => 'Small (<8")', 'medium' => 'Medium (8-15")', 'large' => 'Large (16-23")', 'xl' => 'XL (24-36")'][$size] ?? $size;
+    $label        = 'Tree - ' . ucfirst($sub) . ', ' . $sizeLabel;
     $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => $sub, 'line' => "  [{$time} | {$coords}] {$label}"];
 
   } elseif ($type === 'note') {
@@ -107,7 +107,7 @@ foreach ($entries as $e) {
     $vType = trim((string) ($e['violationType'] ?? ''));
     $vNote = trim((string) ($e['violationNote'] ?? ''));
     $violationRows[] = ['ts' => $ts ?? 0, 'type' => $vType, 'note' => $vNote];
-    $label = 'Violation — ' . ($vType ?: 'Unknown');
+    $label = 'Violation - ' . ($vType ?: 'Unknown');
     if ($vNote !== '') $label .= ': ' . $vNote;
     $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => 'violation', 'line' => "  [{$time} | {$coords}] {$label}"];
   }
@@ -130,9 +130,9 @@ $detailRows = array_values(array_filter(
 // ── Format report ─────────────────────────────────────────────────
 $sizeLabels = [
   'small'  => 'Small (<8")',
-  'medium' => 'Medium (8–15")',
-  'large'  => 'Large (16–23")',
-  'xl'     => 'XL (24–36")',
+  'medium' => 'Medium (8-15")',
+  'large'  => 'Large (16-23")',
+  'xl'     => 'XL (24-36")',
 ];
 
 $fmtRow = function (array $row) use ($sizeLabels): string {
@@ -144,14 +144,13 @@ $fmtRow = function (array $row) use ($sizeLabels): string {
 };
 
 $hikerTotal = $hikerSeen;  // seen already includes auto-increments from contacted taps
-$startTime  = $sessionStart ? date('g:i A', intdiv($sessionStart, 1000)) : '—';
+$startTime  = $sessionStart ? date('g:i A', intdiv($sessionStart, 1000)) : 'n/a';
 $sentTime   = date('g:i A');
 
-$div  = str_repeat('═', 22);
-$divs = str_repeat('─', 22);
+$div = str_repeat('-', 22);
 
 $lines = [
-  'PWV Trail Patrol — Data Logger Report',
+  'PWV Trail Patrol - Data Logger Report',
   "Member:  {$memberName}",
   "Date:    {$reportDate}",
   '',
@@ -204,11 +203,11 @@ $fmtPt = function (?array $pt): string {
   if (!$pt || !isset($pt['lat'], $pt['lng'])) return 'GPS unavailable';
   $ns = (float)$pt['lat'] >= 0 ? 'N' : 'S';
   $ew = (float)$pt['lng'] >= 0 ? 'E' : 'W';
-  return number_format(abs((float)$pt['lat']), 4) . "°{$ns} " . number_format(abs((float)$pt['lng']), 4) . "°{$ew}";
+  return number_format(abs((float)$pt['lat']), 4) . "{$ns} " . number_format(abs((float)$pt['lng']), 4) . "{$ew}";
 };
 
 $fmtPace = function (float $distM, int $durationMs): string {
-  if ($distM <= 0) return '—';
+  if ($distM <= 0) return 'n/a';
   $minPerMile = ($durationMs / 1000 / 60) / ($distM / 1609.344);
   $m = (int) $minPerMile;
   $s = (int) round(($minPerMile - $m) * 60);
@@ -229,11 +228,11 @@ if (!empty($trackers)) {
     $tDur  = (int)  ($tr['activeDurationMs'] ?? 0);
     $totalTrackerM  += $tDist;
     $totalTrackerMs += $tDur;
-    $lines[] = sprintf('  %-20s  %s  ·  %s  ·  %s', $tName . ':', $fmtMi($tDist), $fmtDur($tDur), $fmtPace($tDist, $tDur));
+    $lines[] = sprintf('  %-20s  %s, %s, %s', $tName . ':', $fmtMi($tDist), $fmtDur($tDur), $fmtPace($tDist, $tDur));
   }
   if (count($trackers) > 1) {
     $lines[] = '  ' . str_repeat('-', 18);
-    $lines[] = sprintf('  %-20s  %s  ·  %s  ·  %s', 'Total:', $fmtMi($totalTrackerM), $fmtDur($totalTrackerMs), $fmtPace($totalTrackerM, $totalTrackerMs));
+    $lines[] = sprintf('  %-20s  %s, %s, %s', 'Total:', $fmtMi($totalTrackerM), $fmtDur($totalTrackerMs), $fmtPace($totalTrackerM, $totalTrackerMs));
   }
 }
 
@@ -253,7 +252,7 @@ if ($includeLocations && !empty($trackers)) {
     $tName    = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
     $tDist    = (float)($tr['totalDistanceM']  ?? 0);
     $tDur     = (int)  ($tr['activeDurationMs'] ?? 0);
-    $tStart   = isset($tr['startedAt']) ? date('g:i A', intdiv((int)$tr['startedAt'], 1000)) : '—';
+    $tStart   = isset($tr['startedAt']) ? date('g:i A', intdiv((int)$tr['startedAt'], 1000)) : 'n/a';
     $segments = is_array($tr['segments'] ?? null) ? $tr['segments'] : [];
     $lines[] = '';
     $lines[] = $div;
@@ -263,7 +262,7 @@ if ($includeLocations && !empty($trackers)) {
     $prev_end = null;
     foreach ($segments as $si => $seg) {
       if (!is_array($seg)) continue;
-      $segStart = isset($seg['startAt'])  ? date('g:i A', intdiv((int)$seg['startAt'], 1000)) : '—';
+      $segStart = isset($seg['startAt'])  ? date('g:i A', intdiv((int)$seg['startAt'], 1000)) : 'n/a';
       $segEnd   = isset($seg['endAt'])    ? date('g:i A', intdiv((int)$seg['endAt'],   1000)) : '(active)';
       $segDist  = (float)($seg['distanceM'] ?? 0);
       $segDurMs = isset($seg['startAt'], $seg['endAt'])
@@ -291,7 +290,7 @@ if ($includeLocations && !empty($trackers)) {
 }
 
 $lines[] = '';
-$lines[] = $divs;
+$lines[] = $div;
 $lines[] = "Session started: {$startTime}";
 $lines[] = "Report sent:     {$sentTime}";
 
@@ -342,10 +341,10 @@ if (is_dir($dataLoggerDir)) {
 
 // ── Prepend prominent map link to email body ──────────────────────
 $linkBlock =
-  "═══════════════════════════════════════════════════════\n" .
+  "{$div}\n" .
   "  VIEW INTERACTIVE TRAIL MAP REPORT\n\n" .
   "  {$spaUrl}\n\n" .
-  "═══════════════════════════════════════════════════════\n\n\n";
+  "{$div}\n\n\n";
 
 if ($emailFormat === 'json') {
   $jsonPayload = [
