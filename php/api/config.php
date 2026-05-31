@@ -18,6 +18,9 @@ define('MAIL_FROM',       'noreply@pwv-insights.gennetten.org');
 define('MAIL_FROM_NAME',  'PWV Insights');
 define('OTP_TTL_MINUTES', 30);
 
+/** Public base URL for t_member.Photo filenames (CLRD patrol site). */
+define('PWV_MEMBER_PHOTO_BASE', 'https://clrdvol.org/fs_pics/');
+
 // Hardcoded admin — expand to a DB table when needed
 define('ADMIN_EMAIL', 'douglas@gennetten.com');
 

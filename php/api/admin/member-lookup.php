@@ -9,6 +9,49 @@ require_once __DIR__ . '/../config.php';
 
 define('ML_PWV_GROUP', 10);
 
+/** Build a public photo URL from t_member.Photo (filename or absolute URL). */
+function memberPhotoUrl(?string $photo): ?string {
+  $photo = trim((string) $photo);
+  if ($photo === '') {
+    return null;
+  }
+  if (preg_match('#^https?://#i', $photo)) {
+    return $photo;
+  }
+  return PWV_MEMBER_PHOTO_BASE . rawurlencode(basename($photo));
+}
+
+/** Human-readable membership status for admin member lookup. */
+function memberStatusLabel(
+  ?string $orgStatusName,
+  $memberSince,
+  ?string $agreementDate,
+  $lockedInactive
+): string {
+  if ((int) $lockedInactive === 1) {
+    return 'Inactive';
+  }
+  $name = trim((string) $orgStatusName);
+  if (strcasecmp($name, 'Active') === 0) {
+    $since = trim((string) $memberSince);
+    if ($since !== '' && $since !== '0000') {
+      return 'Active since ' . $since;
+    }
+    if ($agreementDate !== null && $agreementDate !== '' && $agreementDate !== '0000-00-00') {
+      try {
+        return 'Active since ' . (new DateTime($agreementDate))->format('F j, Y');
+      } catch (Throwable $_) {
+        /* fall through */
+      }
+    }
+    return 'Active';
+  }
+  if ($name !== '') {
+    return $name;
+  }
+  return '—';
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -49,12 +92,27 @@ if (strtolower(trim($sess['EmailAddress'])) !== strtolower(ADMIN_EMAIL)) {
 
 // ── Member core info ──────────────────────────────────────────────────────────
 $stmt = $db->prepare(
-  'SELECT PersonID, FirstName, LastName, BirthDate, EmailAddress
-   FROM t_member WHERE PersonID = ? LIMIT 1'
+  'SELECT m.PersonID, m.FirstName, m.LastName, m.BirthDate, m.EmailAddress, m.Photo,
+          mg.OrgStatusID, os.OrgStatusName, mg.MemberSince, mg.AgreementDate,
+          lo.IsInactive AS LockedInactive
+   FROM t_member m
+   LEFT JOIN t_mem_group mg ON mg.PersonID = m.PersonID AND mg.GroupID = ?
+   LEFT JOIN lu_org_status os ON os.OrgStatusID = mg.OrgStatusID
+   LEFT JOIN t_locked_out lo ON lo.PersonID = m.PersonID
+   WHERE m.PersonID = ?
+   LIMIT 1'
 );
-$stmt->execute([$memberId]);
+$stmt->execute([ML_PWV_GROUP, $memberId]);
 $m = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$m) jsonOut(['success' => false, 'error' => 'Member not found'], 404);
+
+$photoUrl    = memberPhotoUrl($m['Photo'] ?? null);
+$statusLabel = memberStatusLabel(
+  $m['OrgStatusName'] ?? null,
+  $m['MemberSince'] ?? null,
+  $m['AgreementDate'] ?? null,
+  $m['LockedInactive'] ?? null
+);
 
 // ── Address (t_mem_address — take lowest MemAddressID as primary) ─────────────
 $stmt = $db->prepare(
@@ -133,6 +191,8 @@ jsonOut([
     'state'       => ($addr['State']         ?? '') !== '' ? trim($addr['State'])         : null,
     'zip'         => ($addr['ZipCode']       ?? '') !== '' ? trim($addr['ZipCode'])       : null,
     'phone'       => ($phoneRow['PhoneNumber'] ?? '') !== '' ? trim($phoneRow['PhoneNumber']) : null,
+    'photoUrl'    => $photoUrl,
+    'status'      => $statusLabel,
     'merit' => [
       'memberDays'  => $memberDays,
       'avgDays'     => $avgDays,

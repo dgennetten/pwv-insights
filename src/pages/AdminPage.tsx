@@ -62,13 +62,40 @@ function MemberCard({ result }: { result: import('../services/authService').Memb
     + (result.zip ? ` ${result.zip}` : '')
 
   const merit = meritLabel(result.merit.ratio)
+  const isActive = result.status.toLowerCase().startsWith('active')
+  const statusClass = isActive
+    ? 'text-emerald-700 dark:text-emerald-400'
+    : result.status.toLowerCase() === 'inactive'
+      ? 'text-stone-500 dark:text-stone-400'
+      : 'text-amber-700 dark:text-amber-400'
 
   return (
-    <div className="mt-4 border-t border-stone-100 dark:border-stone-800 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Full Name</p>
-        <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{result.fullName || '—'}</p>
+    <div className="mt-4 border-t border-stone-100 dark:border-stone-800 pt-4 space-y-4">
+      <div className="flex gap-4 items-start">
+        {result.photoUrl ? (
+          <img
+            src={result.photoUrl}
+            alt=""
+            className="w-20 h-20 shrink-0 rounded-xl object-cover bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700"
+          />
+        ) : (
+          <div
+            className="w-20 h-20 shrink-0 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 text-xs text-center px-1"
+            aria-hidden
+          >
+            No photo
+          </div>
+        )}
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{result.fullName || '—'}</p>
+          <p className={`text-sm font-medium ${statusClass}`}>{result.status}</p>
+          {result.email && (
+            <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{result.email}</p>
+          )}
+        </div>
       </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Phone</p>
         <p className="text-sm text-stone-700 dark:text-stone-200">{result.phone ?? '—'}</p>
@@ -101,6 +128,7 @@ function MemberCard({ result }: { result: import('../services/authService').Memb
         <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
           {result.merit.memberDays} patrol {result.merit.memberDays === 1 ? 'day' : 'days'} · group avg {result.merit.avgDays} days · since {result.merit.seasonStart}
         </p>
+      </div>
       </div>
     </div>
   )

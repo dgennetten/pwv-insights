@@ -16,6 +16,32 @@ config({ path: '.env.local' })
 const PORT      = 3001
 const OTP_TTL   = 10 // minutes
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'douglas@gennetten.com'
+const PWV_MEMBER_PHOTO_BASE = 'https://clrdvol.org/fs_pics/'
+
+function memberPhotoUrl(photo) {
+  const name = String(photo ?? '').trim()
+  if (!name) return null
+  if (/^https?:\/\//i.test(name)) return name
+  return PWV_MEMBER_PHOTO_BASE + encodeURIComponent(name.replace(/^.*[/\\]/, ''))
+}
+
+function memberStatusLabel(orgStatusName, memberSince, agreementDate, lockedInactive) {
+  if (Number(lockedInactive) === 1) return 'Inactive'
+  const status = String(orgStatusName ?? '').trim()
+  if (status.toLowerCase() === 'active') {
+    const since = String(memberSince ?? '').trim()
+    if (since && since !== '0000') return `Active since ${since}`
+    const ad = String(agreementDate ?? '').trim()
+    if (ad && ad !== '0000-00-00') {
+      const dt = new Date(ad.includes('T') ? ad : `${ad}T12:00:00`)
+      if (!Number.isNaN(dt.getTime())) {
+        return `Active since ${dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+      }
+    }
+    return 'Active'
+  }
+  return status || '—'
+}
 
 const pool = mysql.createPool({
   host:     process.env.DB_HOST,
@@ -322,7 +348,15 @@ const routes = {
 
     // Fetch member core info
     const [memberRows] = await pool.query(
-      'SELECT PersonID, FirstName, LastName, BirthDate, EmailAddress FROM t_member WHERE PersonID = ? LIMIT 1',
+      `SELECT m.PersonID, m.FirstName, m.LastName, m.BirthDate, m.EmailAddress, m.Photo,
+              mg.OrgStatusID, os.OrgStatusName, mg.MemberSince, mg.AgreementDate,
+              lo.IsInactive AS LockedInactive
+       FROM t_member m
+       LEFT JOIN t_mem_group mg ON mg.PersonID = m.PersonID AND mg.GroupID = 10
+       LEFT JOIN lu_org_status os ON os.OrgStatusID = mg.OrgStatusID
+       LEFT JOIN t_locked_out lo ON lo.PersonID = m.PersonID
+       WHERE m.PersonID = ?
+       LIMIT 1`,
       [memberId]
     )
     const m = memberRows[0]
@@ -395,6 +429,13 @@ const routes = {
         state:       addr.State        ?? null,
         zip:         addr.ZipCode      ?? null,
         phone:       phoneRow.PhoneNumber ?? null,
+        photoUrl:    memberPhotoUrl(m.Photo),
+        status:      memberStatusLabel(
+          m.OrgStatusName,
+          m.MemberSince,
+          m.AgreementDate,
+          m.LockedInactive
+        ),
         merit: {
           memberDays:  Number(memberDays),
           avgDays:     Number(avgDays),
