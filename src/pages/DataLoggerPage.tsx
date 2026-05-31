@@ -669,7 +669,7 @@ export function DataLoggerPage() {
           <button
             onClick={() => void handleSendReport()}
             disabled={!isOnline || sending || !hasData || sentOk || !reportEmail}
-            className="flex-1 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex-[3] min-w-0 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {sending
               ? `Sending to ${reportEmail}…`
@@ -680,9 +680,9 @@ export function DataLoggerPage() {
           <button
             onClick={() => setShowMap(true)}
             disabled={!hasData}
-            className="flex-1 py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex-[2] min-w-0 py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Map this Report
+            Show Map
           </button>
         </div>
         <label className="flex items-center gap-1.5 cursor-pointer select-none">
