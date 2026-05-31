@@ -276,8 +276,11 @@ export function DataLoggerPage() {
           })),
         }),
       })
-      const data = (await res.json()) as { success?: boolean; error?: string; logId?: string }
-      if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
+      const data = (await res.json()) as { success?: boolean; error?: string; logId?: string; email?: string }
+      if (!res.ok || !data.success) {
+        const msg = data.error ?? `HTTP ${res.status}`
+        throw new Error(data.logId ? `${msg} (map saved: /trail-log/${data.logId})` : msg)
+      }
       await markSessionEmailed(session.id)
       setSession(prev => (prev ? { ...prev, emailedAt: Date.now() } : prev))
       setSentOk(true)
@@ -366,6 +369,7 @@ export function DataLoggerPage() {
     (sum, s) => sum + treeCounts.cleared[s.key] + treeCounts.noted[s.key], 0
   )
   const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0
+  const reportEmail = user?.email?.trim() ?? ''
 
   return (
     <>
@@ -644,13 +648,34 @@ export function DataLoggerPage() {
         {sendError && (
           <p className="text-xs text-red-500 text-center">{sendError}</p>
         )}
+        {reportEmail ? (
+          <p className="text-xs text-center text-stone-500 dark:text-stone-400">
+            {sentOk ? (
+              <>Report sent to{' '}
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">{reportEmail}</span>
+              </>
+            ) : (
+              <>Will email to{' '}
+                <span className="font-medium text-stone-700 dark:text-stone-300">{reportEmail}</span>
+              </>
+            )}
+          </p>
+        ) : (
+          <p className="text-xs text-center text-amber-600 dark:text-amber-400">
+            No email address on file — contact an admin to update your member record.
+          </p>
+        )}
         <div className="flex gap-2">
           <button
             onClick={() => void handleSendReport()}
-            disabled={!isOnline || sending || !hasData || sentOk}
+            disabled={!isOnline || sending || !hasData || sentOk || !reportEmail}
             className="flex-1 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {sending ? 'Sending…' : sentOk ? 'Report Sent ✓' : 'Email Report to Me'}
+            {sending
+              ? `Sending to ${reportEmail}…`
+              : sentOk
+                ? 'Report Sent ✓'
+                : 'STOP Logger & Email Report'}
           </button>
           <button
             onClick={() => setShowMap(true)}

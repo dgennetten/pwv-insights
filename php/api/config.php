@@ -14,7 +14,7 @@ $secrets = getSecrets();
 define('DB_USER', $secrets['db_user']);
 define('DB_PASS', $secrets['db_pass']);
 
-define('MAIL_FROM',       'noreply@gennetten.org');
+define('MAIL_FROM',       'douglas@pwv-insights.gennetten.org');
 define('MAIL_FROM_NAME',  'PWV Insights');
 define('OTP_TTL_MINUTES', 30);
 

@@ -45,6 +45,9 @@ $memberEmail = strtolower(trim($row['EmailAddress']));
 if ($memberName === '') {
   $memberName = trim($row['FirstName'] . ' ' . $row['LastName']);
 }
+if ($memberEmail === '' || !filter_var($memberEmail, FILTER_VALIDATE_EMAIL)) {
+  jsonOut(['success' => false, 'error' => 'No valid email address on file for this member.'], 400);
+}
 
 // ── Tally entries ─────────────────────────────────────────────────
 $hikerSeen      = 0;
@@ -366,6 +369,14 @@ if ($emailFormat === 'json') {
   $reportBody = $linkBlock . implode("\n", $lines);
 }
 
-sendOtpMail($memberEmail, $subject, $reportBody);
+$mailOk = sendOtpMail($memberEmail, $subject, $reportBody);
+if (!$mailOk) {
+  jsonOut([
+    'success' => false,
+    'error'   => 'Failed to send email to ' . $memberEmail . '. Please try again in a moment.',
+    'email'   => $memberEmail,
+    'logId'   => $savedLogId,
+  ], 502);
+}
 
-jsonOut(['success' => true, 'logId' => $savedLogId]);
+jsonOut(['success' => true, 'logId' => $savedLogId, 'email' => $memberEmail]);

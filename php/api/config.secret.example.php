@@ -64,4 +64,23 @@ return [
    * Ticket = md4("$username $group $secret $timestamp") where timestamp = time() & 0xFFFFFFF0
    */
   // 'pwv_sso_secret' => 'YOUR_PWV_SSO_SECRET',
+
+  /**
+   * OTP / report email via PHPMailer + SMTP. Set phpmailer_src to the folder containing
+   * PHPMailer.php on the server (e.g. /home/USER/PHPMailer/src).
+   *
+   * @see https://help.dreamhost.com/hc/en-us/articles/360031174411-PHPMailer-Installing-on-a-shared-server
+   */
+  // 'phpmailer_src' => '/home/USER/PHPMailer/src',
+  // 'smtp' => [
+  //   'host'       => 'smtp.dreamhost.com',
+  //   'port'       => 587,
+  //   'auth'       => true,
+  //   'secure'     => 'tls',
+  //   'timeout'    => 10,
+  //   'username'   => 'douglas@pwv-insights.gennetten.org',
+  //   'password'   => 'YOUR_MAILBOX_PASSWORD',
+  //   'from_email' => 'douglas@pwv-insights.gennetten.org',
+  //   'from_name'  => 'PWV Insights',
+  // ],
 ];
