@@ -60,8 +60,9 @@ interface DistanceTrackerProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTrackerProps) {
-  const [trackers, setTrackers] = useState<TrackerUi[]>([])
-  const [, setTick]             = useState(0)
+  const [trackers,         setTrackers]         = useState<TrackerUi[]>([])
+  const [showAllTrackers,  setShowAllTrackers]  = useState(false)
+  const [, setTick]                             = useState(0)
 
   const watchIdRef      = useRef<number | null>(null)
   const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -392,12 +393,13 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
   return (
     <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
       <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-        Distance Tracker
+        Distance / Time Trackers
       </span>
 
       {trackers.length > 0 && (
         <div className="space-y-2">
-          {trackers.map((t, idx) => {
+          {(showAllTrackers ? trackers : trackers.slice(-1)).map(t => {
+            const idx = trackers.indexOf(t)
             const dur   = getDisplayDuration(t)
             const label = t.name || `Tracker ${idx + 1}`
             return (
@@ -530,6 +532,14 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
               </div>
             )
           })}
+          {trackers.length > 1 && (
+            <button
+              onClick={() => setShowAllTrackers(p => !p)}
+              className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
+            >
+              {showAllTrackers ? 'Show less' : `Show all ${trackers.length} trackers`}
+            </button>
+          )}
         </div>
       )}
 

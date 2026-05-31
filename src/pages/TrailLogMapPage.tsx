@@ -14,12 +14,18 @@ interface LogEntry {
   timestamp: number
   lat: number | null
   lng: number | null
-  type: 'hiker' | 'tree' | 'note'
+  type: 'hiker' | 'tree' | 'note' | 'violation'
   hikerSubtype?: 'seen' | 'contacted'
   treeSubtype?: 'cleared' | 'noted'
   treeSize?: 'small' | 'medium' | 'large' | 'xl'
   noteText?: string
+  violationType?: string
+  violationNote?: string
 }
+
+type TimelineItem =
+  | { kind: 'entry';    entry: LogEntry; ts: number }
+  | { kind: 'waypoint'; lat: number; lng: number; ts: number; name: string; trackerName: string }
 
 interface TrackerSegment {
   startAt: number
@@ -142,30 +148,47 @@ function MapBoundsController({ points }: { points: [number, number][] }) {
 // ── Timeline entry ────────────────────────────────────────────────
 
 function TimelineEntry({
-  entry,
+  item,
   selected,
   onClick,
 }: {
-  entry: LogEntry
+  item: TimelineItem
   selected: boolean
   onClick: () => void
 }) {
-  const isTree  = entry.type === 'tree'
-  const isHiker = entry.type === 'hiker'
-  const hasGps  = entry.lat !== null && entry.lng !== null
+  const hasGps =
+    item.kind === 'waypoint' ||
+    (item.kind === 'entry' && item.entry.lat !== null && item.entry.lng !== null)
 
-  const badge = isTree ? 'TREE' : isHiker ? 'HIKER' : 'NOTE'
-  const badgeClass = isTree
-    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-    : isHiker
-    ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
-    : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
+  let badge: string
+  let badgeClass: string
+  let label: string
 
-  const label = isTree
-    ? `Tree — ${entry.treeSubtype ? entry.treeSubtype.charAt(0).toUpperCase() + entry.treeSubtype.slice(1) : ''}, ${SIZE_LABELS[entry.treeSize ?? ''] ?? entry.treeSize}`
-    : isHiker
-    ? `Hiker — ${entry.hikerSubtype ? entry.hikerSubtype.charAt(0).toUpperCase() + entry.hikerSubtype.slice(1) : ''}`
-    : (entry.noteText ?? '')
+  if (item.kind === 'waypoint') {
+    badge      = 'WPT'
+    badgeClass = 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300'
+    label      = item.name
+  } else {
+    const entry       = item.entry
+    const isTree      = entry.type === 'tree'
+    const isHiker     = entry.type === 'hiker'
+    const isViolation = entry.type === 'violation'
+    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : 'NOTE'
+    badgeClass = isTree
+      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+      : isHiker
+      ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
+      : isViolation
+      ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+      : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
+    label = isTree
+      ? `Tree — ${entry.treeSubtype ? entry.treeSubtype[0].toUpperCase() + entry.treeSubtype.slice(1) : ''}, ${SIZE_LABELS[entry.treeSize ?? ''] ?? entry.treeSize}`
+      : isHiker
+      ? `Hiker — ${entry.hikerSubtype ? entry.hikerSubtype[0].toUpperCase() + entry.hikerSubtype.slice(1) : ''}`
+      : isViolation
+      ? (entry.violationType ?? 'Violation')
+      : (entry.noteText ?? '')
+  }
 
   return (
     <div
@@ -188,7 +211,7 @@ function TimelineEntry({
           {label}
         </div>
         <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
-          {fmtTime(entry.timestamp)}
+          {fmtTime(item.ts)}
           {hasGps && <span className="ml-1.5 text-emerald-500 dark:text-emerald-400">●</span>}
         </div>
       </div>
@@ -270,23 +293,36 @@ export function TrailLogMapPage() {
 
   // ── Derived data ─────────────────────────────────────────────────
 
-  const timelineEntries = useMemo(() => {
+  const timelineItems = useMemo((): TimelineItem[] => {
     if (!log) return []
     const contactedTs = new Set(
       log.entries
         .filter(e => e.type === 'hiker' && e.hikerSubtype === 'contacted')
         .map(e => e.timestamp)
     )
-    return log.entries
+    const entryItems: TimelineItem[] = log.entries
       .filter(e => !(e.type === 'hiker' && e.hikerSubtype === 'seen' && contactedTs.has(e.timestamp)))
-      .slice()
-      .sort((a, b) => a.timestamp - b.timestamp)
-  }, [log])
+      .map(e => ({ kind: 'entry' as const, entry: e, ts: e.timestamp }))
 
-  const gpsEntries = useMemo(
-    () => timelineEntries.filter(e => e.lat !== null && e.lng !== null),
-    [timelineEntries]
-  )
+    const waypointItems: TimelineItem[] = []
+    for (const tracker of log.trackers) {
+      for (const seg of tracker.segments) {
+        for (const wp of seg.waypoints ?? []) {
+          if (wp.name && wp.lat !== null && wp.lng !== null) {
+            waypointItems.push({
+              kind:        'waypoint' as const,
+              lat:         wp.lat,
+              lng:         wp.lng,
+              ts:          wp.ts,
+              name:        wp.name,
+              trackerName: tracker.name || 'Tracker',
+            })
+          }
+        }
+      }
+    }
+    return [...entryItems, ...waypointItems].sort((a, b) => a.ts - b.ts)
+  }, [log])
 
   const waypointMarkers = useMemo(() => {
     if (!log) return []
@@ -309,10 +345,15 @@ export function TrailLogMapPage() {
 
   const mapPoints = useMemo(
     () => [
-      ...gpsEntries.map(e => [e.lat!, e.lng!] as [number, number]),
+      ...timelineItems
+        .filter(item => item.kind === 'entry' && item.entry.lat !== null && item.entry.lng !== null)
+        .map(item => [
+          (item as { kind: 'entry'; entry: LogEntry; ts: number }).entry.lat!,
+          (item as { kind: 'entry'; entry: LogEntry; ts: number }).entry.lng!,
+        ] as [number, number]),
       ...waypointMarkers.map(w => [w.lat, w.lng] as [number, number]),
     ],
-    [gpsEntries, waypointMarkers]
+    [timelineItems, waypointMarkers]
   )
 
   const defaultCenter: [number, number] = [40.3772, -105.5217]
@@ -340,7 +381,9 @@ export function TrailLogMapPage() {
   const sessionStart = timestamps.length > 0 ? Math.min(...timestamps) : null
   const sessionEnd   = timestamps.length > 0 ? Math.max(...timestamps) : null
 
-  const fieldNotes = timelineEntries.filter(e => e.type === 'note')
+  const fieldNotes = timelineItems
+    .filter(item => item.kind === 'entry' && item.entry.type === 'note')
+    .map(item => (item as { kind: 'entry'; entry: LogEntry; ts: number }).entry)
 
   // ── Loading / error states ────────────────────────────────────────
 
@@ -560,15 +603,19 @@ export function TrailLogMapPage() {
                   </CircleMarker>
                 ))}
 
-                {gpsEntries.map(entry => {
-                  const isTree  = entry.type === 'tree'
-                  const isHiker = entry.type === 'hiker'
-                  const color   = isTree ? '#f59e0b' : isHiker ? '#0ea5e9' : '#78716c'
-                  const selected = entry.timestamp === selectedTs
+                {timelineItems.map((item, idx) => {
+                  if (item.kind === 'waypoint') return null
+                  const entry = item.entry
+                  if (entry.lat === null || entry.lng === null) return null
+                  const isTree      = entry.type === 'tree'
+                  const isHiker     = entry.type === 'hiker'
+                  const isViolation = entry.type === 'violation'
+                  const color       = isTree ? '#f59e0b' : isHiker ? '#0ea5e9' : isViolation ? '#ef4444' : '#78716c'
+                  const selected    = entry.timestamp === selectedTs
                   return (
                     <CircleMarker
-                      key={`${entry.type}-${entry.timestamp}-${entry.lat}-${entry.lng}`}
-                      center={[entry.lat!, entry.lng!]}
+                      key={`e-${idx}`}
+                      center={[entry.lat, entry.lng]}
                       radius={selected ? 9 : 6}
                       pathOptions={{
                         color:       selected ? '#059669' : color,
@@ -584,11 +631,13 @@ export function TrailLogMapPage() {
                               ? `Tree — ${entry.treeSubtype}, ${SIZE_LABELS[entry.treeSize ?? ''] ?? entry.treeSize}`
                               : isHiker
                               ? `Hiker — ${entry.hikerSubtype}`
+                              : isViolation
+                              ? `Violation — ${entry.violationType}`
                               : entry.noteText}
                           </div>
                           <div className="text-stone-500">{fmtTime(entry.timestamp)}</div>
                           <div className="text-stone-400 font-mono text-[10px]">
-                            {entry.lat!.toFixed(5)}°, {entry.lng!.toFixed(5)}°
+                            {entry.lat.toFixed(5)}°, {entry.lng.toFixed(5)}°
                           </div>
                         </div>
                       </Popup>
@@ -610,21 +659,21 @@ export function TrailLogMapPage() {
               </p>
             </div>
             <div className="flex-1 overflow-y-auto divide-y divide-stone-100 dark:divide-stone-800">
-              {timelineEntries.length === 0 ? (
+              {timelineItems.length === 0 ? (
                 <div className="flex items-center justify-center h-32">
                   <p className="text-xs text-stone-400 dark:text-stone-500">No entries recorded</p>
                 </div>
               ) : (
-                timelineEntries.map(entry => (
+                timelineItems.map((item, idx) => (
                   <TimelineEntry
-                    key={`${entry.type}-${entry.timestamp}`}
-                    entry={entry}
-                    selected={entry.timestamp === selectedTs}
+                    key={idx}
+                    item={item}
+                    selected={item.ts === selectedTs}
                     onClick={() => {
-                      setSelectedTs(entry.timestamp)
-                      if (entry.lat !== null && entry.lng !== null) {
-                        setFocusCenter([entry.lat, entry.lng])
-                      }
+                      setSelectedTs(item.ts)
+                      const lat = item.kind === 'entry' ? item.entry.lat : item.lat
+                      const lng = item.kind === 'entry' ? item.entry.lng : item.lng
+                      if (lat !== null && lng !== null) setFocusCenter([lat, lng])
                     }}
                   />
                 ))

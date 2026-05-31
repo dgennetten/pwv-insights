@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { MemberGate } from '../components/MemberGate'
 import { DistanceTracker } from '../components/data-logger/DistanceTracker'
+import { MapModal } from '../components/data-logger/MapModal'
 import {
   getOrCreateSession,
   addEntry,
+  deleteEntry,
   getSessionEntries,
   markSessionEmailed,
   clearSessionEntries,
@@ -13,7 +15,42 @@ import {
   resetSession,
 } from '../services/dataLoggerService'
 import { getStoredAuthToken } from '../services/authService'
-import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, Tracker } from '../types/dataLogger'
+import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker } from '../types/dataLogger'
+
+// Matches lu_viol_type in the database, sorted alphabetically, "Other" last
+const VIOLATION_TYPES: string[] = [
+  'Burning Green Wood',
+  'Campfire at Trailhead',
+  'Camping with Stock in a Travel Zone',
+  'Dog Harassing Wildlife, People, or Stock',
+  'Dog Not under Voice Control (with Stock Rider)',
+  'Dog Off Leash against Regulations',
+  'Dog on Trail against Regulations',
+  'Fireworks',
+  'Forest Products Removal',
+  'Illegal Campsite / Fire Ring',
+  'Illegal Discharge of a Firearm',
+  'Illegal Hunting or Fishing',
+  'Improper Campsite / Fire Ring',
+  'Littering along Trail or in Campsite',
+  'Low Flying Aircraft over Wilderness',
+  'Motorized Equipment',
+  'Motorized Vehicle',
+  'Non-Certified Weed-Free Forage',
+  'Off-Road Use',
+  'Overnight Camping at Trailhead',
+  'Oversize Group (# of groups)',
+  'Resource Damage',
+  'Snowmobile in Wilderness',
+  'Stock on Trail against Regulations',
+  'Unattended Fire',
+  'Unauthorized Fire (during ban)',
+  'Unsanitary Condition',
+  'Use of a Closed Trail',
+  'Vandalism',
+  'Wheeled Conveyance',
+  'Other',
+]
 
 const TREE_SIZES: { key: TreeSize; label: string; range: string }[] = [
   { key: 'small',  label: 'Small',  range: '< 8"'   },
@@ -57,14 +94,19 @@ export function DataLoggerPage() {
   const [showTips,      setShowTips]      = useState(false)
   const [session,       setSession]       = useState<LogSession | null>(null)
   const [entries,       setEntries]       = useState<LogEntry[]>([])
-  const [treeMode,      setTreeMode]      = useState<TreeSubtype>('cleared')
-  const [noteText,      setNoteText]      = useState('')
+  const [treeMode,        setTreeMode]        = useState<TreeSubtype>('cleared')
+  const [noteText,        setNoteText]        = useState('')
+  const [violationType,   setViolationType]   = useState('')
+  const [violationNote,   setViolationNote]   = useState('')
+  const [lastAction,      setLastAction]      = useState<number[] | null>(null)
   const [sending,          setSending]          = useState(false)
   const [sentOk,           setSentOk]           = useState(false)
   const [sendError,        setSendError]        = useState<string | null>(null)
   const [includeLocations, setIncludeLocations] = useState(true)
   const [trackers,         setTrackers]         = useState<Tracker[]>([])
-  const [logId,            setLogId]            = useState<string | null>(null)
+  const [showMap,       setShowMap]       = useState(false)
+  const [showAllNotes,      setShowAllNotes]      = useState(false)
+  const [showAllViolations, setShowAllViolations] = useState(false)
   const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
   const [loading,       setLoading]       = useState(true)
   const [confirmClear,  setConfirmClear]  = useState(false)
@@ -116,10 +158,13 @@ export function DataLoggerPage() {
       lng:       pos?.lng ?? null,
       type:      'hiker' as const,
     }
-    await addEntry({ ...base, hikerSubtype: subtype })
+    const id1 = await addEntry({ ...base, hikerSubtype: subtype })
+    const ids = [id1]
     if (subtype === 'contacted') {
-      await addEntry({ ...base, hikerSubtype: 'seen' })
+      const id2 = await addEntry({ ...base, hikerSubtype: 'seen' })
+      ids.push(id2)
     }
+    setLastAction(ids)
     await refreshEntries(session.id)
   }, [session, capturePosition, refreshEntries])
 
@@ -127,7 +172,7 @@ export function DataLoggerPage() {
   const logHikerContactOnly = useCallback(async () => {
     if (!session) return
     const pos = await capturePosition()
-    await addEntry({
+    const id = await addEntry({
       sessionId:    session.id,
       timestamp:    Date.now(),
       lat:          pos?.lat ?? null,
@@ -135,13 +180,14 @@ export function DataLoggerPage() {
       type:         'hiker' as const,
       hikerSubtype: 'contacted',
     })
+    setLastAction([id])
     await refreshEntries(session.id)
   }, [session, capturePosition, refreshEntries])
 
   const logTree = useCallback(async (size: TreeSize) => {
     if (!session) return
     const pos = await capturePosition()
-    await addEntry({
+    const id = await addEntry({
       sessionId:   session.id,
       timestamp:   Date.now(),
       lat:         pos?.lat ?? null,
@@ -150,13 +196,14 @@ export function DataLoggerPage() {
       treeSubtype: treeMode,
       treeSize:    size,
     })
+    setLastAction([id])
     await refreshEntries(session.id)
   }, [session, treeMode, capturePosition, refreshEntries])
 
   const logNote = useCallback(async () => {
     if (!session || !noteText.trim()) return
     const pos = await capturePosition()
-    await addEntry({
+    const id = await addEntry({
       sessionId: session.id,
       timestamp: Date.now(),
       lat:       pos?.lat ?? null,
@@ -165,8 +212,34 @@ export function DataLoggerPage() {
       noteText:  noteText.trim(),
     })
     setNoteText('')
+    setLastAction([id])
     await refreshEntries(session.id)
   }, [session, noteText, capturePosition, refreshEntries])
+
+  const logViolation = useCallback(async () => {
+    if (!session || !violationType) return
+    const pos = await capturePosition()
+    const id = await addEntry({
+      sessionId:     session.id,
+      timestamp:     Date.now(),
+      lat:           pos?.lat ?? null,
+      lng:           pos?.lng ?? null,
+      type:          'violation' as EntryType,
+      violationType: violationType,
+      violationNote: violationNote.trim() || undefined,
+    })
+    setViolationType('')
+    setViolationNote('')
+    setLastAction([id])
+    await refreshEntries(session.id)
+  }, [session, violationType, violationNote, capturePosition, refreshEntries])
+
+  const handleUndo = useCallback(async () => {
+    if (!session || !lastAction) return
+    for (const id of lastAction) await deleteEntry(id)
+    setLastAction(null)
+    await refreshEntries(session.id)
+  }, [session, lastAction, refreshEntries])
 
   const handleSendReport = useCallback(async () => {
     if (!session || !user) return
@@ -205,7 +278,6 @@ export function DataLoggerPage() {
       })
       const data = (await res.json()) as { success?: boolean; error?: string; logId?: string }
       if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
-      if (data.logId) setLogId(data.logId)
       await markSessionEmailed(session.id)
       setSession(prev => (prev ? { ...prev, emailedAt: Date.now() } : prev))
       setSentOk(true)
@@ -224,16 +296,9 @@ export function DataLoggerPage() {
     setTrackers([])
     setSentOk(false)
     setSendError(null)
+    setLastAction(null)
     setTrackerResetKey(k => k + 1)
   }, [])
-
-  const handleMapReport = useCallback(() => {
-    if (logId) {
-      navigate(`/trail-log/${logId}`)
-    } else {
-      navigate('/trail-log', { state: { sessionId: session?.id } })
-    }
-  }, [logId, session, navigate])
 
   const handleClearData = useCallback(async () => {
     if (!session) return
@@ -246,6 +311,7 @@ export function DataLoggerPage() {
     setSentOk(false)
     setSendError(null)
     setConfirmClear(false)
+    setLastAction(null)
     setTrackerResetKey(k => k + 1)
   }, [session])
 
@@ -273,6 +339,11 @@ export function DataLoggerPage() {
     [entries],
   )
 
+  const violationEntries = useMemo(
+    () => entries.filter(e => e.type === 'violation').slice().reverse(),
+    [entries],
+  )
+
   // Auth gate
   if (!isAuthenticated) {
     return (
@@ -294,9 +365,10 @@ export function DataLoggerPage() {
   const treeTotal  = TREE_SIZES.reduce(
     (sum, s) => sum + treeCounts.cleared[s.key] + treeCounts.noted[s.key], 0
   )
-  const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0
+  const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0
 
   return (
+    <>
     <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
 
       {/* Header */}
@@ -309,6 +381,14 @@ export function DataLoggerPage() {
           >
             Usage tips
           </button>
+          {lastAction && !sentOk && (
+            <button
+              onClick={() => void handleUndo()}
+              className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 underline underline-offset-2 transition-colors"
+            >
+              Undo Last Entry
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <div className={`w-2 h-2 rounded-full transition-colors ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
@@ -360,7 +440,7 @@ export function DataLoggerPage() {
           {/* Seen */}
           <button
             onClick={() => void logHiker('seen')}
-            className="flex-1 flex flex-col items-center py-5 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
+            className="flex-1 flex flex-col items-center py-3 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
           >
             <span className="text-5xl font-bold tabular-nums text-stone-800 dark:text-stone-100">
               {hikerCounts.seen}
@@ -375,13 +455,17 @@ export function DataLoggerPage() {
             title="Contact (seen already logged)"
             className="w-8 flex flex-col items-center justify-center gap-0.5 bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:border-amber-300 dark:hover:border-amber-700 active:scale-[0.97] transition-all select-none"
           >
-            <span className="text-base leading-none text-stone-400 dark:text-stone-500">→</span>
+            <div className="flex flex-col items-center gap-0 leading-none text-stone-500 dark:text-stone-400">
+              <span className="text-sm font-black">›</span>
+              <span className="text-sm font-black">›</span>
+              <span className="text-sm font-black">›</span>
+            </div>
           </button>
 
           {/* Contacted */}
           <button
             onClick={() => void logHiker('contacted')}
-            className="flex-1 flex flex-col items-center py-5 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
+            className="flex-1 flex flex-col items-center py-3 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
           >
             <span className="text-5xl font-bold tabular-nums text-stone-800 dark:text-stone-100">
               {hikerCounts.contacted}
@@ -446,6 +530,68 @@ export function DataLoggerPage() {
         onTrackersChange={setTrackers}
       />
 
+      {/* ── VIOLATIONS ──────────────────────────────────── */}
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+            Violations
+          </span>
+          {violationEntries.length > 0 && (
+            <span className="text-xs text-stone-400 dark:text-stone-500">
+              Total: <strong className="text-stone-700 dark:text-stone-300">{violationEntries.length}</strong>
+            </span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={violationType}
+            onChange={e => setViolationType(e.target.value)}
+            className="flex-[2] min-w-0 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
+          >
+            <option value="" disabled>Observation…</option>
+            {VIOLATION_TYPES.map(v => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={violationNote}
+            onChange={e => setViolationNote(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') void logViolation() }}
+            placeholder="Note"
+            className="flex-1 min-w-0 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
+          />
+          <button
+            onClick={() => void logViolation()}
+            disabled={violationType === ''}
+            className="shrink-0 px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg hover:bg-stone-700 dark:hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Add
+          </button>
+        </div>
+        {violationEntries.length > 0 && (
+          <div className="space-y-1.5">
+            {(showAllViolations ? violationEntries : violationEntries.slice(0, 1)).map(e => (
+              <div key={e.id} className="text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2">
+                <div className="font-medium">{e.violationType}</div>
+                {e.violationNote && <div className="text-stone-500 dark:text-stone-400">{e.violationNote}</div>}
+                <div className="text-stone-400 dark:text-stone-500 mt-0.5">
+                  {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
+                </div>
+              </div>
+            ))}
+            {violationEntries.length > 1 && (
+              <button
+                onClick={() => setShowAllViolations(p => !p)}
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
+              >
+                {showAllViolations ? 'Show less' : `Show all ${violationEntries.length} violations`}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── NOTES ───────────────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
         <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
@@ -468,10 +614,9 @@ export function DataLoggerPage() {
             Add
           </button>
         </div>
-
         {noteEntries.length > 0 && (
-          <div className="space-y-1.5 max-h-44 overflow-y-auto">
-            {noteEntries.map(e => (
+          <div className="space-y-1.5">
+            {(showAllNotes ? noteEntries : noteEntries.slice(0, 1)).map(e => (
               <div
                 key={e.id}
                 className="text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
@@ -482,6 +627,14 @@ export function DataLoggerPage() {
                 </div>
               </div>
             ))}
+            {noteEntries.length > 1 && (
+              <button
+                onClick={() => setShowAllNotes(p => !p)}
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
+              >
+                {showAllNotes ? 'Show less' : `Show all ${noteEntries.length} notes`}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -500,7 +653,7 @@ export function DataLoggerPage() {
             {sending ? 'Sending…' : sentOk ? 'Report Sent ✓' : 'Email Report to Me'}
           </button>
           <button
-            onClick={handleMapReport}
+            onClick={() => setShowMap(true)}
             disabled={!hasData}
             className="flex-1 py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
@@ -562,6 +715,17 @@ export function DataLoggerPage() {
       </div>
 
     </div>
+
+    {showMap && session && (
+      <MapModal
+        entries={entries}
+        trackers={trackers}
+        memberName={user?.name ?? ''}
+        reportDate={session.id.slice(0, 10)}
+        onClose={() => setShowMap(false)}
+      />
+    )}
+    </>
   )
 }
 
@@ -681,7 +845,7 @@ function ModeToggle({
           onClick={() => onChange(opt)}
           className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
             value === opt
-              ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
+              ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
               : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
           }`}
         >

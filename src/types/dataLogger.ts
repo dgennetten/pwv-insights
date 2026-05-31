@@ -1,7 +1,7 @@
 export type HikerSubtype = 'seen' | 'contacted'
 export type TreeSubtype  = 'cleared' | 'noted'
 export type TreeSize     = 'small' | 'medium' | 'large' | 'xl'
-export type EntryType    = 'hiker' | 'tree' | 'note'
+export type EntryType    = 'hiker' | 'tree' | 'note' | 'violation'
 
 export interface LogEntry {
   id?: number
@@ -14,6 +14,8 @@ export interface LogEntry {
   treeSubtype?: TreeSubtype
   treeSize?: TreeSize
   noteText?: string
+  violationType?: string
+  violationNote?: string
 }
 
 export interface LogSession {

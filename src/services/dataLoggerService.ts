@@ -41,11 +41,20 @@ export async function getOrCreateSession(dateKey: string): Promise<LogSession> {
   })
 }
 
-export async function addEntry(entry: Omit<LogEntry, 'id'>): Promise<void> {
+export async function addEntry(entry: Omit<LogEntry, 'id'>): Promise<number> {
   const db = await openDB()
   return new Promise((resolve, reject) => {
     const tx  = db.transaction('entries', 'readwrite')
     const req = tx.objectStore('entries').add(entry)
+    req.onsuccess = () => resolve(req.result as number)
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+export async function deleteEntry(id: number): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('entries', 'readwrite').objectStore('entries').delete(id)
     req.onsuccess = () => resolve()
     req.onerror   = () => reject(req.error)
   })

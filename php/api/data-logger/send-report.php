@@ -53,9 +53,10 @@ $trees = [
   'cleared' => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
   'noted'   => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
 ];
-$sessionStart = null;
-$detailRows   = [];  // chronological list for the detail section
-$summaryNotes = [];  // time + text only, for the summary block
+$sessionStart   = null;
+$detailRows     = [];  // chronological list for the detail section
+$summaryNotes   = [];  // time + text only, for the summary block
+$violationRows  = [];  // type + note, for the violations summary block
 
 $fmtCoords = function (?float $lat, ?float $lng): string {
   if ($lat === null || $lng === null) return 'GPS unavailable    ';
@@ -98,6 +99,14 @@ foreach ($entries as $e) {
     if ($text === '') continue;
     $summaryNotes[] = ['ts' => $ts ?? 0, 'line' => "  [{$time}] {$text}"];
     $detailRows[]   = ['ts' => $ts ?? 0, 'subtype' => 'note', 'line' => "  [{$time} | {$coords}] Note: {$text}"];
+
+  } elseif ($type === 'violation') {
+    $vType = trim((string) ($e['violationType'] ?? ''));
+    $vNote = trim((string) ($e['violationNote'] ?? ''));
+    $violationRows[] = ['ts' => $ts ?? 0, 'type' => $vType, 'note' => $vNote];
+    $label = 'Violation — ' . ($vType ?: 'Unknown');
+    if ($vNote !== '') $label .= ': ' . $vNote;
+    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => 'violation', 'line' => "  [{$time} | {$coords}] {$label}"];
   }
 }
 
@@ -165,6 +174,17 @@ if (!empty($summaryNotes)) {
   }
 }
 
+if (!empty($violationRows)) {
+  usort($violationRows, fn($a, $b) => $a['ts'] <=> $b['ts']);
+  $lines[] = '';
+  $lines[] = 'VIOLATIONS (' . count($violationRows) . ')';
+  foreach ($violationRows as $vr) {
+    $line = '  ' . ($vr['type'] ?: 'Unknown');
+    if ($vr['note'] !== '') $line .= ': ' . $vr['note'];
+    $lines[] = $line;
+  }
+}
+
 // ── Distance tracker summary ───────────────────────────────────────
 $fmtMi = function (float $m): string {
   return number_format($m / 1609.344, 2) . ' mi';
@@ -196,7 +216,7 @@ $fmtPace = function (float $distM, int $durationMs): string {
 if (!empty($trackers)) {
   $lines[] = '';
   $lines[] = $div;
-  $lines[] = 'DISTANCE TRACKERS';
+  $lines[] = 'DISTANCE / TIME TRACKERS';
   $totalTrackerM  = 0.0;
   $totalTrackerMs = 0;
   foreach ($trackers as $tr) {
