@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Tooltip, Popup, useMap } from 'react-l
 import { Icon, latLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { Trail } from '../../types/trails'
+import { isValidLatLng } from '../../lib/geo'
 
 // ── Marker icons ─────────────────────────────────────────────────────────────
 
@@ -26,30 +27,55 @@ const ICONS = {
 
 // ── Map controllers ───────────────────────────────────────────────────────────
 
-function FlyToTrail({ trail }: { trail: Trail | null }) {
+function FlyToTrail({ trail, active }: { trail: Trail | null; active: boolean }) {
   const map = useMap()
   useEffect(() => {
-    if (trail?.latitude && trail?.longitude) {
-      map.flyTo([trail.latitude, trail.longitude], 14, { duration: 1.2, easeLinearity: 0.3 })
+    if (!active || !trail || !isValidLatLng(trail.latitude, trail.longitude)) return
+
+    const fly = () => {
+      const { x, y } = map.getSize()
+      if (x === 0 || y === 0) return
+      map.flyTo([trail.latitude!, trail.longitude!], 14, { duration: 1.2, easeLinearity: 0.3 })
     }
-  }, [trail, map])
+
+    map.on('resize', fly)
+    map.invalidateSize()
+    requestAnimationFrame(fly)
+
+    return () => {
+      map.off('resize', fly)
+    }
+  }, [trail, map, active])
   return null
 }
 
-function FitBounds({ trails, skip }: { trails: Trail[]; skip?: boolean }) {
+function FitBounds({ trails, skip, active }: { trails: Trail[]; skip?: boolean; active: boolean }) {
   const map = useMap()
   const fitted = useRef(false)
 
   useEffect(() => {
     // Skip initial fit when a trail is already selected — FlyToTrail handles zoom instead.
     // Without this, FitBounds (which runs after FlyToTrail on mount) overrides the flyTo.
-    if (skip || fitted.current || trails.length === 0) return
-    const withGeo = trails.filter(t => t.latitude && t.longitude)
-    if (withGeo.length === 0) return
-    const bounds = latLngBounds(withGeo.map(t => [t.latitude!, t.longitude!]))
-    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13, duration: 0.5 })
-    fitted.current = true
-  }, [trails, map, skip])
+    if (!active || skip || fitted.current || trails.length === 0) return
+
+    const fit = () => {
+      const { x, y } = map.getSize()
+      if (x === 0 || y === 0) return
+      const withGeo = trails.filter(t => isValidLatLng(t.latitude, t.longitude))
+      if (withGeo.length === 0) return
+      const bounds = latLngBounds(withGeo.map(t => [t.latitude!, t.longitude!]))
+      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13, duration: 0.5 })
+      fitted.current = true
+    }
+
+    map.on('resize', fit)
+    map.invalidateSize()
+    requestAnimationFrame(fit)
+
+    return () => {
+      map.off('resize', fit)
+    }
+  }, [trails, map, skip, active])
 
   return null
 }
@@ -65,11 +91,19 @@ interface TrailMapProps {
   hoveredTrailId?: string | null
   /** Called when user clicks a map marker */
   onSelectTrail?: (trailId: string) => void
+  /** Map panel is visible (hidden mobile list view skips Leaflet animations) */
+  mapActive?: boolean
 }
 
-export function TrailMap({ trails, selectedTrailId, hoveredTrailId, onSelectTrail }: TrailMapProps) {
+export function TrailMap({
+  trails,
+  selectedTrailId,
+  hoveredTrailId,
+  onSelectTrail,
+  mapActive = true,
+}: TrailMapProps) {
   const mappable = useMemo(
-    () => trails.filter(t => t.latitude != null && t.longitude != null),
+    () => trails.filter(t => isValidLatLng(t.latitude, t.longitude)),
     [trails]
   )
 
@@ -134,8 +168,8 @@ export function TrailMap({ trails, selectedTrailId, hoveredTrailId, onSelectTrai
           </Marker>
         ))}
 
-        <FlyToTrail trail={selectedTrail} />
-        <FitBounds trails={mappable} skip={!!selectedTrail} />
+        <FlyToTrail trail={selectedTrail} active={mapActive} />
+        <FitBounds trails={mappable} skip={!!selectedTrail} active={mapActive} />
       </MapContainer>
     </div>
   )

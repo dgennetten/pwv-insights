@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { LogEntry, Tracker } from '../../types/dataLogger'
+import { isValidLatLng } from '../../lib/geo'
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -37,7 +38,20 @@ function MapBoundsController({ points }: { points: [number, number][] }) {
 function MapFocusController({ center }: { center: [number, number] | null }) {
   const map = useMap()
   useEffect(() => {
-    if (center) map.flyTo(center, 16, { animate: true, duration: 0.6 })
+    if (!center || !isValidLatLng(center[0], center[1])) return
+
+    const fly = () => {
+      const { x, y } = map.getSize()
+      if (x === 0 || y === 0) return
+      map.flyTo(center, 16, { animate: true, duration: 0.6 })
+    }
+
+    map.on('resize', fly)
+    requestAnimationFrame(fly)
+
+    return () => {
+      map.off('resize', fly)
+    }
   }, [map, center])
   return null
 }

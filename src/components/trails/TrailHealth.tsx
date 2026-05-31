@@ -46,6 +46,17 @@ export function TrailHealth({
   const [hoveredTrailId, setHoveredTrailId] = useState<string | null>(null)
   const [mapOpen,        setMapOpen]        = useState(getStoredTrailsMapOpen)
   const [mobileView,     setMobileView]     = useState<'list' | 'map'>('list')
+  const [isSmUp,         setIsSmUp]         = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)')
+    const onChange = () => setIsSmUp(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   useEffect(() => {
     setStoredTrailsMapOpen(mapOpen)
@@ -71,6 +82,7 @@ export function TrailHealth({
   // but the map shows all mappable trails regardless of list filters).
   // When in detail view, map highlights / zooms to the selected trail.
   const mapFocusId = selectedTrailId ?? hoveredTrailId
+  const mapActive = isSmUp || mobileView === 'map'
 
   // ── Split layout when map is open ────────────────────────────────────────
   if (mapOpen) {
@@ -121,6 +133,7 @@ export function TrailHealth({
               selectedTrailId={mapFocusId}
               hoveredTrailId={hoveredTrailId}
               onSelectTrail={handleSelect}
+              mapActive={mapActive}
             />
           </Suspense>
         </div>
