@@ -76,11 +76,11 @@ function MemberCard({ result }: { result: import('../services/authService').Memb
           <img
             src={result.photoUrl}
             alt=""
-            className="w-20 h-20 shrink-0 rounded-xl object-cover bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700"
+            className="w-40 h-40 shrink-0 rounded-xl object-cover bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700"
           />
         ) : (
           <div
-            className="w-20 h-20 shrink-0 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 text-xs text-center px-1"
+            className="w-40 h-40 shrink-0 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 text-xs text-center px-1"
             aria-hidden
           >
             No photo
