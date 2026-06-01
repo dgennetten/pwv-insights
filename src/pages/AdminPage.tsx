@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
@@ -37,6 +37,41 @@ function memberNameLastFirst(row: AdminLoginRow): string {
   const first = row.firstName?.trim() ?? ''
   if (last && first) return `${last}, ${first}`
   return last || first || '—'
+}
+
+function loginRowToMember(row: AdminLoginRow): MemberSearchResult | null {
+  if (!Number.isFinite(row.memberId) || row.memberId <= 0) return null
+  return {
+    memberId: Math.trunc(row.memberId),
+    firstName: row.firstName?.trim() ?? '',
+    lastName: row.lastName?.trim() ?? '',
+    dob: '',
+  }
+}
+
+function trailLogToMember(row: TrailLogRow): MemberSearchResult | null {
+  const id = Number(row.memberId)
+  if (!Number.isFinite(id) || id <= 0) return null
+  return { memberId: Math.trunc(id), firstName: '', lastName: '', dob: '' }
+}
+
+function MemberLookupNameButton({
+  name,
+  onClick,
+}: {
+  name: string
+  onClick: () => void
+}) {
+  if (name === '—') return <>{name}</>
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-left text-emerald-700 dark:text-emerald-400 hover:underline font-medium"
+    >
+      {name}
+    </button>
+  )
 }
 
 function filterLogins(rows: AdminLoginRow[]): AdminLoginRow[] {
@@ -155,6 +190,17 @@ export function AdminPage() {
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupError, setLookupError] = useState<string | null>(null)
 
+  const lookupSectionRef = useRef<HTMLDivElement>(null)
+
+  const prepopulateMemberLookup = useCallback((member: MemberSearchResult, displayName: string) => {
+    setSelectedMember(member)
+    setAuthQuery(displayName)
+    setAuthResults([])
+    setLookupResult(null)
+    setLookupError(null)
+    lookupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [])
+
   const allowed = canAccessAdminPage(user?.email)
 
   useEffect(() => {
@@ -231,7 +277,10 @@ export function AdminPage() {
 
         {allowed ? (
           <>
-          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
+          <div
+            ref={lookupSectionRef}
+            className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4"
+          >
             <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3">
               Member Lookup
             </h3>
@@ -374,7 +423,19 @@ export function AdminPage() {
                               <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">
                                 {Number.isFinite(row.memberId) ? String(Math.trunc(row.memberId)) : '—'}
                               </td>
-                              <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">{memberNameLastFirst(row)}</td>
+                              <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">
+                                {(() => {
+                                  const name = memberNameLastFirst(row)
+                                  const member = loginRowToMember(row)
+                                  if (!member) return name
+                                  return (
+                                    <MemberLookupNameButton
+                                      name={name}
+                                      onClick={() => prepopulateMemberLookup(member, name)}
+                                    />
+                                  )
+                                })()}
+                              </td>
                               <td className="px-3 py-2.5 whitespace-nowrap">
                                 {row.loginType === 'ACCESS' ? (
                                   <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Access</span>
@@ -436,7 +497,19 @@ export function AdminPage() {
                               <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{row.date}</td>
                               <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{row.time}</td>
                               <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">{row.memberId}</td>
-                              <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">{row.memberName || '—'}</td>
+                              <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">
+                                {(() => {
+                                  const name = row.memberName || '—'
+                                  const member = trailLogToMember(row)
+                                  if (!member) return name
+                                  return (
+                                    <MemberLookupNameButton
+                                      name={name}
+                                      onClick={() => prepopulateMemberLookup(member, name)}
+                                    />
+                                  )
+                                })()}
+                              </td>
                               <td className="px-3 py-2.5 whitespace-nowrap">
                                 <a
                                   href={`/trail-log/${row.logId}`}
