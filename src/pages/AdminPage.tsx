@@ -192,14 +192,28 @@ export function AdminPage() {
 
   const lookupSectionRef = useRef<HTMLDivElement>(null)
 
-  const prepopulateMemberLookup = useCallback((member: MemberSearchResult, displayName: string) => {
+  const runMemberLookup = useCallback((memberId: number) => {
+    const token = getStoredAuthToken()
+    if (!token) {
+      setLookupError('No session token found. Sign in again.')
+      return
+    }
+    setLookupLoading(true)
+    setLookupError(null)
+    setLookupResult(null)
+    void fetchAdminMemberLookup(token, memberId)
+      .then(r => { setLookupResult(r) })
+      .catch(e => { setLookupError(e instanceof Error ? e.message : 'Lookup failed') })
+      .finally(() => { setLookupLoading(false) })
+  }, [])
+
+  const selectAndLookupMember = useCallback((member: MemberSearchResult, displayName: string) => {
     setSelectedMember(member)
     setAuthQuery(displayName)
     setAuthResults([])
-    setLookupResult(null)
-    setLookupError(null)
     lookupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [])
+    runMemberLookup(member.memberId)
+  }, [runMemberLookup])
 
   const allowed = canAccessAdminPage(user?.email)
 
@@ -325,15 +339,7 @@ export function AdminPage() {
                 disabled={selectedMember === null || lookupLoading}
                 onClick={() => {
                   if (!selectedMember) return
-                  const token = getStoredAuthToken()
-                  if (!token) return
-                  setLookupLoading(true)
-                  setLookupError(null)
-                  setLookupResult(null)
-                  void fetchAdminMemberLookup(token, selectedMember.memberId)
-                    .then(r => { setLookupResult(r) })
-                    .catch(e => { setLookupError(e instanceof Error ? e.message : 'Lookup failed') })
-                    .finally(() => { setLookupLoading(false) })
+                  runMemberLookup(selectedMember.memberId)
                 }}
                 className="text-sm font-medium px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
@@ -431,7 +437,7 @@ export function AdminPage() {
                                   return (
                                     <MemberLookupNameButton
                                       name={name}
-                                      onClick={() => prepopulateMemberLookup(member, name)}
+                                      onClick={() => selectAndLookupMember(member, name)}
                                     />
                                   )
                                 })()}
@@ -505,7 +511,7 @@ export function AdminPage() {
                                   return (
                                     <MemberLookupNameButton
                                       name={name}
-                                      onClick={() => prepopulateMemberLookup(member, name)}
+                                      onClick={() => selectAndLookupMember(member, name)}
                                     />
                                   )
                                 })()}
