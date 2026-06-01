@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/trail-log-utils.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -308,6 +309,7 @@ $spaUrl     = "{$protocol}://{$host}/trail-log/{$logId}";
 
 $logPayload = [
   'logId'      => $logId,
+  'personId'   => $personId,
   'member'     => $memberName,
   'email'      => $memberEmail,
   'reportDate' => $reportDate,

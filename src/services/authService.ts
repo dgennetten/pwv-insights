@@ -90,7 +90,7 @@ export async function fetchAdminMemberLookup(
 
 export interface TrailLogRow {
   logId: string
-  memberId: string
+  memberId: number
   memberName: string
   date: string
   time: string

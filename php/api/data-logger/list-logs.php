@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/trail-log-utils.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -45,9 +46,9 @@ foreach (glob($dataLoggerDir . '/trailLog.*.json') as $filePath) {
   if (!preg_match('/^trailLog\.(\d+)$/', $filename, $m)) continue;
   $inner = $m[1]; // e.g. 4811202605271251
 
-  if (strlen($inner) < 13) continue; // need at least 1 memberId digit + 12 date/time digits
+  if (strlen($inner) < 13) continue; // need at least 1 personId digit + 12 date/time digits
+
   $dateTime = substr($inner, -12); // YmdHi = 202605271251
-  $memberId = substr($inner, 0, -12); // 4811
 
   $dateStr = substr($dateTime, 0, 8); // 20260527
   $timeStr = substr($dateTime, 8, 4); // 1251
@@ -55,15 +56,24 @@ foreach (glob($dataLoggerDir . '/trailLog.*.json') as $filePath) {
   $dt = DateTime::createFromFormat('Ymd', $dateStr);
   $tm = DateTime::createFromFormat('Hi',  $timeStr);
 
+  $json = null;
   $memberName = '';
   $raw = @file_get_contents($filePath);
   if ($raw !== false) {
-    $json = json_decode($raw, true);
-    $memberName = is_array($json) ? (string)($json['member'] ?? '') : '';
+    $decoded = json_decode($raw, true);
+    if (is_array($decoded)) {
+      $json = $decoded;
+      $memberName = (string) ($json['member'] ?? '');
+    }
   }
 
+  $logId = is_array($json) && !empty($json['logId'])
+    ? (string) $json['logId']
+    : $filename;
+  $memberId = trailLogResolvePersonId($db, is_array($json) ? $json : [], $logId);
+
   $logs[] = [
-    'logId'      => $filename,
+    'logId'      => $logId,
     'memberId'   => $memberId,
     'memberName' => $memberName,
     'date'       => $dt ? $dt->format('M j, Y') : $dateStr,

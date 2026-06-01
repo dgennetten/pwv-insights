@@ -14,6 +14,7 @@ import {
   type MemberSearchResult,
   type TrailLogRow,
 } from '../services/authService'
+import { trailLogPersonId } from '../lib/trailLogId'
 
 function formatLoginDate(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return '—'
@@ -50,9 +51,9 @@ function loginRowToMember(row: AdminLoginRow): MemberSearchResult | null {
 }
 
 function trailLogToMember(row: TrailLogRow): MemberSearchResult | null {
-  const id = Number(row.memberId)
-  if (!Number.isFinite(id) || id <= 0) return null
-  return { memberId: Math.trunc(id), firstName: '', lastName: '', dob: '' }
+  const id = trailLogPersonId(row)
+  if (id <= 0) return null
+  return { memberId: id, firstName: '', lastName: '', dob: '' }
 }
 
 function MemberLookupNameButton({
@@ -498,23 +499,25 @@ export function AdminPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-                          {trailLogs.map(row => (
+                          {trailLogs.map(row => {
+                            const personId = trailLogPersonId(row)
+                            const member = trailLogToMember(row)
+                            const displayName = row.memberName?.trim()
+                              || (personId > 0 ? `Member ${personId}` : '—')
+                            return (
                             <tr key={row.logId} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
                               <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{row.date}</td>
                               <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{row.time}</td>
-                              <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">{row.memberId}</td>
+                              <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">
+                                {personId > 0 ? personId : '—'}
+                              </td>
                               <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">
-                                {(() => {
-                                  const name = row.memberName || '—'
-                                  const member = trailLogToMember(row)
-                                  if (!member) return name
-                                  return (
-                                    <MemberLookupNameButton
-                                      name={name}
-                                      onClick={() => selectAndLookupMember(member, name)}
-                                    />
-                                  )
-                                })()}
+                                {member ? (
+                                  <MemberLookupNameButton
+                                    name={displayName}
+                                    onClick={() => selectAndLookupMember(member, displayName)}
+                                  />
+                                ) : displayName}
                               </td>
                               <td className="px-3 py-2.5 whitespace-nowrap">
                                 <a
@@ -530,7 +533,8 @@ export function AdminPage() {
                                 </a>
                               </td>
                             </tr>
-                          ))}
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>
