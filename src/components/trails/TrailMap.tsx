@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Tooltip, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, Tooltip, Popup, useMap } from 'react-leaflet'
 import { Icon, latLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { Trail } from '../../types/trails'
 import { isValidLatLng } from '../../lib/geo'
+import { trailMetadata } from '../../data/trailMetadata'
+import { trailPaths } from '../../data/trailPaths'
 
 // ── Marker icons ─────────────────────────────────────────────────────────────
 
@@ -131,7 +133,28 @@ export function TrailMap({
           url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
         />
 
-        {mappable.map(trail => (
+        {/* Trail path polylines (keyed by WksiteID) */}
+        {mappable.map(trail => {
+          const paths = trail.wksiteId != null ? (trailPaths[trail.wksiteId] ?? []) : []
+          if (paths.length === 0) return null
+          const isSelected = trail.id === selectedTrailId
+          const isHovered  = trail.id === hoveredTrailId
+          return paths.map((coords, pi) => (
+            <Polyline
+              key={`path-${trail.id}-${pi}`}
+              positions={coords.map(([lng, lat]) => [lat, lng])}
+              pathOptions={{
+                color:   isSelected ? '#059669' : isHovered ? '#d97706' : '#6ee7b7',
+                weight:  isSelected ? 4 : 2.5,
+                opacity: isSelected ? 0.9 : 0.6,
+              }}
+            />
+          ))
+        })}
+
+        {mappable.map(trail => {
+          const meta = trail.wksiteId != null ? trailMetadata[trail.wksiteId] : undefined
+          return (
           <Marker
             key={trail.id}
             position={[trail.latitude!, trail.longitude!]}
@@ -144,10 +167,43 @@ export function TrailMap({
 
             {/* Tap/click popup — works on both desktop and mobile */}
             <Popup>
-              <div className="text-sm leading-snug min-w-[160px] space-y-1.5">
+              <div className="text-sm leading-snug min-w-[180px] space-y-1.5">
                 <div className="font-semibold text-stone-900">{trail.name}</div>
                 {trail.trailNumber > 0 && (
                   <div className="text-xs text-stone-500">Trail #{trail.trailNumber}</div>
+                )}
+                {meta && (
+                  <div className="space-y-1 pt-0.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                        meta.difficulty === 'easy'     ? 'bg-green-100 text-green-800' :
+                        meta.difficulty === 'difficult' ? 'bg-orange-100 text-orange-800' :
+                                                          'bg-blue-100 text-blue-800'
+                      }`}>
+                        {meta.difficulty.charAt(0).toUpperCase() + meta.difficulty.slice(1)}
+                      </span>
+                      <span className="text-xs text-stone-500">{meta.lengthMiles} mi one-way</span>
+                    </div>
+                    <div className="flex gap-2 text-xs text-stone-500">
+                      <span title="Dogs">
+                        🐕 {meta.dogs === 'leash' ? 'leash' : meta.dogs === 'allowed' ? 'ok' : '✗'}
+                      </span>
+                      <span title="Bikes">
+                        🚲 {meta.bikes ? 'ok' : '✗'}
+                      </span>
+                      <span title="Stock">
+                        🐴 {meta.stock === 'allowed' ? 'ok' : '✗'}
+                      </span>
+                    </div>
+                    <a
+                      href={meta.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-emerald-600 hover:underline block"
+                    >
+                      Trail description PDF →
+                    </a>
+                  </div>
                 )}
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${trail.latitude},${trail.longitude}`}
@@ -166,7 +222,8 @@ export function TrailMap({
               </div>
             </Popup>
           </Marker>
-        ))}
+          )
+        })}
 
         <FlyToTrail trail={selectedTrail} active={mapActive} />
         <FitBounds trails={mappable} skip={!!selectedTrail} active={mapActive} />

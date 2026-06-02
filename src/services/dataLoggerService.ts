@@ -146,6 +146,26 @@ export async function clearSessionTrackers(sessionId: string): Promise<void> {
   })
 }
 
+export async function updateSessionWksite(sessionId: string, wksiteId: number | null): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction('sessions', 'readwrite')
+    const store = tx.objectStore('sessions')
+    const get   = store.get(sessionId)
+    get.onsuccess = () => {
+      const session = get.result as LogSession | undefined
+      if (!session) { resolve(); return }
+      const updated: LogSession = { ...session }
+      if (wksiteId === null) delete updated.wksiteId
+      else updated.wksiteId = wksiteId
+      const put = store.put(updated)
+      put.onsuccess = () => resolve()
+      put.onerror   = () => reject(put.error)
+    }
+    get.onerror = () => reject(get.error)
+  })
+}
+
 export async function markSessionEmailed(sessionId: string): Promise<void> {
   const db = await openDB()
   return new Promise((resolve, reject) => {

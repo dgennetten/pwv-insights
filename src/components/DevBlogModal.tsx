@@ -58,14 +58,14 @@ export function DevBlogModal({ onClose }: DevBlogModalProps) {
               <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Latest</span>
               <span className="text-[10px] text-stone-400 dark:text-stone-500">{formatDate(latest.date)}</span>
             </div>
-            <p className="text-sm text-stone-800 dark:text-stone-200 leading-relaxed">{latest.content}</p>
+            <p className="text-sm text-stone-800 dark:text-stone-200 leading-relaxed whitespace-pre-line">{latest.content}</p>
           </div>
 
           {/* Older entries */}
           {older.map(entry => (
             <div key={entry.id} className="space-y-1.5 pt-3 border-t border-stone-100 dark:border-stone-800">
               <span className="text-[10px] text-stone-400 dark:text-stone-500">{formatDate(entry.date)}</span>
-              <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">{entry.content}</p>
+              <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed whitespace-pre-line">{entry.content}</p>
             </div>
           ))}
         </div>

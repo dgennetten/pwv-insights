@@ -1,8 +1,27 @@
-import { useMemo, useState, useEffect } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, useMap } from 'react-leaflet'
+import { DivIcon } from 'leaflet'
+import { trailPaths } from '../../data/trailPaths'
 import 'leaflet/dist/leaflet.css'
 import type { LogEntry, Tracker } from '../../types/dataLogger'
 import { isValidLatLng } from '../../lib/geo'
+
+// ── Haversine (local) ─────────────────────────────────────────────
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1); const dLng = toRad(lng2 - lng1)
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+}
+function fmtMiles(m: number): string { return (m / 1609.344).toFixed(2) + ' mi' }
+
+// ── Trailhead icon ─────────────────────────────────────────────────
+const TH_ICON = new DivIcon({
+  html: '<div style="background:#059669;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:2px 5px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.35)">TH</div>',
+  className: '',
+  iconAnchor: [18, 12],
+})
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -59,16 +78,37 @@ function MapFocusController({ center }: { center: [number, number] | null }) {
 // ── MapModal ──────────────────────────────────────────────────────
 
 interface MapModalProps {
-  entries:    LogEntry[]
-  trackers:   Tracker[]
-  memberName: string
-  reportDate: string
-  onClose:    () => void
+  entries:          LogEntry[]
+  trackers:         Tracker[]
+  memberName:       string
+  reportDate:       string
+  trailheadCoords?: { lat: number; lng: number }
+  wksiteId?:        number
+  onClose:          () => void
 }
 
-export function MapModal({ entries, trackers, memberName, reportDate, onClose }: MapModalProps) {
+export function MapModal({ entries, trackers, memberName, reportDate, trailheadCoords, wksiteId, onClose }: MapModalProps) {
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const [selectedTs,  setSelectedTs]  = useState<number | null>(null)
+  const [livePos, setLivePos] = useState<{ lat: number; lng: number } | null>(null)
+  const livePosWatchRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    livePosWatchRef.current = navigator.geolocation.watchPosition(
+      pos => setLivePos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => { /* silent */ },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+    )
+    return () => {
+      if (livePosWatchRef.current !== null)
+        navigator.geolocation.clearWatch(livePosWatchRef.current)
+    }
+  }, [])
+
+  const thDistLabel = trailheadCoords && livePos
+    ? fmtMiles(haversineMeters(trailheadCoords.lat, trailheadCoords.lng, livePos.lat, livePos.lng))
+    : null
 
   // Merged timeline: entries (deduped) + named manual waypoints, sorted by ts
   const timelineItems = useMemo((): TimelineItem[] => {
@@ -148,6 +188,11 @@ export function MapModal({ entries, trackers, memberName, reportDate, onClose }:
 
         {/* Map — fixed 45vh on mobile, flex-1 on desktop */}
         <div className="relative shrink-0 h-[45vh] lg:h-auto lg:flex-1 lg:shrink">
+          {thDistLabel && (
+            <div className="absolute top-2 left-2 z-[500] bg-emerald-700/90 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow pointer-events-none">
+              {thDistLabel} from trailhead
+            </div>
+          )}
           <MapContainer
             center={[40.3772, -105.5217]}
             zoom={13}
@@ -160,6 +205,35 @@ export function MapModal({ entries, trackers, memberName, reportDate, onClose }:
             />
             {mapPoints.length > 0 && <MapBoundsController points={mapPoints} />}
             <MapFocusController center={focusCenter} />
+
+            {/* Trail path polyline */}
+            {wksiteId != null && (trailPaths[wksiteId] ?? []).map((coords, i) => (
+              <Polyline
+                key={`trail-path-${i}`}
+                positions={coords.map(([lng, lat]) => [lat, lng])}
+                pathOptions={{ color: '#059669', weight: 3, opacity: 0.6 }}
+              />
+            ))}
+
+            {/* Trailhead marker */}
+            {trailheadCoords && isValidLatLng(trailheadCoords.lat, trailheadCoords.lng) && (
+              <Marker position={[trailheadCoords.lat, trailheadCoords.lng]} icon={TH_ICON}>
+                <Popup>
+                  <div className="text-xs font-semibold">Trailhead</div>
+                </Popup>
+              </Marker>
+            )}
+
+            {/* Live user position */}
+            {livePos && isValidLatLng(livePos.lat, livePos.lng) && (
+              <CircleMarker
+                center={[livePos.lat, livePos.lng]}
+                radius={8}
+                pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2 }}
+              >
+                <Popup><div className="text-xs font-semibold">Your location</div></Popup>
+              </CircleMarker>
+            )}
 
             {/* All waypoints (auto + manual) as violet dots */}
             {trackers.flatMap((tracker, ti) =>

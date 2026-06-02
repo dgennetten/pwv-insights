@@ -15,6 +15,8 @@ import {
   resetSession,
 } from '../services/dataLoggerService'
 import { getStoredAuthToken } from '../services/authService'
+import { trailGeoData, trailNames } from '../data/trailGeoData'
+import { updateSessionWksite } from '../services/dataLoggerService'
 import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker } from '../types/dataLogger'
 
 // Matches lu_viol_type in the database, sorted alphabetically, "Other" last
@@ -111,6 +113,19 @@ export function DataLoggerPage() {
   const [loading,       setLoading]       = useState(true)
   const [confirmClear,  setConfirmClear]  = useState(false)
   const [trackerResetKey, setTrackerResetKey] = useState(0)
+
+  const trailheadCoords = session?.wksiteId != null
+    ? (trailGeoData[session.wksiteId] ?? null)
+    : null
+
+  const handleWksiteChange = useCallback(async (wksiteId: number | null) => {
+    if (!session) return
+    await updateSessionWksite(session.id, wksiteId)
+    setSession(prev => prev
+      ? { ...prev, wksiteId: wksiteId ?? undefined }
+      : prev
+    )
+  }, [session])
 
   // Online / offline tracking
   useEffect(() => {
@@ -429,6 +444,28 @@ export function DataLoggerPage() {
         </div>
       )}
 
+      {/* ── TRAIL SELECTOR ──────────────────────────────── */}
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 shrink-0">
+            Trail
+          </span>
+          <select
+            value={session?.wksiteId ?? ''}
+            onChange={e => void handleWksiteChange(e.target.value ? parseInt(e.target.value, 10) : null)}
+            className="flex-1 min-w-0 px-2.5 py-1.5 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
+          >
+            <option value="">— Select trail —</option>
+            {(Object.entries(trailNames) as [string, string][])
+              .sort((a, b) => a[1].localeCompare(b[1]))
+              .map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ))
+            }
+          </select>
+        </div>
+      </div>
+
       {/* ── HIKER COUNTER ───────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -531,6 +568,7 @@ export function DataLoggerPage() {
       <DistanceTracker
         key={trackerResetKey}
         sessionId={session?.id ?? null}
+        trailheadCoords={trailheadCoords ?? undefined}
         onTrackersChange={setTrackers}
       />
 
@@ -747,6 +785,8 @@ export function DataLoggerPage() {
         trackers={trackers}
         memberName={user?.name ?? ''}
         reportDate={session.id.slice(0, 10)}
+        trailheadCoords={trailheadCoords ?? undefined}
+        wksiteId={session.wksiteId}
         onClose={() => setShowMap(false)}
       />
     )}

@@ -16,6 +16,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-05-31',
     content: "NEW OFFLINE DATA LOGGER — Inspired by the PWV trail reporting task, the new Data Logger makes it easy to track most of the observations you make on your pocket notepad, with the immediate benefit that all entries are geo-located! At any time, you can pop up a map of your log so far. When you're finished, an email can be sent to you with all the info — summarized and detailed — including a link to a permanently available interactive map/list. Give it a try! Count the people & trees in your backyard or neighborhood! And Send Feedback. KDG",
   },
+  {
+    id: 3,
+    date: '2026-06-02',
+    content: `NEW TRAIL DATA AND FEATURES!! — Two big areas got an upgrade today:\n\n🗺️ TRAILS MAP — Head to the Trails page and open the map. Trail routes are now drawn as lines on the map (sourced from OpenStreetMap). Tap any trailhead marker and the popup now shows difficulty, one-way distance, and icons for dogs/bikes/stock, plus a direct link to the official PWV trail description PDF.\n\n📍 DATA LOGGER — Before you start logging, use the new Trail selector at the top to pick your worksite. Once selected:\n• The Distance Tracker shows your straight-line distance from the trailhead, updating live as you move.\n• The map (Show Map button) now marks the trailhead with a green TH badge, draws the trail route, shows a blue dot at your current GPS position, and displays a "X mi from trailhead" overlay.\n\nKDG`,
+  },
 ]
 
 export type BlogPref =

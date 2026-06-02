@@ -268,6 +268,30 @@ const routes = {
     })
   },
 
+  async 'POST /api/auth/dev-auto-login.php'(req, res) {
+    const normalised = ADMIN_EMAIL.trim().toLowerCase()
+    const [memberRows] = await pool.query(
+      'SELECT PersonID, FirstName, LastName FROM t_member WHERE LOWER(EmailAddress) = ? LIMIT 1',
+      [normalised]
+    )
+    if (!memberRows.length) return send(res, { success: false, error: 'Member not found' }, 404)
+    const member = memberRows[0]
+    const token  = crypto.randomBytes(32).toString('hex')
+    const expiresAtMs = Date.now() + 365 * 24 * 60 * 60 * 1000
+    const expiry = new Date(expiresAtMs).toISOString().slice(0, 19).replace('T', ' ')
+    await pool.query('INSERT INTO auth_sessions (person_id, token, expires_at) VALUES (?, ?, ?)',
+      [member.PersonID, token, expiry])
+    await authLoginLogInsert(member.PersonID)
+    send(res, {
+      success: true, token,
+      email: normalised,
+      name: `${member.FirstName} ${member.LastName}`.trim(),
+      role: 'admin',
+      personId: member.PersonID,
+      expiresAt: expiresAtMs,
+    })
+  },
+
   async 'POST /api/auth/session.php'(req, res) {
     const body = await readJson(req)
     const token = String(body.token ?? '').trim()

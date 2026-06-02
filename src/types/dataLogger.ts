@@ -22,6 +22,7 @@ export interface LogSession {
   id: string        // "YYYY-MM-DD" — one session per calendar day
   startedAt: number
   emailedAt?: number
+  wksiteId?: number // selected worksite/trail for this session
 }
 
 // ── Distance Tracker ───────────────────────────────────────────────

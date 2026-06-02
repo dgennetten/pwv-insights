@@ -54,12 +54,13 @@ function makePersistable(t: TrackerUi): Tracker {
 
 interface DistanceTrackerProps {
   sessionId: string | null
+  trailheadCoords?: { lat: number; lng: number }
   onTrackersChange?: (trackers: Tracker[]) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTrackerProps) {
+export function DistanceTracker({ sessionId, trailheadCoords, onTrackersChange }: DistanceTrackerProps) {
   const [trackers,         setTrackers]         = useState<TrackerUi[]>([])
   const [showAllTrackers,  setShowAllTrackers]  = useState(false)
   const [, setTick]                             = useState(0)
@@ -69,6 +70,7 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
   const lastPointsRef   = useRef<Map<string, GpsPoint>>(new Map())
   const trackersRef     = useRef<TrackerUi[]>([])
   const wakeLockRef     = useRef<WakeLockSentinel | null>(null)
+  const currentPosRef   = useRef<{ lat: number; lng: number } | null>(null)
 
   // Maps tracker ID → { segDistM, ts } at the last waypoint for that tracker
   const lastWaypointRef = useRef<Map<string, { segDistM: number; ts: number }>>(new Map())
@@ -120,6 +122,7 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
       ts:       pos.timestamp,
       accuracy: pos.coords.accuracy ?? undefined,
     }
+    currentPosRef.current = { lat: point.lat, lng: point.lng }
 
     const settings = getLoggerSettings()
 
@@ -421,6 +424,14 @@ export function DistanceTracker({ sessionId, onTrackersChange }: DistanceTracker
                     {stateLabel[t.state]}
                   </span>
                 </div>
+                {trailheadCoords && (t.state === 'tracking' || t.state === 'paused') && currentPosRef.current && (
+                  <div className="text-xs text-stone-500 dark:text-stone-400 tabular-nums">
+                    {fmtMiles(haversineMeters(
+                      trailheadCoords.lat, trailheadCoords.lng,
+                      currentPosRef.current.lat, currentPosRef.current.lng,
+                    ))} from trailhead
+                  </div>
+                )}
 
                 {/* Saved: show name */}
                 {t.state === 'saved' && (
