@@ -53,7 +53,7 @@ const METRICS_BY_CATEGORY: Record<
   hours: [
     { value: 'totalHours',    label: 'Total',      unit: 'hrs' },
     { value: 'patrolHours',   label: 'Patrol',     unit: 'hrs' },
-    { value: 'nonPatrolHours', label: 'Non-patrol', unit: 'hrs' },
+    { value: 'nonPatrolHours', label: 'Trail Work', unit: 'hrs' },
   ],
 }
 
