@@ -1,4 +1,6 @@
-import { ArrowLeft, Footprints, Leaf, TreePine } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, Footprints, Leaf, Map, TreePine } from 'lucide-react'
+import { TrailMapModal } from './TrailMapModal'
 import type { TrailCoveragePatrolDetailProps } from '../../types/activity-dashboard'
 import { DEFAULT_PREFERENCES } from '../../types/settings'
 import { formatInteger } from '../../lib/formatNumber'
@@ -20,6 +22,7 @@ export function TrailCoveragePatrolDetail({
   onBack,
   trailDetailPrefs,
 }: TrailCoveragePatrolDetailProps) {
+  const [mapOpen, setMapOpen] = useState(false)
   const td = { ...DEFAULT_PREFERENCES.trailDetail, ...trailDetailPrefs }
   const sorted = [...patrols].sort((a, b) => b.date.localeCompare(a.date))
 
@@ -40,6 +43,15 @@ export function TrailCoveragePatrolDetail({
           <div>
             <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 flex flex-wrap items-center gap-2">
               <span>{trail.trailName}</span>
+              <button
+                type="button"
+                onClick={() => setMapOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                title="View on map"
+              >
+                <Map className="w-3 h-3" strokeWidth={2} />
+                Map
+              </button>
               {trail.inWilderness && (
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                   <Leaf className="w-3 h-3" strokeWidth={2} />
@@ -180,6 +192,13 @@ export function TrailCoveragePatrolDetail({
           </div>
         )}
       </div>
+      {mapOpen && (
+        <TrailMapModal
+          trailName={trail.trailName}
+          trailNumber={trail.trailNumber}
+          onClose={() => setMapOpen(false)}
+        />
+      )}
     </div>
   )
 }
