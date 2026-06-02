@@ -159,32 +159,33 @@ export function TrailMap({
             key={trail.id}
             position={[trail.latitude!, trail.longitude!]}
             icon={getIcon(trail)}
+            eventHandlers={{ popupopen: e => e.target.closeTooltip() }}
           >
-            {/* Hover tooltip — desktop only (invisible on touch devices) */}
+            {/* Hover tooltip — desktop only (closes when popup opens on mobile) */}
             <Tooltip direction="top" offset={[0, -30]} opacity={0.9}>
               {trail.name}
             </Tooltip>
 
             {/* Tap/click popup — works on both desktop and mobile */}
             <Popup>
-              <div className="text-sm leading-snug min-w-[180px] space-y-1.5">
-                <div className="font-semibold text-stone-900">{trail.name}</div>
+              <div className="text-base leading-snug min-w-[230px] space-y-1.5">
+                <div className="font-semibold text-lg text-stone-900">{trail.name}</div>
                 {trail.trailNumber > 0 && (
-                  <div className="text-xs text-stone-500">Trail #{trail.trailNumber}</div>
+                  <div className="text-sm text-stone-500">Trail #{trail.trailNumber}</div>
                 )}
                 {meta && (
                   <div className="space-y-1 pt-0.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                      <span className={`text-sm px-1.5 py-0.5 rounded font-medium ${
                         meta.difficulty === 'easy'     ? 'bg-green-100 text-green-800' :
                         meta.difficulty === 'difficult' ? 'bg-orange-100 text-orange-800' :
                                                           'bg-blue-100 text-blue-800'
                       }`}>
                         {meta.difficulty.charAt(0).toUpperCase() + meta.difficulty.slice(1)}
                       </span>
-                      <span className="text-xs text-stone-500">{meta.lengthMiles} mi one-way</span>
+                      <span className="text-sm text-stone-500">{meta.lengthMiles} mi one-way</span>
                     </div>
-                    <div className="flex gap-2 text-xs text-stone-500">
+                    <div className="flex gap-2 text-sm text-stone-500">
                       <span title="Dogs">
                         🐕 {meta.dogs === 'leash' ? 'leash' : meta.dogs === 'allowed' ? 'ok' : '✗'}
                       </span>
@@ -199,7 +200,7 @@ export function TrailMap({
                       href={meta.pdfUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-emerald-600 hover:underline block"
+                      className="text-sm text-emerald-600 hover:underline block"
                     >
                       Trail description PDF →
                     </a>
@@ -209,13 +210,13 @@ export function TrailMap({
                   href={`https://www.google.com/maps/dir/?api=1&destination=${trail.latitude},${trail.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-emerald-600 hover:underline block"
+                  className="text-sm text-emerald-600 hover:underline block"
                 >
                   Driving directions →
                 </a>
                 <button
                   onClick={() => onSelectTrail?.(trail.id)}
-                  className="text-xs font-semibold text-stone-600 hover:text-emerald-700 block pt-0.5"
+                  className="text-sm font-semibold text-stone-600 hover:text-emerald-700 block pt-0.5"
                 >
                   View trail details →
                 </button>
