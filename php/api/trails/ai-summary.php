@@ -87,7 +87,7 @@ function buildPrompt(array $reports, string $trailName): string {
 function callClaude(string $apiKey, string $prompt): ?string {
     $payload = json_encode([
         'model'      => 'claude-haiku-4-5-20251001',
-        'max_tokens' => 250,
+        'max_tokens' => 400,
         'messages'   => [['role' => 'user', 'content' => $prompt]],
     ]);
 
