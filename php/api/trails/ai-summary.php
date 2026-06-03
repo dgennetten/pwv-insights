@@ -26,6 +26,7 @@ function ensureAiSummaryTable(PDO $db): void {
 }
 
 function fetchRecentReports(PDO $db, int $wksiteId, int $limit): array {
+    $limit = max(1, min(10, $limit));
     $stmt = $db->prepare("
         SELECT
             r.ReportID,
@@ -47,9 +48,9 @@ function fetchRecentReports(PDO $db, int $wksiteId, int $limit): array {
           AND (r.IsUnofficial IS NULL OR r.IsUnofficial = 0)
         GROUP BY r.ReportID, r.ActivityDate, r.PatrolExtent, r.TrailConditions, r.Comment
         ORDER BY r.ActivityDate DESC
-        LIMIT ?
+        LIMIT {$limit}
     ");
-    $stmt->execute([$wksiteId, AI_SUMMARY_PWV_GROUP, $limit]);
+    $stmt->execute([$wksiteId, AI_SUMMARY_PWV_GROUP]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
