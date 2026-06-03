@@ -569,6 +569,7 @@ export function DataLoggerPage() {
         key={trackerResetKey}
         sessionId={session?.id ?? null}
         trailheadCoords={trailheadCoords ?? undefined}
+        wksiteId={session?.wksiteId}
         onTrackersChange={setTrackers}
       />
 

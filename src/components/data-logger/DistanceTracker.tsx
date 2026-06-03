@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { saveTracker, getSessionTrackers } from '../../services/dataLoggerService'
 import { getLoggerSettings } from '../../lib/loggerSettings'
+import { trailPaths } from '../../data/trailPaths'
 import type { Tracker, TrackerSegment, TrackerState, GpsPoint, Waypoint } from '../../types/dataLogger'
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -18,6 +19,46 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
 
 function fmtMiles(meters: number): string {
   return (meters / 1609.344).toFixed(2) + ' mi'
+}
+
+// Along-path distance from trailhead to user's closest point on the trail.
+// pathSegs is [lng, lat][][] (Overpass convention); TH/user coords are {lat, lng}.
+function distAlongPath(
+  pathSegs: [number, number][][],
+  thLat: number, thLng: number,
+  userLat: number, userLng: number,
+): number {
+  let bestPerpM = Infinity
+  let bestAlongM = 0
+
+  for (const seg of pathSegs) {
+    if (seg.length < 2) continue
+    const pts = seg.map(([lng, lat]): [number, number] => [lat, lng])
+    // Orient so the end nearest to the trailhead comes first
+    const d0 = haversineMeters(thLat, thLng, pts[0][0], pts[0][1])
+    const dN = haversineMeters(thLat, thLng, pts[pts.length - 1][0], pts[pts.length - 1][1])
+    if (dN < d0) pts.reverse()
+
+    let cum = 0
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [aLat, aLng] = pts[i]
+      const [bLat, bLng] = pts[i + 1]
+      const segM = haversineMeters(aLat, aLng, bLat, bLng)
+      // Flat-space projection onto segment (accurate enough for trail-length segments)
+      const dx = bLat - aLat, dy = bLng - aLng
+      const lenSq = dx * dx + dy * dy
+      const t = lenSq > 0
+        ? Math.max(0, Math.min(1, ((userLat - aLat) * dx + (userLng - aLng) * dy) / lenSq))
+        : 0
+      const perpM = haversineMeters(userLat, userLng, aLat + t * dx, aLng + t * dy)
+      if (perpM < bestPerpM) {
+        bestPerpM = perpM
+        bestAlongM = cum + t * segM
+      }
+      cum += segM
+    }
+  }
+  return bestAlongM
 }
 
 function fmtDuration(ms: number): string {
@@ -55,12 +96,13 @@ function makePersistable(t: TrackerUi): Tracker {
 interface DistanceTrackerProps {
   sessionId: string | null
   trailheadCoords?: { lat: number; lng: number }
+  wksiteId?: number
   onTrackersChange?: (trackers: Tracker[]) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DistanceTracker({ sessionId, trailheadCoords, onTrackersChange }: DistanceTrackerProps) {
+export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTrackersChange }: DistanceTrackerProps) {
   const [trackers,         setTrackers]         = useState<TrackerUi[]>([])
   const [showAllTrackers,  setShowAllTrackers]  = useState(false)
   const [, setTick]                             = useState(0)
@@ -426,10 +468,14 @@ export function DistanceTracker({ sessionId, trailheadCoords, onTrackersChange }
                 </div>
                 {trailheadCoords && (t.state === 'tracking' || t.state === 'paused') && currentPosRef.current && (
                   <div className="text-xs text-stone-500 dark:text-stone-400 tabular-nums">
-                    {fmtMiles(haversineMeters(
-                      trailheadCoords.lat, trailheadCoords.lng,
-                      currentPosRef.current.lat, currentPosRef.current.lng,
-                    ))} from trailhead
+                    {(() => {
+                      const pos = currentPosRef.current!
+                      const segs = wksiteId != null ? (trailPaths[wksiteId] ?? []) : []
+                      const distM = segs.length > 0
+                        ? distAlongPath(segs, trailheadCoords.lat, trailheadCoords.lng, pos.lat, pos.lng)
+                        : haversineMeters(trailheadCoords.lat, trailheadCoords.lng, pos.lat, pos.lng)
+                      return fmtMiles(distM)
+                    })()} from trailhead
                   </div>
                 )}
 
