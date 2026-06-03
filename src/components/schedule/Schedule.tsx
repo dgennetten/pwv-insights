@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowUp, CalendarDays, ChevronDown, Clock, Users } from 'lucide-react'
 import type { ScheduleEntry, ScheduleMemberOption } from '../../types/schedule'
 import type { ScheduleColumnsPrefs } from '../../types/settings'
@@ -326,7 +327,11 @@ export function Schedule({
                     )}
                     {cols.trail && (
                       <td className="px-4 py-3 text-stone-800 dark:text-stone-200">
-                        {s.wksiteName ?? <span className="text-stone-400 dark:text-stone-600 italic">Unknown</span>}
+                        {s.wksiteName
+                          ? s.wksiteId
+                            ? <Link to={`/trails?trail=w${s.wksiteId}`} className="text-emerald-600 dark:text-emerald-400 hover:underline">{s.wksiteName}</Link>
+                            : s.wksiteName
+                          : <span className="text-stone-400 dark:text-stone-600 italic">Unknown</span>}
                       </td>
                     )}
                     {cols.activityType && (

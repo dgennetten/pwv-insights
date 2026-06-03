@@ -32,6 +32,7 @@ try {
         SELECT
             s.ScheduleID,
             s.ActivityDate,
+            s.WksiteID,
             w.WksiteName,
             atype.ActTypeName,
             am.ActMethodName,
@@ -58,7 +59,7 @@ try {
                   WHERE smf.ScheduleID = s.ScheduleID AND smf.PersonID = ?
               )
           )
-        GROUP BY s.ScheduleID, s.ActivityDate, w.WksiteName, atype.ActTypeName, am.ActMethodName,
+        GROUP BY s.ScheduleID, s.ActivityDate, s.WksiteID, w.WksiteName, atype.ActTypeName, am.ActMethodName,
                  sched.FirstName, sched.LastName, s.ReportID
         ORDER BY s.ActivityDate $dateOrder, s.ScheduleID $dateOrder
     ");
@@ -73,6 +74,7 @@ try {
         return [
             'scheduleId'    => (int) $row['ScheduleID'],
             'activityDate'  => $row['ActivityDate'],
+            'wksiteId'      => $row['WksiteID'] !== null ? (int)$row['WksiteID'] : null,
             'wksiteName'    => $row['WksiteName']    ?? null,
             'activityType'  => $row['ActTypeName']   ?? null,
             'activityMethod'=> $row['ActMethodName'] ?? null,

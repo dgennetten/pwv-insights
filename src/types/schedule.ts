@@ -1,6 +1,7 @@
 export interface ScheduleEntry {
   scheduleId: number
   activityDate: string
+  wksiteId: number | null
   wksiteName: string | null
   activityType: string | null
   activityMethod: string | null
