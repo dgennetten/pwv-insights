@@ -128,7 +128,7 @@ try {
     ensureAiSummaryTable($db);
 
     // Trail name for the prompt
-    $nameStmt = $db->prepare('SELECT WksiteName FROM lu_wksite WHERE WksiteID = ? LIMIT 1');
+    $nameStmt = $db->prepare('SELECT WksiteName FROM lu_worksite WHERE WksiteID = ? LIMIT 1');
     $nameStmt->execute([$wksiteId]);
     $trailName = (string)($nameStmt->fetchColumn() ?: 'this trail');
 
@@ -136,7 +136,7 @@ try {
     $reports = fetchRecentReports($db, $wksiteId, AI_SUMMARY_MAX_REPORTS);
     if (empty($reports)) jsonOut(['summary' => null, 'reason' => 'no_reports']);
 
-    $reportIds = array_map(fn($r) => (int)$r['ReportID'], $reports);
+    $reportIds = array_map(function($r) { return (int)$r['ReportID']; }, $reports);
     sort($reportIds);
     $cacheKey = implode(',', $reportIds);
 
