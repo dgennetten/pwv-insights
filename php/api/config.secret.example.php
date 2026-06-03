@@ -6,6 +6,15 @@ return [
   'db_pass' => 'YOUR_DB_PASS',
 
   /**
+   * Anthropic API key for AI trail report summaries (php/api/trails/ai-summary.php).
+   * Get a key at https://console.anthropic.com — uses claude-haiku, costs ~$0.001 per summary.
+   * Summaries are cached in trail_ai_summary (sql/08-trail-ai-summary-cache.sql) and only
+   * regenerated when new reports arrive, so costs are minimal.
+   * Omit or leave empty to disable the AI summary card on trail detail pages.
+   */
+  // 'claude_api_key' => 'sk-ant-...',
+
+  /**
    * Optional: single column on t_report for filing PersonID when not in t_report_member.
    * If unset, every known column that exists on t_report is OR’d (ReporterID, ReportWriterID, SubmittedByPersonID, …).
    * Set to false for roster-only. PWV tree rows usually have no person column — attribution is the report.

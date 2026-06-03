@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ArrowLeft, Leaf, AlertTriangle, Footprints, PersonStanding, Lock, Map, Loader2 } from 'lucide-react'
 import type { Trail, Difficulty, TreeSizeBreakdown } from '../../types/trails'
+import { TrailAISummary } from './TrailAISummary'
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
@@ -397,6 +398,9 @@ export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPr
           </div>
         )}
       </div>
+
+      {/* AI conditions summary — authenticated users only */}
+      {isAuthenticated && <TrailAISummary wksiteId={trail.wksiteId} />}
 
       {/* KPI cards */}
       <div className="grid grid-cols-3 gap-3 mb-4">

@@ -522,6 +522,17 @@ const routes = {
       }, 500)
     }
   },
+
+  async 'GET /api/trails/ai-summary.php'(req, res) {
+    // Dev mock — returns a placeholder so the card renders locally.
+    // In production the PHP endpoint calls Claude and caches the result.
+    send(res, {
+      summary: '[Dev] Trail conditions are generally good based on recent patrols. Moderate visitor traffic observed on weekends, with most hikers complying with Leave No Trace guidelines. No significant hazards reported; one downed tree near mile 2 was cleared on the most recent patrol.',
+      generatedAt: new Date().toISOString(),
+      reportIds: [1001, 1002, 1003],
+      cached: false,
+    })
+  },
 }
 
 const server = http.createServer(async (req, res) => {
