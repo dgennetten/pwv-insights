@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { ActivityDashboard } from '../components/activity-dashboard/ActivityDashboard'
 import { roundTreesClearedForScope } from '../components/activity-dashboard/formatTreesCleared'
@@ -152,6 +152,7 @@ export function ActivityDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
   const [userPrefs, setUserPrefs] = useState<UserPreferences>(getLocalPreferences)
+  const autoSwitchedRef = useRef(false)
 
   const fetchData = useCallback(async (s: DashboardScope) => {
     setLoading(true)
@@ -174,7 +175,13 @@ export function ActivityDashboardPage() {
             : ' For local dev, set PHP_API_UPSTREAM in .env.local (see server/dev-api.mjs) and restart npm run dev:api.'
         throw new Error(`Dashboard API returned no summary (check network tab and PHP).${hint}`)
       }
-      setData(normalizeDashData(json, s.memberContext))
+      const normalized = normalizeDashData(json, s.memberContext)
+      setData(normalized)
+      // On first load, if viewing "me" with no activity this season, switch to all members.
+      if (!autoSwitchedRef.current && s.memberContext !== 'all' && normalized.summary.patrols === 0) {
+        autoSwitchedRef.current = true
+        setScope(prev => ({ ...prev, memberContext: 'all' }))
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load dashboard data')
     } finally {
@@ -198,6 +205,7 @@ export function ActivityDashboardPage() {
   // When signed in, repair invalid memberContext (e.g. bad number → default to self).
   useEffect(() => {
     const pid = user?.personId
+    autoSwitchedRef.current = false
     if (pid == null) {
       setScope(prev => (prev.memberContext === 'all' ? prev : { ...prev, memberContext: 'all' }))
       return
