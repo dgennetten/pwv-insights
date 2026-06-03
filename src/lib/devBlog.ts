@@ -21,6 +21,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-06-02',
     content: `NEW TRAIL DATA AND FEATURES!! — Two big areas got an upgrade today:\n\n🗺️ TRAILS MAP — Head to the Trails page and open the map. Trail routes are now drawn as lines on the map (sourced from OpenStreetMap). Tap any trailhead marker and the popup now shows difficulty, one-way distance, and icons for dogs/bikes/stock, plus a direct link to the official PWV trail description PDF.\n\n📍 DATA LOGGER — Before you start logging, use the new Trail selector at the top to pick your worksite. Once selected:\n• The Distance Tracker shows your along-the-path distance from the trailhead, updating live as you move.\n• The map (Show Map button) now marks the trailhead with a green TH badge, draws the trail route, shows a blue dot at your current GPS position, and displays a "X mi from trailhead" overlay.\n\nKDG`,
   },
+  {
+    id: 4,
+    date: '2026-06-03',
+    content: `AI TRAIL CONDITIONS SUMMARY — On the Trails page, each trail detail now shows an AI-generated summary of recent patrol conditions. It pulls the last three patrol reports and uses Claude (Anthropic's AI) to distill the key observations into a concise paragraph — trail conditions, hazards, wildlife, visitor behavior, maintenance needs. Summaries are cached and only regenerate when new reports arrive, so the cost is minimal. (Thank you Chris Brown for inspiring this feature!)\n\nAlso: trail names on the My Schedule page are now clickable links — tap any trail name to jump straight to its detail page. KDG`,
+  },
 ]
 
 export type BlogPref =
