@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, Leaf, AlertTriangle, Footprints, PersonStanding, Lock, Map, Loader2 } from 'lucide-react'
+import { ArrowLeft, Leaf, AlertTriangle, Footprints, PersonStanding, Lock, Map, Loader2, FileText } from 'lucide-react'
 import type { Trail, Difficulty, TreeSizeBreakdown } from '../../types/trails'
+import { trailMetadata } from '../../data/trailMetadata'
 import { TrailAISummary } from './TrailAISummary'
 
 function formatDate(iso: string) {
@@ -350,6 +351,18 @@ export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPr
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">{trail.name}</h2>
+              {trail.wksiteId != null && trailMetadata[trail.wksiteId] && (
+                <a
+                  href={trailMetadata[trail.wksiteId].pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors"
+                  title="Trail description PDF"
+                >
+                  <FileText className="w-3 h-3" strokeWidth={2} />
+                  PDF
+                </a>
+              )}
               {trail.wilderness && (
                 <span className="flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                   <Leaf className="w-3 h-3" /> Wilderness
