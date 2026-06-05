@@ -1,3 +1,4 @@
+import { Undo2 } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -403,9 +404,11 @@ export function DataLoggerPage() {
           </button>
           {lastAction && !sentOk && (
             <button
+              type="button"
               onClick={() => void handleUndo()}
-              className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 underline underline-offset-2 transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
             >
+              <Undo2 className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
               Undo Last Entry
             </button>
           )}
@@ -574,6 +577,53 @@ export function DataLoggerPage() {
         onTrackersChange={setTrackers}
       />
 
+      {/* ── NOTES ───────────────────────────────────────── */}
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+          Notes
+        </span>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={noteText}
+            onChange={e => setNoteText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') void logNote() }}
+            placeholder="Observation…"
+            className="flex-1 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
+          />
+          <button
+            onClick={() => void logNote()}
+            disabled={!noteText.trim()}
+            className="px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-200 transition-colors"
+          >
+            Add
+          </button>
+        </div>
+        {noteEntries.length > 0 && (
+          <div className="space-y-1.5">
+            {(showAllNotes ? noteEntries : noteEntries.slice(0, 1)).map(e => (
+              <div
+                key={e.id}
+                className="text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
+              >
+                <div>{e.noteText}</div>
+                <div className="text-stone-400 dark:text-stone-500 mt-0.5">
+                  {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
+                </div>
+              </div>
+            ))}
+            {noteEntries.length > 1 && (
+              <button
+                onClick={() => setShowAllNotes(p => !p)}
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
+              >
+                {showAllNotes ? 'Show less' : `Show all ${noteEntries.length} notes`}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── VIOLATIONS ──────────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -630,53 +680,6 @@ export function DataLoggerPage() {
                 className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
               >
                 {showAllViolations ? 'Show less' : `Show all ${violationEntries.length} violations`}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── NOTES ───────────────────────────────────────── */}
-      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-          Notes
-        </span>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={noteText}
-            onChange={e => setNoteText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') void logNote() }}
-            placeholder="Observation…"
-            className="flex-1 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
-          />
-          <button
-            onClick={() => void logNote()}
-            disabled={!noteText.trim()}
-            className="px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-200 transition-colors"
-          >
-            Add
-          </button>
-        </div>
-        {noteEntries.length > 0 && (
-          <div className="space-y-1.5">
-            {(showAllNotes ? noteEntries : noteEntries.slice(0, 1)).map(e => (
-              <div
-                key={e.id}
-                className="text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
-              >
-                <div>{e.noteText}</div>
-                <div className="text-stone-400 dark:text-stone-500 mt-0.5">
-                  {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
-                </div>
-              </div>
-            ))}
-            {noteEntries.length > 1 && (
-              <button
-                onClick={() => setShowAllNotes(p => !p)}
-                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
-              >
-                {showAllNotes ? 'Show less' : `Show all ${noteEntries.length} notes`}
               </button>
             )}
           </div>
