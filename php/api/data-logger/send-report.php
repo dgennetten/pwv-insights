@@ -18,6 +18,7 @@ $memberName       = trim($body['memberName'] ?? '');
 $reportDate       = trim($body['reportDate'] ?? date('Y-m-d'));
 $includeLocations = !empty($body['includeLocations']);
 $trackers         = is_array($body['trackers'] ?? null) ? $body['trackers'] : [];
+$trackers         = trailLogNormalizeTrackers($trackers);
 $emailFormat      = (string)($body['emailFormat'] ?? 'text');
 
 if ($token === '' || strlen($token) !== 64 || !ctype_xdigit($token)) {
@@ -220,15 +221,14 @@ if (!empty($trackers)) {
   $lines[] = '';
   $lines[] = $div;
   $lines[] = 'DISTANCE / TIME TRACKERS';
-  $totalTrackerM  = 0.0;
-  $totalTrackerMs = 0;
+  $surveyStats = trailLogSurveyTrackingStats($trackers);
+  $totalTrackerM  = $surveyStats['distanceM'];
+  $totalTrackerMs = $surveyStats['durationMs'];
   foreach ($trackers as $tr) {
     if (!is_array($tr)) continue;
     $tName = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
-    $tDist = (float)($tr['totalDistanceM']  ?? 0);
+    $tDist = trailLogTrackerDistanceM($tr);
     $tDur  = (int)  ($tr['activeDurationMs'] ?? 0);
-    $totalTrackerM  += $tDist;
-    $totalTrackerMs += $tDur;
     $lines[] = sprintf('  %-20s  %s, %s, %s', $tName . ':', $fmtMi($tDist), $fmtDur($tDur), $fmtPace($tDist, $tDur));
   }
   if (count($trackers) > 1) {
@@ -251,7 +251,7 @@ if ($includeLocations && !empty($trackers)) {
   foreach ($trackers as $idx => $tr) {
     if (!is_array($tr)) continue;
     $tName    = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
-    $tDist    = (float)($tr['totalDistanceM']  ?? 0);
+    $tDist    = trailLogTrackerDistanceM($tr);
     $tDur     = (int)  ($tr['activeDurationMs'] ?? 0);
     $tStart   = isset($tr['startedAt']) ? date('g:i A', intdiv((int)$tr['startedAt'], 1000)) : 'n/a';
     $segments = is_array($tr['segments'] ?? null) ? $tr['segments'] : [];

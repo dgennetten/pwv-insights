@@ -39,7 +39,7 @@ export function DevBlogModal({ onClose }: DevBlogModalProps) {
             <div className="w-6 h-6 rounded-md bg-emerald-600 flex items-center justify-center">
               <Rss className="w-3.5 h-3.5 text-white" strokeWidth={2} />
             </div>
-            <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">Developer's Blog</span>
+            <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">Developer's Log</span>
           </div>
           <button
             onClick={onClose}

@@ -337,10 +337,10 @@ export function SettingsPage() {
               </div>
             </div>
 
-            {/* ── Developer's Blog ──────────────────────────────────────── */}
+            {/* ── Developer's Log ──────────────────────────────────────── */}
             <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
               <div className="mb-1">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Developer's Blog</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Developer's Log</h3>
                 <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
                   Occasional notes on new features and changes.
                 </p>

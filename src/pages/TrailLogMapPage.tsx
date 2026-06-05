@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import { getSessionEntries, getSessionTrackers } from '../services/dataLoggerService'
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredTheme, applyTheme } from '../lib/theme'
+import { surveyTrackingStats, fmtPaceMinPerMi } from '../lib/gpsDistance'
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -95,11 +96,7 @@ function fmtDuration(ms: number): string {
 }
 
 function fmtPace(distM: number, durationMs: number): string {
-  if (distM <= 0) return '—'
-  const minPerMile = (durationMs / 1000 / 60) / (distM / 1609.344)
-  const m = Math.floor(minPerMile)
-  const s = Math.round((minPerMile - m) * 60)
-  return `${m}:${String(s === 60 ? 0 : s).padStart(2, '0')} min/mi`
+  return fmtPaceMinPerMi(distM, durationMs)
 }
 
 function buildSummaryFromEntries(entries: LogEntry[]) {
@@ -360,8 +357,7 @@ export function TrailLogMapPage() {
 
   const { summary, trackers } = log ?? { summary: null, trackers: [] }
 
-  const totalDistanceM = trackers.reduce((s, t) => s + t.totalDistanceM, 0)
-  const totalDurationMs = trackers.reduce((s, t) => s + t.activeDurationMs, 0)
+  const { distanceM: totalDistanceM, durationMs: totalDurationMs } = surveyTrackingStats(trackers)
 
   const treeTotal = summary
     ? Object.values(summary.trees.cleared).reduce((s, v) => s + v, 0) +

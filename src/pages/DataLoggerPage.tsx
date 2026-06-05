@@ -18,6 +18,7 @@ import { getStoredAuthToken } from '../services/authService'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
 import { updateSessionWksite } from '../services/dataLoggerService'
 import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker } from '../types/dataLogger'
+import { trackerDistanceM } from '../lib/gpsDistance'
 
 // Matches lu_viol_type in the database, sorted alphabetically, "Other" last
 const VIOLATION_TYPES: string[] = [
@@ -277,7 +278,7 @@ export function DataLoggerPage() {
           trackers:         trackers.map(t => ({
             name:            t.name || 'Unnamed',
             state:           t.state,
-            totalDistanceM:  t.totalDistanceM,
+            totalDistanceM:  trackerDistanceM(t),
             activeDurationMs: t.activeDurationMs,
             startedAt:       t.startedAt,
             segments:        t.segments.map(s => ({
@@ -455,7 +456,7 @@ export function DataLoggerPage() {
             onChange={e => void handleWksiteChange(e.target.value ? parseInt(e.target.value, 10) : null)}
             className="flex-1 min-w-0 px-2.5 py-1.5 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
           >
-            <option value="">— Select trail —</option>
+            <option value="">— Select trail IF on a PWV trail —</option>
             {(Object.entries(trailNames) as [string, string][])
               .sort((a, b) => a[1].localeCompare(b[1]))
               .map(([id, name]) => (

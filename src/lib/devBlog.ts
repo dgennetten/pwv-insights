@@ -24,7 +24,7 @@ export const BLOG_ENTRIES: BlogEntry[] = [
   {
     id: 4,
     date: '2026-06-03',
-    content: `AI TRAIL CONDITIONS SUMMARY — On the Trails page, each trail detail now shows an AI-generated summary of recent patrol conditions. It pulls the last three patrol reports and uses Claude (Anthropic's AI) to distill the key observations into a concise paragraph — trail conditions, hazards, wildlife, visitor behavior, maintenance needs. Summaries are cached and only regenerate when new reports arrive, so the cost is minimal. (Thank you Chris Brown for inspiring this feature!)\n\nAlso: trail names on the My Schedule page are now clickable links — tap any trail name to jump straight to its detail page. KDG`,
+    content: `TRAIL CONDITIONS SUMMARY — On the Trails page, each trail detail now shows a generated summary of recent patrol conditions. It pulls the last three patrol reports and uses Claude (Anthropic's AI) to distill the key observations into a concise paragraph — trail conditions, hazards, wildlife, visitor behavior, maintenance needs. Summaries are cached and only regenerate when new reports arrive, so the cost is minimal. (Thank you Chris Brown for inspiring this feature!)\n\nAlso: trail names on the My Schedule page are now clickable links — tap any trail name to jump straight to its detail page. KDG`,
   },
 ]
 

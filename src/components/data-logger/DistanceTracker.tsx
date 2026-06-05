@@ -1,21 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { saveTracker, getSessionTrackers } from '../../services/dataLoggerService'
 import { getLoggerSettings } from '../../lib/loggerSettings'
+import { haversineMeters } from '../../lib/gpsDistance'
 import { trailPaths } from '../../data/trailPaths'
 import type { Tracker, TrackerSegment, TrackerState, GpsPoint, Waypoint } from '../../types/dataLogger'
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
-
-function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R    = 6371000
-  const toRad = (d: number) => (d * Math.PI) / 180
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
-  const a    =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 function fmtMiles(meters: number): string {
   return (meters / 1609.344).toFixed(2) + ' mi'
@@ -110,6 +100,7 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
   const watchIdRef      = useRef<number | null>(null)
   const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastPointsRef   = useRef<Map<string, GpsPoint>>(new Map())
+  const pendingDistRef  = useRef<Map<string, number>>(new Map())
   const trackersRef     = useRef<TrackerUi[]>([])
   const wakeLockRef     = useRef<WakeLockSentinel | null>(null)
   const currentPosRef   = useRef<{ lat: number; lng: number } | null>(null)
@@ -175,7 +166,13 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
         let distAdd = 0
         if (last) {
           const d = haversineMeters(last.lat, last.lng, point.lat, point.lng)
-          if (d >= JITTER_M) distAdd = d
+          const pending = (pendingDistRef.current.get(tracker.id) ?? 0) + d
+          if (pending >= JITTER_M) {
+            distAdd = pending
+            pendingDistRef.current.set(tracker.id, 0)
+          } else {
+            pendingDistRef.current.set(tracker.id, pending)
+          }
         }
         lastPointsRef.current.set(tracker.id, point)
 
@@ -219,6 +216,7 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
         }
         return { ...tracker, totalDistanceM: tracker.totalDistanceM + distAdd, segments: segs }
       })
+      trackersRef.current = updated
       return updated
     })
   }, [])
@@ -256,6 +254,7 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
     stopWatch()
     if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
     lastPointsRef.current.clear()
+    pendingDistRef.current.clear()
     lastWaypointRef.current.clear()
     setTrackers([])
 
@@ -288,9 +287,12 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
 
   // Fixed: compute next from ref synchronously — avoids React 18 batching race
   const update = useCallback(async (fn: (prev: TrackerUi[]) => TrackerUi[]) => {
-    const next = fn(trackersRef.current)
-    trackersRef.current = next
-    setTrackers(next)
+    let next: TrackerUi[] = []
+    setTrackers(prev => {
+      next = fn(prev)
+      trackersRef.current = next
+      return next
+    })
     await persist(next)
   }, [persist])
 
@@ -335,6 +337,7 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
   const resumeTracker = useCallback(async (id: string) => {
     const now = Date.now()
     lastWaypointRef.current.delete(id)  // new segment — reset waypoint baseline
+    pendingDistRef.current.delete(id)
     await update(prev => prev.map(t => {
       if (t.id !== id || t.state !== 'paused') return t
       const seg: TrackerSegment = { startAt: now, distanceM: 0 }
