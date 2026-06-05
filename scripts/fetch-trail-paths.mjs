@@ -37,6 +37,7 @@ const TRAIL_SEARCH = [
   [48,  ['Corral Creek', 'Upper Big South']],
   [57,  ['Crosier Mountain', 'Garden Gate']],
   [66,  ['Crosier Rainbow']],
+  [84,  ['Elkhorn Creek Trail', 'Elkhorn Creek']],
   [87,  ['Emmaline Lake']],
   [93,  ['Fish Creek Trail']],
   [96,  ['Flowers Trail', 'Flowers Road']],

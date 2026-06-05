@@ -1,9 +1,10 @@
 /**
  * Static trailhead coordinates keyed by lu_worksite.WksiteID.
- * Sourced from the trailsMapper project (../trailsMapper/src/data/trails.ts).
+ * Sourced from PWV KML exports (db/temp/All PWV Trails.kml).
+ * Re-sync: node scripts/import-trailheads-from-kml.mjs
  */
 export const trailGeoData: Record<number, { lat: number; lng: number }> = {
-  3:   { lat: 40.581,          lng: -105.60033 },  // Beaver Creek
+  3:   { lat: 40.5797,          lng: -105.6177 },  // Beaver Creek
   6:   { lat: 40.6345,         lng: -105.8063  },  // Big South
   9:   { lat: 40.57983,        lng: -105.85567 },  // Blue Lake
   15:  { lat: 40.594,          lng: -105.71433 },  // Brackenbury
@@ -15,6 +16,7 @@ export const trailGeoData: Record<number, { lat: number; lng: number }> = {
   48:  { lat: 40.518,          lng: -105.771   },  // Corral Creek
   57:  { lat: 40.44233,        lng: -105.37833 },  // Crosier Mountain
   66:  { lat: 40.45717,        lng: -105.42517 },  // Crosier Rainbow
+  84:  { lat: 40.74638,       lng: -105.54068 }, // Elkhorn Creek
   87:  { lat: 40.57617,        lng: -105.58633 },  // Emmaline Lake
   93:  { lat: 40.6185,         lng: -105.526   },  // Fish Creek
   96:  { lat: 40.63433,        lng: -105.53183 },  // Flowers
@@ -92,6 +94,7 @@ export const trailNames: Record<number, string> = {
   48:  'Corral Creek',
   57:  'Crosier Mountain (Garden Gate)',
   66:  'Crosier Rainbow',
+  84:  'Elkhorn Creek',
   87:  'Emmaline Lake',
   93:  'Fish Creek',
   96:  'Flowers',

@@ -29,6 +29,7 @@ export const trailMetadata: Record<number, TrailMeta> = {
   48: { pdfUrl: BASE + 'Public_CorralCreek-UpperBigSouth.pdf', lengthMiles: 5.2, difficulty: 'easy',    dogs: 'leash',    bikes: false, stock: 'allowed' },
   57: { pdfUrl: BASE + 'Public_CrosierGardenGate.pdf',       lengthMiles: 5.1,  difficulty: 'moderate',  dogs: 'allowed',  bikes: true,  stock: 'none'    },
   66: { pdfUrl: BASE + 'Public_CrosierRainbow.pdf',          lengthMiles: 3.7,  difficulty: 'moderate',  dogs: 'allowed',  bikes: true,  stock: 'allowed' },
+  84: { pdfUrl: BASE + 'Public_ElkhornCreek.pdf',           lengthMiles: 4.1,  difficulty: 'moderate',  dogs: 'allowed',  bikes: false, stock: 'none'    },
   87: { pdfUrl: BASE + 'Public_EmmalineLake.pdf',            lengthMiles: 5.7,  difficulty: 'moderate',  dogs: 'leash',    bikes: false, stock: 'allowed' },
   93: { pdfUrl: BASE + 'Public_FishCreek.pdf',               lengthMiles: 6.3,  difficulty: 'moderate',  dogs: 'leash',    bikes: false, stock: 'allowed' },
   96: { pdfUrl: BASE + 'Public_Flowers.pdf',                 lengthMiles: 17.9, difficulty: 'moderate',  dogs: 'leash',    bikes: false, stock: 'none'    },
