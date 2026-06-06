@@ -15,6 +15,11 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
 }
 function fmtMiles(m: number): string { return (m / 1609.344).toFixed(2) + ' mi' }
+function fmtPace(minPerMi: number): string {
+  const m = Math.floor(minPerMi)
+  const s = Math.round((minPerMi - m) * 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
 
 // ── Trailhead icon ─────────────────────────────────────────────────
 const TH_ICON = new DivIcon({
@@ -33,14 +38,14 @@ const SIZE_LABELS: Record<string, string> = {
 }
 
 function fmtTime(ms: number): string {
-  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })
 }
 
 // ── Unified timeline item ─────────────────────────────────────────
 
 type TimelineItem =
   | { kind: 'entry';    entry: LogEntry; ts: number }
-  | { kind: 'waypoint'; lat: number; lng: number; ts: number; name: string; trackerName: string }
+  | { kind: 'waypoint'; lat: number; lng: number; ts: number; name?: string; trackerName: string; paceMinPerMi?: number }
 
 // ── Leaflet controllers ───────────────────────────────────────────
 
@@ -125,14 +130,15 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     for (const tracker of trackers) {
       for (const seg of tracker.segments) {
         for (const wp of seg.waypoints ?? []) {
-          if (wp.name && wp.lat !== null && wp.lng !== null) {
+          if (wp.lat !== null && wp.lng !== null) {
             waypointItems.push({
-              kind:        'waypoint' as const,
-              lat:         wp.lat,
-              lng:         wp.lng,
-              ts:          wp.ts,
-              name:        wp.name,
-              trackerName: tracker.name || 'Tracker',
+              kind:         'waypoint' as const,
+              lat:          wp.lat,
+              lng:          wp.lng,
+              ts:           wp.ts,
+              name:         wp.name,
+              trackerName:  tracker.name || 'Tracker',
+              paceMinPerMi: wp.paceMinPerMi,
             })
           }
         }
@@ -152,16 +158,8 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
         pts.push([item.lat, item.lng])
       }
     }
-    for (const tracker of trackers) {
-      for (const seg of tracker.segments) {
-        for (const wp of seg.waypoints ?? []) {
-          if (!wp.name && wp.lat !== null && wp.lng !== null)
-            pts.push([wp.lat, wp.lng])
-        }
-      }
-    }
     return pts
-  }, [timelineItems, trackers])
+  }, [timelineItems])
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-stone-900">
@@ -249,7 +247,10 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                     >
                       <Popup>
                         <div className="text-xs space-y-0.5">
-                          <div className="font-semibold">{wp.name ?? 'GPS Waypoint'}</div>
+                          <div className="font-semibold">{wp.name ?? 'Auto-Waypoint'}</div>
+                          {wp.paceMinPerMi != null && (
+                            <div className="text-stone-500">Pace: {fmtPace(wp.paceMinPerMi)}/mi</div>
+                          )}
                           <div className="text-stone-500">{tracker.name || 'Tracker'} · {fmtTime(wp.ts)}</div>
                         </div>
                       </Popup>
@@ -361,9 +362,10 @@ function MapTimelineRow({
   let label: string
 
   if (item.kind === 'waypoint') {
-    badge      = 'WPT'
+    const isAuto = !item.name
+    badge      = isAuto ? 'AUTO' : 'WPT'
     badgeClass = 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300'
-    label      = item.name
+    label      = item.name ?? (item.paceMinPerMi != null ? `${fmtPace(item.paceMinPerMi)}/mi` : 'Auto-Waypoint')
   } else {
     const e           = item.entry
     const isTree      = e.type === 'tree'
