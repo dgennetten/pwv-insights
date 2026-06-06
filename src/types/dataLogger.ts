@@ -40,6 +40,7 @@ export interface Waypoint {
   ts: number
   segmentDistanceM: number  // cumulative distance within this segment at the waypoint
   name?: string             // only present for manually added waypoints
+  paceMinPerMi?: number     // avg pace since prior waypoint (or segment start); auto-waypoints only
 }
 
 export interface TrackerSegment {

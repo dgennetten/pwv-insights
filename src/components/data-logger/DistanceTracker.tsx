@@ -67,6 +67,23 @@ function fmtTime(ms: number): string {
 const JITTER_M   = 3   // ignore GPS deltas < 3 m
 const ACCURACY_M = 50  // ignore fixes with accuracy > 50 m
 
+function triggerWaypointAlert() {
+  if ('vibrate' in navigator) navigator.vibrate([100, 50, 100])
+  try {
+    const ctx  = new AudioContext()
+    const osc  = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.value = 880
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.3)
+    osc.onended = () => void ctx.close()
+  } catch { /* audio not supported */ }
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface TrackerUi extends Tracker {
@@ -158,6 +175,7 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
     currentPosRef.current = { lat: point.lat, lng: point.lng }
 
     const settings = getLoggerSettings()
+    let waypointFired = false
 
     setTrackers(prev => {
       const updated = prev.map(tracker => {
@@ -199,11 +217,19 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
           }
 
           if (shouldAdd) {
+            const intervalDistM = newSegDistM - lastWpDistM
+            const intervalMs    = point.ts - lastWpTs
+            const paceMinPerMi  = (settings.waypointPace && intervalDistM > 0)
+              ? (intervalMs / 60000) / (intervalDistM / 1609.344)
+              : undefined
+
             newWaypoints = [...newWaypoints, {
               lat: point.lat, lng: point.lng, ts: point.ts,
               segmentDistanceM: newSegDistM,
+              ...(paceMinPerMi !== undefined ? { paceMinPerMi } : {}),
             }]
             lastWaypointRef.current.set(tracker.id, { segDistM: newSegDistM, ts: point.ts })
+            waypointFired = true
           }
         }
 
@@ -219,6 +245,8 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
       trackersRef.current = updated
       return updated
     })
+
+    if (waypointFired && settings.waypointVibrate) triggerWaypointAlert()
   }, [])
 
   const startWatch = useCallback(() => {

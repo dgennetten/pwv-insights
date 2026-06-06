@@ -331,6 +331,16 @@ export function SettingsPage() {
                           {loggerSettings.waypointMode === 'distance' ? 'mi' : 'min'}
                         </span>
                       </div>
+                      <PrefRow
+                        label="Short vibration & beep at each Auto-Waypoint"
+                        checked={loggerSettings.waypointVibrate}
+                        onChange={v => updateLoggerSettings({ waypointVibrate: v })}
+                      />
+                      <PrefRow
+                        label="Record average pace between Auto-Waypoints"
+                        checked={loggerSettings.waypointPace}
+                        onChange={v => updateLoggerSettings({ waypointPace: v })}
+                      />
                     </div>
                   )}
                 </div>
