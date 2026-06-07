@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    define: {
+      __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+    },
     server: {
       proxy: {
         // Forward /api calls to your DreamHost PHP files during dev.

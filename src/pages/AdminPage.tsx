@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
 import { canAccessAdminPage } from '../lib/adminAccess'
+import { version } from '../../package.json'
 import {
   fetchAdminMemberLookup,
   fetchAdminMemberSearch,
@@ -284,9 +285,12 @@ export function AdminPage() {
     <MemberGate>
       <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
         <div className="mb-5">
-          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Admin</h2>
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Admin</h2>
+            <span className="text-xs text-stone-400 dark:text-stone-500">v{version}</span>
+          </div>
           <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
-            Organization tools and audit views
+            Organization tools and audit views · updated {__BUILD_DATE__}
           </p>
         </div>
 
