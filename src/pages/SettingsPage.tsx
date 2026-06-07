@@ -183,7 +183,7 @@ export function SettingsPage() {
             <span className="text-xs text-stone-400 dark:text-stone-500">v{version}</span>
           </div>
           <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
-            Personalize your dashboard experience · updated {__BUILD_DATE__}
+            Personalize your dashboard experience
           </p>
         </div>
 
