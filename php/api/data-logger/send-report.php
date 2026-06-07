@@ -12,43 +12,55 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $body             = json_decode(file_get_contents('php://input'), true) ?? [];
-$token            = trim($body['token']      ?? '');
+$token            = trim($body['token']       ?? '');
+$guestEmailRaw    = trim($body['guestEmail']  ?? '');
 $entries          = is_array($body['entries'] ?? null) ? $body['entries'] : [];
-$memberName       = trim($body['memberName'] ?? '');
-$reportDate       = trim($body['reportDate'] ?? date('Y-m-d'));
+$memberName       = trim($body['memberName']  ?? '');
+$reportDate       = trim($body['reportDate']  ?? date('Y-m-d'));
 $includeLocations = !empty($body['includeLocations']);
 $trackers         = is_array($body['trackers'] ?? null) ? $body['trackers'] : [];
 $trackers         = trailLogNormalizeTrackers($trackers);
 $emailFormat      = (string)($body['emailFormat'] ?? 'text');
+$isGuest          = ($token === '' && $guestEmailRaw !== '');
 
-if ($token === '' || strlen($token) !== 64 || !ctype_xdigit($token)) {
-  jsonOut(['success' => false, 'error' => 'Invalid token'], 401);
-}
+if ($isGuest) {
+  $memberEmail = strtolower($guestEmailRaw);
+  if (!filter_var($memberEmail, FILTER_VALIDATE_EMAIL)) {
+    jsonOut(['success' => false, 'error' => 'Invalid email address.'], 400);
+  }
+  if ($memberName === '') $memberName = 'Guest';
+  $personId = 0;
+} else {
+  if ($token === '' || strlen($token) !== 64 || !ctype_xdigit($token)) {
+    jsonOut(['success' => false, 'error' => 'Invalid token'], 401);
+  }
 
-$db   = getDb();
-$stmt = $db->prepare(
-  'SELECT s.person_id, s.expires_at, m.EmailAddress, m.FirstName, m.LastName
-   FROM auth_sessions s
-   JOIN t_member m ON m.PersonID = s.person_id
-   WHERE s.token = ?
-   LIMIT 1'
-);
-$stmt->execute([$token]);
-$row = $stmt->fetch(PDO::FETCH_ASSOC);
+  $db   = getDb();
+  $stmt = $db->prepare(
+    'SELECT s.person_id, s.expires_at, m.EmailAddress, m.FirstName, m.LastName
+     FROM auth_sessions s
+     JOIN t_member m ON m.PersonID = s.person_id
+     WHERE s.token = ?
+     LIMIT 1'
+  );
+  $stmt->execute([$token]);
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$row) {
-  jsonOut(['success' => false, 'error' => 'Unknown session'], 401);
-}
-if (strtotime($row['expires_at']) < time()) {
-  jsonOut(['success' => false, 'error' => 'Session expired'], 401);
-}
+  if (!$row) {
+    jsonOut(['success' => false, 'error' => 'Unknown session'], 401);
+  }
+  if (strtotime($row['expires_at']) < time()) {
+    jsonOut(['success' => false, 'error' => 'Session expired'], 401);
+  }
 
-$memberEmail = strtolower(trim($row['EmailAddress']));
-if ($memberName === '') {
-  $memberName = trim($row['FirstName'] . ' ' . $row['LastName']);
-}
-if ($memberEmail === '' || !filter_var($memberEmail, FILTER_VALIDATE_EMAIL)) {
-  jsonOut(['success' => false, 'error' => 'No valid email address on file for this member.'], 400);
+  $memberEmail = strtolower(trim($row['EmailAddress']));
+  if ($memberName === '') {
+    $memberName = trim($row['FirstName'] . ' ' . $row['LastName']);
+  }
+  if ($memberEmail === '' || !filter_var($memberEmail, FILTER_VALIDATE_EMAIL)) {
+    jsonOut(['success' => false, 'error' => 'No valid email address on file for this member.'], 400);
+  }
+  $personId = (int) $row['person_id'];
 }
 
 // ── Tally entries ─────────────────────────────────────────────────
@@ -300,8 +312,9 @@ $subject = "PWV Data Logger Report - {$reportDate}";
 // ── Generate unique log ID and save to file ───────────────────────
 $logDate  = date('Ymd');
 $logTime  = date('Hi');
-$personId = (int) $row['person_id'];
-$logId    = "trailLog.{$personId}{$logDate}{$logTime}";
+$logId    = $isGuest
+  ? 'trailLog.g' . $logDate . $logTime . sprintf('%04d', mt_rand(0, 9999))
+  : "trailLog.{$personId}{$logDate}{$logTime}";
 
 $protocol   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host       = $_SERVER['HTTP_HOST'] ?? 'localhost';

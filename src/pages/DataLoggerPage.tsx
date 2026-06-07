@@ -107,7 +107,7 @@ function fmtTime(ms: number): string {
 }
 
 export function DataLoggerPage() {
-  const { user, openLogin } = useAuth()
+  const { user } = useAuth()
   const isAuthenticated = !!user?.personId
 
   const [isOnline,      setIsOnline]      = useState(navigator.onLine)
@@ -130,8 +130,10 @@ export function DataLoggerPage() {
   const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
   const [loading,           setLoading]           = useState(true)
   const [confirmClear,      setConfirmClear]      = useState(false)
-  const [trackerResetKey,   setTrackerResetKey]   = useState(0)
-  const [recoveryCandidate, setRecoveryCandidate] = useState<RecoveryCandidate | null>(null)
+  const [trackerResetKey,     setTrackerResetKey]     = useState(0)
+  const [recoveryCandidate,   setRecoveryCandidate]   = useState<RecoveryCandidate | null>(null)
+  const [showGuestEmailForm,  setShowGuestEmailForm]  = useState(false)
+  const [guestEmail,          setGuestEmail]          = useState('')
 
   const trailheadCoords = session?.wksiteId != null
     ? (trailGeoData[session.wksiteId] ?? null)
@@ -359,6 +361,53 @@ export function DataLoggerPage() {
       setSending(false)
     }
   }, [session, user, entries, trackers, includeLocations])
+
+  const handleGuestSendReport = useCallback(async () => {
+    if (!session || !guestEmail) return
+    setSending(true)
+    setSendError(null)
+    try {
+      const res  = await fetch('/api/data-logger/send-report.php', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          guestEmail,
+          sessionId:        session.id,
+          reportDate:       session.id,
+          emailFormat:      'text',
+          entries,
+          includeLocations,
+          trackers:         trackers.map(t => ({
+            name:            t.name || 'Unnamed',
+            state:           t.state,
+            totalDistanceM:  trackerDistanceM(t),
+            activeDurationMs: t.activeDurationMs,
+            startedAt:       t.startedAt,
+            segments:        t.segments.map(s => ({
+              startAt:    s.startAt,
+              endAt:      s.endAt,
+              distanceM:  s.distanceM,
+              startPoint: s.startPoint ?? null,
+              endPoint:   s.endPoint ?? null,
+              waypoints:  s.waypoints ?? [],
+            })),
+          })),
+        }),
+      })
+      const data = (await res.json()) as { success?: boolean; error?: string; logId?: string }
+      if (!res.ok || !data.success) {
+        const msg = data.error ?? `HTTP ${res.status}`
+        throw new Error(data.logId ? `${msg} (map saved: /trail-log/${data.logId})` : msg)
+      }
+      await markSessionEmailed(session.id)
+      setSession(prev => (prev ? { ...prev, emailedAt: Date.now() } : prev))
+      setSentOk(true)
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Failed to send report')
+    } finally {
+      setSending(false)
+    }
+  }, [session, guestEmail, entries, trackers, includeLocations])
 
   const handleNewSession = useCallback(async () => {
     const newKey = new Date().toISOString().slice(0, 16)
@@ -824,17 +873,85 @@ export function DataLoggerPage() {
           </>
         ) : (
           <>
-            <button
-              onClick={() => setShowMap(true)}
-              disabled={!hasData}
-              className="w-full py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Show Map
-            </button>
-            <p className="text-xs text-center text-stone-400 dark:text-stone-500">
-              <button onClick={openLogin} className="underline underline-offset-2 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">Sign in</button>
-              {' '}as a PWV member to submit a patrol report
-            </p>
+            {sendError && (
+              <p className="text-xs text-red-500 text-center">{sendError}</p>
+            )}
+            {sentOk ? (
+              <>
+                <p className="text-xs text-center text-emerald-600 dark:text-emerald-400 font-medium">
+                  Report sent to <span className="font-semibold">{guestEmail}</span>
+                </p>
+                <button
+                  onClick={() => setShowMap(true)}
+                  disabled={!hasData}
+                  className="w-full py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Show Map
+                </button>
+              </>
+            ) : showGuestEmailForm ? (
+              <>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={guestEmail}
+                  onChange={e => setGuestEmail(e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void handleGuestSendReport()}
+                    disabled={!guestEmail.includes('@') || !isOnline || sending}
+                    className="flex-[3] py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {sending ? 'Sending…' : 'Send Report'}
+                  </button>
+                  <button
+                    onClick={() => { setShowGuestEmailForm(false); setSendError(null) }}
+                    className="flex-[2] py-3 bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 text-sm font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-stone-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeLocations}
+                    onChange={e => setIncludeLocations(e.target.checked)}
+                    className="w-4 h-4 rounded accent-emerald-600"
+                  />
+                  <span className="text-xs text-stone-600 dark:text-stone-400">Include GPS data in emailed report</span>
+                </label>
+                {!isOnline && (
+                  <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Connect to network to send report</p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowGuestEmailForm(true)}
+                    disabled={!hasData}
+                    className="flex-[3] py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Email Me the Report
+                  </button>
+                  <button
+                    onClick={() => setShowMap(true)}
+                    disabled={!hasData}
+                    className="flex-[2] py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Show Map
+                  </button>
+                </div>
+                {isOnline && !hasData && (
+                  <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Log some data first</p>
+                )}
+                {!isOnline && (
+                  <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Connect to network to send report</p>
+                )}
+              </>
+            )}
           </>
         )}
         {session && (

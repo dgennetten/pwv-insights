@@ -26,6 +26,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-06-03',
     content: `TRAIL CONDITIONS SUMMARY — On the Trails page, each trail detail now shows a generated summary of recent patrol conditions. It pulls the last three patrol reports and uses Claude (Anthropic's AI) to distill the key observations into a concise paragraph — trail conditions, hazards, wildlife, visitor behavior, maintenance needs. Summaries are cached and only regenerate when new reports arrive, so the cost is minimal. (Thank you Chris Brown for inspiring this feature!)\n\nAlso: trail names on the My Schedule page are now clickable links — tap any trail name to jump straight to its detail page. KDG`,
   },
+  {
+    id: 5,
+    date: '2026-06-07',
+    content: `DATA LOGGER SESSION RECOVERY — I was out tracking yesterday and lost data mid-session while fumbling around on my phone. I've added robust session recovery: if the app closes before you end a session, the next time you open it you'll be offered to resume right where you left off.\n\nAlso: the Data Logger is now available to non-members — no sign-in required. Anyone can track and get an emailed report. PWV members still get the full submit-to-HQ flow as before. KDG`,
+  },
 ]
 
 export type BlogPref =
