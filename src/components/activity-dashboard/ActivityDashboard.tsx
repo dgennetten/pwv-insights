@@ -400,7 +400,7 @@ export function ActivityDashboard({
             >
               Sign in via PWV.ORG
             </a>
-            {' '}to see your personal stats and track your own patrol activity.
+            {' '}to see your personal stats and view your own patrol activity.
           </p>
         </div>
       )}
