@@ -1,8 +1,6 @@
 import { Undo2 } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { MemberGate } from '../components/MemberGate'
 import { DistanceTracker } from '../components/data-logger/DistanceTracker'
 import { MapModal } from '../components/data-logger/MapModal'
 import {
@@ -109,8 +107,7 @@ function fmtTime(ms: number): string {
 }
 
 export function DataLoggerPage() {
-  const { user } = useAuth()
-  const navigate  = useNavigate()
+  const { user, openLogin } = useAuth()
   const isAuthenticated = !!user?.personId
 
   const [isOnline,      setIsOnline]      = useState(navigator.onLine)
@@ -418,15 +415,6 @@ export function DataLoggerPage() {
     () => entries.filter(e => e.type === 'violation').slice().reverse(),
     [entries],
   )
-
-  // Auth gate
-  if (!isAuthenticated) {
-    return (
-      <MemberGate onBack={() => navigate(-1)}>
-        <div className="min-h-[60vh] bg-stone-50 dark:bg-stone-950" />
-      </MemberGate>
-    )
-  }
 
   if (loading) {
     return (
@@ -776,60 +764,78 @@ export function DataLoggerPage() {
 
       {/* ── EMAIL REPORT ────────────────────────────────── */}
       <div className="space-y-2 pb-2">
-        {sendError && (
-          <p className="text-xs text-red-500 text-center">{sendError}</p>
-        )}
-        {reportEmail ? (
-          <p className="text-xs text-center text-stone-500 dark:text-stone-400">
-            {sentOk ? (
-              <>Report sent to{' '}
-                <span className="font-medium text-emerald-600 dark:text-emerald-400">{reportEmail}</span>
-              </>
-            ) : (
-              <>Will email to{' '}
-                <span className="font-medium text-stone-700 dark:text-stone-300">{reportEmail}</span>
-              </>
+        {isAuthenticated ? (
+          <>
+            {sendError && (
+              <p className="text-xs text-red-500 text-center">{sendError}</p>
             )}
-          </p>
+            {reportEmail ? (
+              <p className="text-xs text-center text-stone-500 dark:text-stone-400">
+                {sentOk ? (
+                  <>Report sent to{' '}
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">{reportEmail}</span>
+                  </>
+                ) : (
+                  <>Will email to{' '}
+                    <span className="font-medium text-stone-700 dark:text-stone-300">{reportEmail}</span>
+                  </>
+                )}
+              </p>
+            ) : (
+              <p className="text-xs text-center text-amber-600 dark:text-amber-400">
+                No email address on file — contact an admin to update your member record.
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => void handleSendReport()}
+                disabled={!isOnline || sending || !hasData || sentOk || !reportEmail}
+                className="flex-[3] min-w-0 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {sending
+                  ? `Sending to ${reportEmail}…`
+                  : sentOk
+                    ? 'Report Sent ✓'
+                    : 'STOP Logger & Email Report'}
+              </button>
+              <button
+                onClick={() => setShowMap(true)}
+                disabled={!hasData}
+                className="flex-[2] min-w-0 py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Show Map
+              </button>
+            </div>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={includeLocations}
+                onChange={e => setIncludeLocations(e.target.checked)}
+                className="w-4 h-4 rounded accent-emerald-600"
+              />
+              <span className="text-xs text-stone-600 dark:text-stone-400">Include GPS data in emailed report</span>
+            </label>
+            {!isOnline && (
+              <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Connect to network to send report</p>
+            )}
+            {isOnline && !hasData && !sentOk && (
+              <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Log some data first</p>
+            )}
+          </>
         ) : (
-          <p className="text-xs text-center text-amber-600 dark:text-amber-400">
-            No email address on file — contact an admin to update your member record.
-          </p>
-        )}
-        <div className="flex gap-2">
-          <button
-            onClick={() => void handleSendReport()}
-            disabled={!isOnline || sending || !hasData || sentOk || !reportEmail}
-            className="flex-[3] min-w-0 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {sending
-              ? `Sending to ${reportEmail}…`
-              : sentOk
-                ? 'Report Sent ✓'
-                : 'STOP Logger & Email Report'}
-          </button>
-          <button
-            onClick={() => setShowMap(true)}
-            disabled={!hasData}
-            className="flex-[2] min-w-0 py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Show Map
-          </button>
-        </div>
-        <label className="flex items-center gap-1.5 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={includeLocations}
-            onChange={e => setIncludeLocations(e.target.checked)}
-            className="w-4 h-4 rounded accent-emerald-600"
-          />
-          <span className="text-xs text-stone-600 dark:text-stone-400">Include GPS data in emailed report</span>
-        </label>
-        {!isOnline && (
-          <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Connect to network to send report</p>
-        )}
-        {isOnline && !hasData && !sentOk && (
-          <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Log some data first</p>
+          <>
+            <button
+              onClick={() => setShowMap(true)}
+              disabled={!hasData}
+              className="w-full py-3 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold rounded-xl hover:bg-stone-700 dark:hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Show Map
+            </button>
+            <p className="text-xs text-center text-stone-400 dark:text-stone-500">
+              <button onClick={openLogin} className="underline underline-offset-2 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">Sign in</button>
+              {' '}as a PWV member to submit a patrol report
+            </p>
+          </>
         )}
         {session && (
           <p className="text-xs text-stone-400 dark:text-stone-500 text-center">
