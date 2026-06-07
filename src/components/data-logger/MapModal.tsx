@@ -275,13 +275,14 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     return pts
   }, [timelineItems])
 
-  const focusCenter = useMemo((): [number, number] | null => {
-    if (!selectedItem) return null
-    if (selectedItem.kind === 'entry') {
-      const { lat, lng } = selectedItem.entry
-      return lat != null && lng != null ? [lat, lng] : null
-    }
-    return [selectedItem.lat, selectedItem.lng]
+  const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
+  const timelineScrollRef = useRef<HTMLDivElement>(null)
+
+  // Scroll the selected row into view (useful when selecting via map pin)
+  useEffect(() => {
+    if (!selectedItem || !timelineScrollRef.current) return
+    const el = timelineScrollRef.current.querySelector<HTMLElement>(`[data-ts="${selectedItem.ts}"]`)
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [selectedItem])
 
   const hasAutoWaypoints = useMemo(
@@ -294,7 +295,19 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
   )
   const loggerSettings = useMemo(() => getLoggerSettings(), [])
 
-  const handleItemClick = (item: TimelineItem) => {
+  // List row click: fly to location + open popup + highlight
+  const handleListRowClick = (item: TimelineItem) => {
+    const isDeselecting = selectedItem?.ts === item.ts
+    setSelectedItem(isDeselecting ? null : item)
+    if (!isDeselecting) {
+      const lat = item.kind === 'entry' ? item.entry.lat : item.lat
+      const lng = item.kind === 'entry' ? item.entry.lng : item.lng
+      if (lat != null && lng != null) setFocusCenter([lat, lng])
+    }
+  }
+
+  // Map pin click: open popup + highlight + scroll row into view (no fly)
+  const handleMapPinClick = (item: TimelineItem) => {
     setSelectedItem(prev => prev?.ts === item.ts ? null : item)
   }
 
@@ -374,14 +387,14 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                   <CircleMarker
                     key={`wp-${i}`}
                     center={[item.lat, item.lng]}
-                    radius={item.name ? 5 : 3}
+                    radius={item.name ? 5 : 5}
                     pathOptions={{
                       color:       sel ? '#059669' : '#7c3aed',
                       fillColor:   '#8b5cf6',
                       fillOpacity: 0.8,
                       weight:      sel ? 2.5 : 1,
                     }}
-                    eventHandlers={{ click: () => handleItemClick(item) }}
+                    eventHandlers={{ click: () => handleMapPinClick(item) }}
                   />
                 )
               })
@@ -409,7 +422,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                       fillOpacity: 0.85,
                       weight:      sel ? 2.5 : 1.5,
                     }}
-                    eventHandlers={{ click: () => handleItemClick(item) }}
+                    eventHandlers={{ click: () => handleMapPinClick(item) }}
                   />
                 )
               })
@@ -450,7 +463,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto divide-y divide-stone-100 dark:divide-stone-800">
+          <div ref={timelineScrollRef} className="flex-1 overflow-y-auto divide-y divide-stone-100 dark:divide-stone-800">
             {timelineItems.length === 0 ? (
               <div className="flex items-center justify-center h-20">
                 <p className="text-xs text-stone-400 dark:text-stone-500">No entries yet</p>
@@ -461,7 +474,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                   key={idx}
                   item={item}
                   selected={selectedItem?.ts === item.ts}
-                  onClick={() => handleItemClick(item)}
+                  onClick={() => handleListRowClick(item)}
                 />
               ))
             )}
@@ -521,6 +534,7 @@ function MapTimelineRow({ item, selected, onClick }: {
 
   return (
     <div
+      data-ts={item.ts}
       onClick={onClick}
       className={`flex items-start gap-2 px-3 py-2 cursor-pointer transition-colors ${
         selected
