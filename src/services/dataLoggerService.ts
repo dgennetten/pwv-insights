@@ -166,6 +166,15 @@ export async function updateSessionWksite(sessionId: string, wksiteId: number | 
   })
 }
 
+export async function getAllSessions(): Promise<LogSession[]> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('sessions', 'readonly').objectStore('sessions').getAll()
+    req.onsuccess = () => resolve(req.result as LogSession[])
+    req.onerror   = () => reject(req.error)
+  })
+}
+
 export async function markSessionEmailed(sessionId: string): Promise<void> {
   const db = await openDB()
   return new Promise((resolve, reject) => {

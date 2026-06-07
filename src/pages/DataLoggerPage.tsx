@@ -7,9 +7,11 @@ import { DistanceTracker } from '../components/data-logger/DistanceTracker'
 import { MapModal } from '../components/data-logger/MapModal'
 import {
   getOrCreateSession,
+  getAllSessions,
   addEntry,
   deleteEntry,
   getSessionEntries,
+  getSessionTrackers,
   markSessionEmailed,
   clearSessionEntries,
   clearSessionTrackers,
@@ -67,6 +69,23 @@ function todayKey(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+interface RecoveryCandidate {
+  session:       LogSession
+  entryCount:    number
+  trackerCount:  number
+  totalDistanceM: number
+}
+
+function formatSessionDate(session: LogSession): string {
+  const d   = new Date(session.startedAt)
+  const now = new Date()
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
+  const timePart = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  if (diffDays === 0) return `Today at ${timePart}`
+  if (diffDays === 1) return `Yesterday at ${timePart}`
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ` at ${timePart}`
+}
+
 async function getPosition(): Promise<{ lat: number; lng: number } | null> {
   return new Promise(resolve => {
     if (!navigator.geolocation) return resolve(null)
@@ -112,9 +131,10 @@ export function DataLoggerPage() {
   const [showAllNotes,      setShowAllNotes]      = useState(false)
   const [showAllViolations, setShowAllViolations] = useState(false)
   const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
-  const [loading,       setLoading]       = useState(true)
-  const [confirmClear,  setConfirmClear]  = useState(false)
-  const [trackerResetKey, setTrackerResetKey] = useState(0)
+  const [loading,           setLoading]           = useState(true)
+  const [confirmClear,      setConfirmClear]      = useState(false)
+  const [trackerResetKey,   setTrackerResetKey]   = useState(0)
+  const [recoveryCandidate, setRecoveryCandidate] = useState<RecoveryCandidate | null>(null)
 
   const trailheadCoords = session?.wksiteId != null
     ? (trailGeoData[session.wksiteId] ?? null)
@@ -151,11 +171,46 @@ export function DataLoggerPage() {
       setEntries(e)
       if (s.emailedAt) setSentOk(true)
       setLoading(false)
+
+      // When the current session is empty, look for an unsent session with data
+      if (e.length === 0 && !s.emailedAt) {
+        const all = await getAllSessions()
+        const candidates = await Promise.all(
+          all
+            .filter(sess => sess.id !== s.id && !sess.emailedAt)
+            .map(async sess => {
+              const es = await getSessionEntries(sess.id)
+              const ts = await getSessionTrackers(sess.id)
+              return {
+                session:        sess,
+                entryCount:     es.length,
+                trackerCount:   ts.length,
+                totalDistanceM: ts.reduce((sum, t) => sum + t.totalDistanceM, 0),
+              }
+            })
+        )
+        const best = candidates
+          .filter(c => c.entryCount > 0 || c.trackerCount > 0)
+          .sort((a, b) => b.session.startedAt - a.session.startedAt)[0] ?? null
+        setRecoveryCandidate(best)
+      }
     })()
   }, [isAuthenticated])
 
   const refreshEntries = useCallback(async (sessionId: string) => {
     setEntries(await getSessionEntries(sessionId))
+  }, [])
+
+  const handleResumeSession = useCallback(async (candidate: RecoveryCandidate) => {
+    const e = await getSessionEntries(candidate.session.id)
+    setSession(candidate.session)
+    setEntries(e)
+    setTrackers([])
+    setTrackerResetKey(k => k + 1)
+    setSentOk(!!candidate.session.emailedAt)
+    setSendError(null)
+    setLastAction(null)
+    setRecoveryCandidate(null)
   }, [])
 
   const capturePosition = useCallback(async (): Promise<{ lat: number; lng: number } | null> => {
@@ -422,6 +477,39 @@ export function DataLoggerPage() {
       </div>
 
       {showTips && <UsageTipsModal onClose={() => setShowTips(false)} />}
+
+      {/* Session recovery */}
+      {recoveryCandidate && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl px-4 py-3 space-y-2">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            Unsent session found
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            {formatSessionDate(recoveryCandidate.session)}
+            {' · '}{recoveryCandidate.entryCount} entr{recoveryCandidate.entryCount === 1 ? 'y' : 'ies'}
+            {recoveryCandidate.trackerCount > 0 && (
+              ` · ${recoveryCandidate.trackerCount} tracker${recoveryCandidate.trackerCount > 1 ? 's' : ''}`
+            )}
+            {recoveryCandidate.totalDistanceM > 0 && (
+              ` (${(recoveryCandidate.totalDistanceM / 1609.344).toFixed(2)} mi tracked)`
+            )}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => void handleResumeSession(recoveryCandidate)}
+              className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors"
+            >
+              Resume Session
+            </button>
+            <button
+              onClick={() => setRecoveryCandidate(null)}
+              className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors"
+            >
+              Start Fresh
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* GPS warning */}
       {gpsStatus !== 'ok' && (
