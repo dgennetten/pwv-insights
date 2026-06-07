@@ -1,6 +1,7 @@
 import { Undo2 } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { version } from '../../package.json'
 import { DistanceTracker } from '../components/data-logger/DistanceTracker'
 import { MapModal } from '../components/data-logger/MapModal'
 import {
@@ -328,6 +329,7 @@ export function DataLoggerPage() {
           memberName:       user.name,
           reportDate:       session.id,
           emailFormat:      'text',
+          appVersion:       version,
           entries,
           includeLocations,
           trackers:         trackers.map(t => ({
@@ -375,6 +377,7 @@ export function DataLoggerPage() {
           sessionId:        session.id,
           reportDate:       session.id,
           emailFormat:      'text',
+          appVersion:       version,
           entries,
           includeLocations,
           trackers:         trackers.map(t => ({

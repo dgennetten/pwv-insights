@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Check } from 'lucide-react'
-import { MemberGate } from '../components/MemberGate'
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredAuthToken } from '../services/authService'
 import { version } from '../../package.json'
@@ -173,227 +172,249 @@ export function SettingsPage() {
   }
 
   return (
-    <MemberGate>
-      <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
+    <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
 
-        {/* Header */}
-        <div className="mb-5">
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Settings</h2>
-            <span className="text-xs text-stone-400 dark:text-stone-500">v{version}</span>
-          </div>
-          <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
-            Personalize your dashboard experience
-          </p>
+      {/* Header */}
+      <div className="mb-5">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Settings</h2>
+          <span className="text-xs text-stone-400 dark:text-stone-500">v{version}</span>
         </div>
+        <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
+          Personalize your dashboard experience
+        </p>
+      </div>
 
-        {loading ? (
-          <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">Loading…</p>
-        ) : (
-          <>
-            {/* ── Appearance ────────────────────────────────────────────── */}
-            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
-              <div className="mb-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Appearance</h3>
-                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Choose your color theme preference.</p>
+      {loading ? (
+        <p className="text-xs text-stone-400 dark:text-stone-500 py-6 text-center">Loading…</p>
+      ) : (
+        <>
+          {/* ── Data Logger (accessible to all) ──────────────────────── */}
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
+            <div className="mb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Data Logger</h3>
+                <button
+                  onClick={() => setShowLoggerTips(true)}
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
+                >
+                  Usage tips
+                </button>
               </div>
-              <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
-                {(['light', 'system', 'dark'] as Theme[]).map(opt => (
-                  <button
-                    key={opt}
-                    onClick={() => handleTheme(opt)}
-                    className={`flex-1 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${
-                      theme === opt
-                        ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
-                        : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Screen wake lock and auto-waypoint recording for distance tracking. All settings are saved locally.</p>
             </div>
-
-            {/* ── Activity Dashboard ────────────────────────────────────── */}
-            <SectionCard
-              title="Activity Dashboard"
-              description="Choose which KPI cards appear at the top of the Activity Dashboard and row details."
-            >
-              <PrefRow label="Patrols"            checked={prefs.dashboardKpi.patrols}          onChange={v => updateKpi('patrols', v)} />
-              <PrefRow label="Trails Covered"     checked={prefs.dashboardKpi.trailsCovered}    onChange={v => updateKpi('trailsCovered', v)} />
-              <PrefRow label="Trees Cleared"      checked={prefs.dashboardKpi.treesCleared}     onChange={v => updateKpi('treesCleared', v)} />
-              <PrefRow label="Hikers Seen"        checked={prefs.dashboardKpi.hikersSeen}       onChange={v => updateKpi('hikersSeen', v)} />
-              <PrefRow label="Hikers Contacted"   checked={prefs.dashboardKpi.hikersContacted}  onChange={v => updateKpi('hikersContacted', v)} />
-              <PrefRow label="Days Patrolling"    checked={prefs.dashboardKpi.daysPatrolling}   onChange={v => updateKpi('daysPatrolling', v)} />
-              <PrefRow label="Days Weeding"       checked={prefs.dashboardKpi.daysWeeding}      onChange={v => updateKpi('daysWeeding', v)} />
-              <PrefRow label="Contact Efficiency" checked={prefs.dashboardKpi.patrolEfficiency} onChange={v => updateKpi('patrolEfficiency', v)} />
-              <PrefRow label="Volunteer Hours"    checked={prefs.dashboardKpi.volunteerHours}   onChange={v => updateKpi('volunteerHours', v)} />
-            </SectionCard>
-
-            {/* ── Trails ────────────────────────────────────────────────── */}
-            <SectionCard
-              title="Trails"
-              description="Choose which metrics appear as KPI cards on the trail detail and in patrol rows."
-            >
-              <PrefRow label="Trees Cleared"      checked={prefs.trailDetail.treesCleared}      onChange={v => updateTrailDetail('treesCleared', v)} />
-              <PrefRow label="Hikers Seen"        checked={prefs.trailDetail.hikersSeen}        onChange={v => updateTrailDetail('hikersSeen', v)} />
-              <PrefRow label="Hikers Contacted"   checked={prefs.trailDetail.hikersContacted}   onChange={v => updateTrailDetail('hikersContacted', v)} />
-              <PrefRow label="Contact Efficiency" checked={prefs.trailDetail.patrolEfficiency}  onChange={v => updateTrailDetail('patrolEfficiency', v)} />
-            </SectionCard>
-
-            {/* ── My Schedule ───────────────────────────────────────────── */}
-            <SectionCard
-              title="My Schedule"
-              description="Choose which columns appear in the My Schedule table."
-            >
-              <PrefRow label="Schedule #"    checked={prefs.scheduleColumns.scheduleId}      onChange={v => updateScheduleColumns('scheduleId', v)} />
-              <PrefRow label="Trail"         checked={prefs.scheduleColumns.trail}           onChange={v => updateScheduleColumns('trail', v)} />
-              <PrefRow label="Type"          checked={prefs.scheduleColumns.activityType}    onChange={v => updateScheduleColumns('activityType', v)} />
-              <PrefRow label="Method"        checked={prefs.scheduleColumns.activityMethod}  onChange={v => updateScheduleColumns('activityMethod', v)} />
-              <PrefRow label="Members"       checked={prefs.scheduleColumns.members}         onChange={v => updateScheduleColumns('members', v)} />
-              <PrefRow label="Author"        checked={prefs.scheduleColumns.author}          onChange={v => updateScheduleColumns('author', v)} />
-            </SectionCard>
-
-            {/* ── Data Logger ───────────────────────────────────────────── */}
-            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
-              <div className="mb-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Data Logger</h3>
-                  <button
-                    onClick={() => setShowLoggerTips(true)}
-                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
-                  >
-                    Usage tips
-                  </button>
-                </div>
-                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Email format, screen wake lock, and auto-waypoint recording for distance tracking. All settings are saved locally.</p>
-              </div>
-              {showLoggerTips && <UsageTipsModal onClose={() => setShowLoggerTips(false)} />}
-              <div className="divide-y divide-stone-100 dark:divide-stone-800">
+            {showLoggerTips && <UsageTipsModal onClose={() => setShowLoggerTips(false)} />}
+            <div className="divide-y divide-stone-100 dark:divide-stone-800">
+              <PrefRow
+                label="Keep screen awake while tracking"
+                checked={loggerSettings.wakeLockEnabled}
+                onChange={v => updateLoggerSettings({ wakeLockEnabled: v })}
+                afterLabel={
+                  <span className="text-xs text-stone-400 dark:text-stone-500">
+                    Prevents auto-lock; uses more battery
+                  </span>
+                }
+              />
+              <div>
                 <PrefRow
-                  label="Keep screen awake while tracking"
-                  checked={loggerSettings.wakeLockEnabled}
-                  onChange={v => updateLoggerSettings({ wakeLockEnabled: v })}
-                  afterLabel={
-                    <span className="text-xs text-stone-400 dark:text-stone-500">
-                      Prevents auto-lock; uses more battery
-                    </span>
-                  }
+                  label="Record Auto-Waypoints"
+                  checked={loggerSettings.waypointsEnabled}
+                  onChange={v => updateLoggerSettings({ waypointsEnabled: v })}
                 />
-                <div>
-                  <PrefRow
-                    label="Record Auto-Waypoints"
-                    checked={loggerSettings.waypointsEnabled}
-                    onChange={v => updateLoggerSettings({ waypointsEnabled: v })}
-                  />
-                  {loggerSettings.waypointsEnabled && (
-                    <div className="pb-3 pl-2 space-y-3">
+                {loggerSettings.waypointsEnabled && (
+                  <div className="pb-3 pl-2 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Mode</span>
+                      <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
+                        {(['distance', 'time'] as const).map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => updateLoggerSettings({ waypointMode: mode })}
+                            className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
+                              loggerSettings.waypointMode === mode
+                                ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
+                                : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
+                            }`}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Every</span>
+                      <input
+                        type="number"
+                        min={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
+                        step={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
+                        value={loggerSettings.waypointMode === 'distance'
+                          ? loggerSettings.waypointDistanceMi
+                          : loggerSettings.waypointTimeMin}
+                        onChange={e => {
+                          const v = parseFloat(e.target.value)
+                          if (!isNaN(v) && v > 0) {
+                            updateLoggerSettings(
+                              loggerSettings.waypointMode === 'distance'
+                                ? { waypointDistanceMi: v }
+                                : { waypointTimeMin: v }
+                            )
+                          }
+                        }}
+                        className="w-16 px-2 py-1 text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
+                      />
+                      <span className="text-xs text-stone-400 dark:text-stone-500">
+                        {loggerSettings.waypointMode === 'distance' ? 'mi' : 'min'}
+                      </span>
+                    </div>
+                    <PrefRow
+                      label="Short vibration & beep at each Auto-Waypoint"
+                      checked={loggerSettings.waypointVibrate}
+                      onChange={v => updateLoggerSettings({ waypointVibrate: v })}
+                    />
+                    <PrefRow
+                      label="Record average pace between Auto-Waypoints"
+                      checked={loggerSettings.waypointPace}
+                      onChange={v => updateLoggerSettings({ waypointPace: v })}
+                    />
+                    {loggerSettings.waypointPace && (
                       <div className="flex items-center gap-3">
-                        <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Mode</span>
                         <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
-                          {(['distance', 'time'] as const).map(mode => (
+                          {(['min-per-mi', 'mph'] as const).map(fmt => (
                             <button
-                              key={mode}
-                              onClick={() => updateLoggerSettings({ waypointMode: mode })}
-                              className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
-                                loggerSettings.waypointMode === mode
+                              key={fmt}
+                              onClick={() => updateLoggerSettings({ waypointPaceFormat: fmt })}
+                              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                                loggerSettings.waypointPaceFormat === fmt
                                   ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
                                   : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
                               }`}
                             >
-                              {mode}
+                              {fmt === 'min-per-mi' ? 'time/dist' : 'dist/time'}
                             </button>
                           ))}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Every</span>
-                        <input
-                          type="number"
-                          min={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
-                          step={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
-                          value={loggerSettings.waypointMode === 'distance'
-                            ? loggerSettings.waypointDistanceMi
-                            : loggerSettings.waypointTimeMin}
-                          onChange={e => {
-                            const v = parseFloat(e.target.value)
-                            if (!isNaN(v) && v > 0) {
-                              updateLoggerSettings(
-                                loggerSettings.waypointMode === 'distance'
-                                  ? { waypointDistanceMi: v }
-                                  : { waypointTimeMin: v }
-                              )
-                            }
-                          }}
-                          className="w-16 px-2 py-1 text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
-                        />
-                        <span className="text-xs text-stone-400 dark:text-stone-500">
-                          {loggerSettings.waypointMode === 'distance' ? 'mi' : 'min'}
-                        </span>
-                      </div>
-                      <PrefRow
-                        label="Short vibration & beep at each Auto-Waypoint"
-                        checked={loggerSettings.waypointVibrate}
-                        onChange={v => updateLoggerSettings({ waypointVibrate: v })}
-                      />
-                      <PrefRow
-                        label="Record average pace between Auto-Waypoints"
-                        checked={loggerSettings.waypointPace}
-                        onChange={v => updateLoggerSettings({ waypointPace: v })}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ── Developer's Log ──────────────────────────────────────── */}
-            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
-              <div className="mb-1">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Developer's Log</h3>
-                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
-                  Occasional notes on new features and changes.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  onClick={() => {
-                    clearBlogPref()
-                    setShowBlog(true)
-                  }}
-                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
-                >
-                  Show latest post
-                </button>
-              </div>
-            </div>
-            {showBlog && <DevBlogModal onClose={() => setShowBlog(false)} />}
-
-            {/* ── Save bar ──────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between gap-3 pt-1">
-              <div className="min-h-[1.25rem]">
-                {error && (
-                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-                )}
-                {savedAt && !error && (
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                    Saved
-                  </p>
+                    )}
+                  </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* ── Developer's Log ──────────────────────────────────────── */}
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
+            <div className="mb-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Developer's Log</h3>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
+                Occasional notes on new features and changes.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
               <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={saving}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white transition-colors disabled:opacity-50"
+                onClick={() => {
+                  clearBlogPref()
+                  setShowBlog(true)
+                }}
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
               >
-                {saving ? 'Saving…' : 'Save changes'}
+                Show latest post
               </button>
             </div>
-          </>
-        )}
+          </div>
+          {showBlog && <DevBlogModal onClose={() => setShowBlog(false)} />}
 
-      </div>
-    </MemberGate>
+          {/* ── Appearance ────────────────────────────────────────────── */}
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
+            <div className="mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Appearance</h3>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Choose your color theme preference.</p>
+            </div>
+            <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
+              {(['light', 'system', 'dark'] as Theme[]).map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => handleTheme(opt)}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${
+                    theme === opt
+                      ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
+                      : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Member settings ───────────────────────────────────────── */}
+          {!!user && (
+            <>
+              {/* ── Activity Dashboard ──────────────────────────────── */}
+              <SectionCard
+                title="Activity Dashboard"
+                description="Choose which KPI cards appear at the top of the Activity Dashboard and row details."
+              >
+                <PrefRow label="Patrols"            checked={prefs.dashboardKpi.patrols}          onChange={v => updateKpi('patrols', v)} />
+                <PrefRow label="Trails Covered"     checked={prefs.dashboardKpi.trailsCovered}    onChange={v => updateKpi('trailsCovered', v)} />
+                <PrefRow label="Trees Cleared"      checked={prefs.dashboardKpi.treesCleared}     onChange={v => updateKpi('treesCleared', v)} />
+                <PrefRow label="Hikers Seen"        checked={prefs.dashboardKpi.hikersSeen}       onChange={v => updateKpi('hikersSeen', v)} />
+                <PrefRow label="Hikers Contacted"   checked={prefs.dashboardKpi.hikersContacted}  onChange={v => updateKpi('hikersContacted', v)} />
+                <PrefRow label="Days Patrolling"    checked={prefs.dashboardKpi.daysPatrolling}   onChange={v => updateKpi('daysPatrolling', v)} />
+                <PrefRow label="Days Weeding"       checked={prefs.dashboardKpi.daysWeeding}      onChange={v => updateKpi('daysWeeding', v)} />
+                <PrefRow label="Contact Efficiency" checked={prefs.dashboardKpi.patrolEfficiency} onChange={v => updateKpi('patrolEfficiency', v)} />
+                <PrefRow label="Volunteer Hours"    checked={prefs.dashboardKpi.volunteerHours}   onChange={v => updateKpi('volunteerHours', v)} />
+              </SectionCard>
+
+              {/* ── Trails ──────────────────────────────────────────── */}
+              <SectionCard
+                title="Trails"
+                description="Choose which metrics appear as KPI cards on the trail detail and in patrol rows."
+              >
+                <PrefRow label="Trees Cleared"      checked={prefs.trailDetail.treesCleared}      onChange={v => updateTrailDetail('treesCleared', v)} />
+                <PrefRow label="Hikers Seen"        checked={prefs.trailDetail.hikersSeen}        onChange={v => updateTrailDetail('hikersSeen', v)} />
+                <PrefRow label="Hikers Contacted"   checked={prefs.trailDetail.hikersContacted}   onChange={v => updateTrailDetail('hikersContacted', v)} />
+                <PrefRow label="Contact Efficiency" checked={prefs.trailDetail.patrolEfficiency}  onChange={v => updateTrailDetail('patrolEfficiency', v)} />
+              </SectionCard>
+
+              {/* ── My Schedule ─────────────────────────────────────── */}
+              <SectionCard
+                title="My Schedule"
+                description="Choose which columns appear in the My Schedule table."
+              >
+                <PrefRow label="Schedule #"    checked={prefs.scheduleColumns.scheduleId}      onChange={v => updateScheduleColumns('scheduleId', v)} />
+                <PrefRow label="Trail"         checked={prefs.scheduleColumns.trail}           onChange={v => updateScheduleColumns('trail', v)} />
+                <PrefRow label="Type"          checked={prefs.scheduleColumns.activityType}    onChange={v => updateScheduleColumns('activityType', v)} />
+                <PrefRow label="Method"        checked={prefs.scheduleColumns.activityMethod}  onChange={v => updateScheduleColumns('activityMethod', v)} />
+                <PrefRow label="Members"       checked={prefs.scheduleColumns.members}         onChange={v => updateScheduleColumns('members', v)} />
+                <PrefRow label="Author"        checked={prefs.scheduleColumns.author}          onChange={v => updateScheduleColumns('author', v)} />
+              </SectionCard>
+
+              {/* ── Save bar ────────────────────────────────────────── */}
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <div className="min-h-[1.25rem]">
+                  {error && (
+                    <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                  )}
+                  {savedAt && !error && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                      Saved
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={saving}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+    </div>
   )
 }

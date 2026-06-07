@@ -6,6 +6,7 @@ export interface LoggerSettings {
   wakeLockEnabled: boolean
   waypointVibrate: boolean
   waypointPace: boolean
+  waypointPaceFormat: 'min-per-mi' | 'mph'
 }
 
 const STORAGE_KEY = 'pwv_logger_settings'
@@ -18,6 +19,7 @@ const DEFAULTS: LoggerSettings = {
   wakeLockEnabled: true,
   waypointVibrate: false,
   waypointPace: false,
+  waypointPaceFormat: 'min-per-mi',
 }
 
 export function getLoggerSettings(): LoggerSettings {

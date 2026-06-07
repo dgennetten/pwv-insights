@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $body             = json_decode(file_get_contents('php://input'), true) ?? [];
 $token            = trim($body['token']       ?? '');
 $guestEmailRaw    = trim($body['guestEmail']  ?? '');
+$appVersion       = trim($body['appVersion']  ?? '');
 $entries          = is_array($body['entries'] ?? null) ? $body['entries'] : [];
 $memberName       = trim($body['memberName']  ?? '');
 $reportDate       = trim($body['reportDate']  ?? date('Y-m-d'));
@@ -306,6 +307,8 @@ $lines[] = '';
 $lines[] = $div;
 $lines[] = "Session started: {$startTime}";
 $lines[] = "Report sent:     {$sentTime}";
+$lines[] = '';
+$lines[] = "\u{2014} KDG" . ($appVersion !== '' ? " (v{$appVersion})" : '');
 
 $subject = "PWV Data Logger Report - {$reportDate}";
 

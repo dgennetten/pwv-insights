@@ -22,6 +22,10 @@ function fmtPace(minPerMi: number) {
   const s = Math.round((minPerMi - m) * 60)
   return `${m}:${String(s).padStart(2, '0')}`
 }
+function fmtPaceDisplay(minPerMi: number, fmt: 'min-per-mi' | 'mph') {
+  if (fmt === 'mph') return `${(60 / minPerMi).toFixed(1)} mph`
+  return `${fmtPace(minPerMi)}/mi`
+}
 function fmtTime(ms: number) {
   return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })
 }
@@ -52,14 +56,14 @@ type TimelineItem =
 
 // ── Popup HTML builder ────────────────────────────────────────────
 
-function buildPopupHtml(item: TimelineItem): string {
+function buildPopupHtml(item: TimelineItem, paceFormat: 'min-per-mi' | 'mph' = 'min-per-mi'): string {
   const rows: string[] = []
 
   if (item.kind === 'waypoint') {
     rows.push(`<div style="font-weight:600;margin-bottom:3px">${item.name ? esc(item.name) : 'Auto-Waypoint'}</div>`)
     rows.push(`<div>Tracker: ${esc(item.trackerName)}</div>`)
     rows.push(`<div>At: ${fmtMiles(item.segmentDistanceM)} into segment</div>`)
-    if (item.paceMinPerMi != null) rows.push(`<div>Pace: <b>${fmtPace(item.paceMinPerMi)}/mi</b></div>`)
+    if (item.paceMinPerMi != null) rows.push(`<div>Pace: <b>${fmtPaceDisplay(item.paceMinPerMi, paceFormat)}</b></div>`)
     rows.push(`<div>${fmtTime(item.ts)}</div>`)
     rows.push(`<div style="color:#a8a29e;margin-top:2px">${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>`)
   } else {
@@ -113,6 +117,7 @@ function MapFocusController({ center }: { center: [number, number] | null }) {
 
 function MapPopupController({ item }: { item: TimelineItem | null }) {
   const map = useMap()
+  const paceFormat = useMemo(() => getLoggerSettings().waypointPaceFormat, [])
   useEffect(() => {
     if (!item) { map.closePopup(); return }
     const lat = item.kind === 'entry' ? item.entry.lat : item.lat
@@ -120,47 +125,57 @@ function MapPopupController({ item }: { item: TimelineItem | null }) {
     if (lat == null || lng == null) return
     const p = createLPopup({ maxWidth: 280, closeButton: true })
       .setLatLng([lat, lng])
-      .setContent(buildPopupHtml(item))
+      .setContent(buildPopupHtml(item, paceFormat))
     map.openPopup(p)
     return () => { try { map.closePopup(p) } catch { /* ignore */ } }
-  }, [map, item])
+  }, [map, item, paceFormat])
   return null
 }
 
 // ── Pace chart ────────────────────────────────────────────────────
 
-function PaceChart({ trackers, timelineItems }: { trackers: Tracker[]; timelineItems: TimelineItem[] }) {
-  const pacePoints: { ts: number; pace: number }[] = []
+function PaceChart({ trackers, timelineItems, paceFormat }: {
+  trackers: Tracker[]
+  timelineItems: TimelineItem[]
+  paceFormat: 'min-per-mi' | 'mph'
+}) {
+  const rawPoints: { ts: number; pace: number }[] = []
   for (const t of trackers)
     for (const seg of t.segments)
       for (const wp of seg.waypoints ?? [])
         if (!wp.name && wp.paceMinPerMi != null)
-          pacePoints.push({ ts: wp.ts, pace: wp.paceMinPerMi })
-  pacePoints.sort((a, b) => a.ts - b.ts)
-  if (pacePoints.length < 2) return null
+          rawPoints.push({ ts: wp.ts, pace: wp.paceMinPerMi })
+  rawPoints.sort((a, b) => a.ts - b.ts)
+  if (rawPoints.length < 2) return null
 
   const W = 800; const H = 100
   const PL = 42; const PR = 10; const PT = 8; const PB = 24
   const plotW = W - PL - PR
   const plotH = H - PT - PB
 
-  const allTs  = [...timelineItems.map(i => i.ts), ...pacePoints.map(p => p.ts)]
+  const allTs  = [...timelineItems.map(i => i.ts), ...rawPoints.map(p => p.ts)]
   const tMin   = Math.min(...allTs); const tMax = Math.max(...allTs)
   const tRange = tMax - tMin || 1
+  const xS = (ts: number) => PL + ((ts - tMin) / tRange) * plotW
 
-  const pMin   = Math.min(...pacePoints.map(p => p.pace))
-  const pMax   = Math.max(...pacePoints.map(p => p.pace))
-  const pad    = (pMax - pMin) * 0.3 || 1
-  const yMin   = Math.max(0, pMin - pad); const yMax = pMax + pad
+  const isMph = paceFormat === 'mph'
+  // For min/mi: slower (higher value) = top. For mph: faster (higher value) = top.
+  // Both modes: higher y-value = top of chart.
+  const plotValues = isMph ? rawPoints.map(p => 60 / p.pace) : rawPoints.map(p => p.pace)
+  const vMin = Math.min(...plotValues); const vMax = Math.max(...plotValues)
+  const pad  = (vMax - vMin) * 0.3 || 1
+  const yMin = Math.max(0, vMin - pad); const yMax = vMax + pad
   const yRange = yMax - yMin
+  // Higher plotValue = top for both modes (min/mi: high=slow=top; mph: high=fast=top)
+  const yS = (v: number) => PT + plotH * (1 - (v - yMin) / yRange)
 
-  // slower (higher pace value) = top of chart = lower SVG y
-  const xS = (ts: number)   => PL + ((ts - tMin) / tRange) * plotW
-  const yS = (pace: number) => PT + plotH * (1 - (pace - yMin) / yRange)
-
-  const axisY   = PT + plotH
-  const linePath = pacePoints.map((d, i) => `${i === 0 ? 'M' : 'L'}${xS(d.ts).toFixed(1)},${yS(d.pace).toFixed(1)}`).join(' ')
-  const yTicks   = [yMin, (yMin + yMax) / 2, yMax]
+  const axisY    = PT + plotH
+  const linePath = rawPoints.map((d, i) => {
+    const v = isMph ? 60 / d.pace : d.pace
+    return `${i === 0 ? 'M' : 'L'}${xS(d.ts).toFixed(1)},${yS(v).toFixed(1)}`
+  }).join(' ')
+  const yTicks = [yMin, (yMin + yMax) / 2, yMax]
+  const fmtTick = (v: number) => isMph ? v.toFixed(1) : fmtPace(v)
 
   const dotColor = (item: TimelineItem) => {
     if (item.kind === 'waypoint') return item.name ? '#7c3aed' : '#a78bfa'
@@ -172,7 +187,10 @@ function PaceChart({ trackers, timelineItems }: { trackers: Tracker[]; timelineI
     <div className="shrink-0 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 px-2 pt-1.5 pb-0">
       <div className="flex items-center gap-3 px-2 mb-0.5">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
-          Pace · min/mi <span className="font-normal normal-case">(slower ↑)</span>
+          {isMph
+            ? <>Speed · mph <span className="font-normal normal-case">(faster ↑)</span></>
+            : <>Pace · min/mi <span className="font-normal normal-case">(slower ↑)</span></>
+          }
         </p>
         <div className="flex gap-2.5 ml-auto text-[10px] text-stone-400 dark:text-stone-500">
           <span><span style={{ color: '#0ea5e9' }}>●</span> Hiker</span>
@@ -182,17 +200,18 @@ function PaceChart({ trackers, timelineItems }: { trackers: Tracker[]; timelineI
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: `${H}px`, display: 'block' }}>
-        {yTicks.map((p, i) => (
+        {yTicks.map((v, i) => (
           <g key={i}>
-            <line x1={PL} y1={yS(p)} x2={W - PR} y2={yS(p)} stroke="#e7e5e4" strokeWidth={0.5} />
-            <text x={PL - 4} y={yS(p) + 3.5} textAnchor="end" fontSize={8} fill="#a8a29e">{fmtPace(p)}</text>
+            <line x1={PL} y1={yS(v)} x2={W - PR} y2={yS(v)} stroke="#e7e5e4" strokeWidth={0.5} />
+            <text x={PL - 4} y={yS(v) + 3.5} textAnchor="end" fontSize={8} fill="#a8a29e">{fmtTick(v)}</text>
           </g>
         ))}
         <line x1={PL} y1={axisY} x2={W - PR} y2={axisY} stroke="#d6d3d1" strokeWidth={0.75} />
         <path d={linePath} fill="none" stroke="#7c3aed" strokeWidth={1.5} strokeLinejoin="round" />
-        {pacePoints.map((d, i) => (
-          <circle key={i} cx={xS(d.ts)} cy={yS(d.pace)} r={2.5} fill="#7c3aed" />
-        ))}
+        {rawPoints.map((d, i) => {
+          const v = isMph ? 60 / d.pace : d.pace
+          return <circle key={i} cx={xS(d.ts)} cy={yS(v)} r={2.5} fill="#7c3aed" />
+        })}
         {timelineItems.map((item, i) => (
           <circle key={i} cx={xS(item.ts)} cy={axisY + 11} r={2.5} fill={dotColor(item)} opacity={0.85} />
         ))}
@@ -332,7 +351,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
       </div>
 
       {/* Page-wide pace chart */}
-      {hasPaceData && <PaceChart trackers={trackers} timelineItems={timelineItems} />}
+      {hasPaceData && <PaceChart trackers={trackers} timelineItems={timelineItems} paceFormat={loggerSettings.waypointPaceFormat} />}
 
       {/* Map + Timeline */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
@@ -387,7 +406,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                   <CircleMarker
                     key={`wp-${i}`}
                     center={[item.lat, item.lng]}
-                    radius={item.name ? 5 : 5}
+                    radius={item.name ? 5 : 2.5}
                     pathOptions={{
                       color:       sel ? '#059669' : '#7c3aed',
                       fillColor:   '#8b5cf6',
@@ -475,6 +494,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                   item={item}
                   selected={selectedItem?.ts === item.ts}
                   onClick={() => handleListRowClick(item)}
+                  paceFormat={loggerSettings.waypointPaceFormat}
                 />
               ))
             )}
@@ -488,10 +508,11 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
 
 // ── Timeline row ──────────────────────────────────────────────────
 
-function MapTimelineRow({ item, selected, onClick }: {
-  item:    TimelineItem
-  selected: boolean
-  onClick:  () => void
+function MapTimelineRow({ item, selected, onClick, paceFormat }: {
+  item:       TimelineItem
+  selected:   boolean
+  onClick:    () => void
+  paceFormat: 'min-per-mi' | 'mph'
 }) {
   const hasGps =
     item.kind === 'waypoint' ||
@@ -506,7 +527,7 @@ function MapTimelineRow({ item, selected, onClick }: {
     const isAuto = !item.name
     badge      = isAuto ? 'AUTO' : 'WPT'
     badgeClass = 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300'
-    label      = item.name ?? (item.paceMinPerMi != null ? `${fmtPace(item.paceMinPerMi)}/mi` : 'Auto-Waypoint')
+    label      = item.name ?? (item.paceMinPerMi != null ? fmtPaceDisplay(item.paceMinPerMi, paceFormat) : 'Auto-Waypoint')
     sublabel   = `${item.trackerName} · ${fmtMiles(item.segmentDistanceM)}`
   } else {
     const e           = item.entry
