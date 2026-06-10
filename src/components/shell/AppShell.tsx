@@ -29,7 +29,7 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <div className="flex h-screen bg-stone-50 dark:bg-stone-950 overflow-hidden font-[Inter,sans-serif]">
+    <div className="flex h-screen bg-stone-50 dark:bg-stone-950 overflow-hidden font-[Inter_Variable,Inter,sans-serif]">
 
       {/* ── Desktop sidebar ─────────────────────────────────── */}
       <aside

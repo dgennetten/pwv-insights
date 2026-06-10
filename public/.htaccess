@@ -9,3 +9,18 @@
   # Rewrite all requests to index.html for client-side routing
   RewriteRule ^ index.html [QSA,L]
 </IfModule>
+
+<IfModule mod_headers.c>
+  # The service worker and app shell must always revalidate so new deploys
+  # are picked up; the SW precaches them for offline use regardless.
+  <FilesMatch "^(sw\.js|registerSW\.js|index\.html|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+# Hashed build assets are immutable — cache for a year
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} =~ m#^/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+</IfModule>

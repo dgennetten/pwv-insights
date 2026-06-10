@@ -37,10 +37,27 @@ const TOKEN_KEY    = AUTH_TOKEN_STORAGE_KEY
 const EXPIRES_KEY  = 'pwv_auth_expires'
 const REMEMBER_KEY = 'pwv_auth_remember'
 
+function parseStoredUser(): AuthUser | undefined {
+  const raw = localStorage.getItem(SESSION_KEY)
+  if (!raw) return undefined
+  const u = JSON.parse(raw) as Record<string, unknown>
+  const pid = Math.trunc(Number(u.personId))
+  if (!Number.isFinite(pid) || pid < 1) return undefined
+  return {
+    personId: pid,
+    name: String(u.name ?? ''),
+    email: String(u.email ?? ''),
+    role: String(u.role ?? 'member'),
+  }
+}
+
 function loadSession(): AuthUser | undefined {
   try {
     const expires = localStorage.getItem(EXPIRES_KEY)
     if (expires && Date.now() > Number(expires)) {
+      // Offline grace: keep the stale session so the data logger stays usable
+      // on the trail; it gets revalidated on the next online load.
+      if (!navigator.onLine) return parseStoredUser()
       localStorage.removeItem(SESSION_KEY)
       // Keep token when "remember"; useLayoutEffect revalidates via session.php
       if (localStorage.getItem(REMEMBER_KEY) !== '1') {
@@ -50,17 +67,7 @@ function loadSession(): AuthUser | undefined {
       }
       return undefined
     }
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) return undefined
-    const u = JSON.parse(raw) as Record<string, unknown>
-    const pid = Math.trunc(Number(u.personId))
-    if (!Number.isFinite(pid) || pid < 1) return undefined
-    return {
-      personId: pid,
-      name: String(u.name ?? ''),
-      email: String(u.email ?? ''),
-      role: String(u.role ?? 'member'),
-    }
+    return parseStoredUser()
   } catch {
     return undefined
   }
@@ -153,7 +160,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           login(r.token, r.email ?? '', r.name ?? '', r.role ?? 'member', r.personId, true, r.expiresAt)
           return
         }
-        clearRememberedCredentials()
+        // null = network failure (e.g. offline) — keep the stored credentials
+        // and retry on a future load. Only clear on an explicit rejection.
+        if (r !== null) clearRememberedCredentials()
       }
 
       // No valid stored session — try SSO token from PWV.ORG redirect
@@ -204,7 +213,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           login(r.token, r.email ?? '', r.name ?? '', r.role ?? 'member', r.personId, true, r.expiresAt)
           return
         }
-        clearRememberedCredentials()
+        // Don't clear remembered credentials on network failure (offline)
+        if (r !== null) clearRememberedCredentials()
       }
       setLoginModalOpen(true)
     })()
