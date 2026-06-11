@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, Tooltip, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getSessionEntries, getSessionTrackers } from '../services/dataLoggerService'
+import { getSessionEntries, getSessionTrackers, getOrCreateSession } from '../services/dataLoggerService'
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredTheme, applyTheme } from '../lib/theme'
 import { surveyTrackingStats, fmtPaceMinPerMi } from '../lib/gpsDistance'
+import { trailPaths } from '../data/trailPaths'
+import { trailGeoData, trailNames } from '../data/trailGeoData'
+import { TRAILHEAD_PIN } from '../lib/trailheadPin'
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -15,13 +18,20 @@ interface LogEntry {
   timestamp: number
   lat: number | null
   lng: number | null
-  type: 'hiker' | 'tree' | 'note' | 'violation'
+  type: 'hiker' | 'tree' | 'note' | 'violation' | 'trail'
   hikerSubtype?: 'seen' | 'contacted'
   treeSubtype?: 'cleared' | 'noted'
   treeSize?: 'small' | 'medium' | 'large' | 'xl'
   noteText?: string
   violationType?: string
   violationNote?: string
+  wksiteId?: number | null
+  trailName?: string
+  distFromTrailheadM?: number
+}
+
+function fmtMiFromTh(m: number): string {
+  return (m / 1609.344).toFixed(2) + ' mi from TH'
 }
 
 type TimelineItem =
@@ -57,6 +67,8 @@ interface TrailLog {
   member: string
   reportDate: string
   savedAt?: string
+  wksiteId?: number | null
+  trailName?: string | null
   summary: {
     hikers: { seen: number; contacted: number; total: number }
     trees: {
@@ -76,6 +88,7 @@ const SIZE_LABELS: Record<string, string> = {
   large:  'Large (16–23")',
   xl:     'XL (24–36")',
 }
+
 
 function fmtTime(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -160,6 +173,7 @@ function TimelineEntry({
   let badge: string
   let badgeClass: string
   let label: string
+  let thDistM: number | undefined
 
   if (item.kind === 'waypoint') {
     badge      = 'WPT'
@@ -170,13 +184,17 @@ function TimelineEntry({
     const isTree      = entry.type === 'tree'
     const isHiker     = entry.type === 'hiker'
     const isViolation = entry.type === 'violation'
-    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : 'NOTE'
+    const isTrail     = entry.type === 'trail'
+    thDistM    = entry.distFromTrailheadM
+    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : 'NOTE'
     badgeClass = isTree
       ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
       : isHiker
       ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
       : isViolation
       ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+      : isTrail
+      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
       : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
     label = isTree
       ? `Tree — ${entry.treeSubtype ? entry.treeSubtype[0].toUpperCase() + entry.treeSubtype.slice(1) : ''}, ${SIZE_LABELS[entry.treeSize ?? ''] ?? entry.treeSize}`
@@ -184,8 +202,12 @@ function TimelineEntry({
       ? `Hiker — ${entry.hikerSubtype ? entry.hikerSubtype[0].toUpperCase() + entry.hikerSubtype.slice(1) : ''}`
       : isViolation
       ? (entry.violationType ?? 'Violation')
+      : isTrail
+      ? `Trail: ${entry.trailName ?? 'none (off PWV trail)'}`
       : (entry.noteText ?? '')
   }
+
+  const isTrailRow = item.kind === 'entry' && item.entry.type === 'trail'
 
   return (
     <div
@@ -193,6 +215,8 @@ function TimelineEntry({
       className={`flex items-start gap-2.5 px-4 py-2.5 transition-colors ${
         hasGps ? 'cursor-pointer' : ''
       } ${
+        isTrailRow ? 'bg-emerald-50/60 dark:bg-emerald-950/30 ' : ''
+      }${
         selected
           ? 'bg-emerald-50 dark:bg-emerald-900/20'
           : hasGps
@@ -209,6 +233,7 @@ function TimelineEntry({
         </div>
         <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
           {fmtTime(item.ts)}
+          {thDistM != null && <span className="ml-1.5">· {fmtMiFromTh(thDistM)}</span>}
           {hasGps && <span className="ml-1.5 text-emerald-500 dark:text-emerald-400">●</span>}
         </div>
       </div>
@@ -252,10 +277,13 @@ export function TrailLogMapPage() {
 
           const entries  = await getSessionEntries(sessionId)
           const trackers = await getSessionTrackers(sessionId)
+          const session  = await getOrCreateSession(sessionId)
 
           setLog({
             member:     user?.name ?? 'Patrol Member',
             reportDate: sessionId.slice(0, 10),
+            wksiteId:   session.wksiteId ?? null,
+            trailName:  session.wksiteId != null ? (trailNames[session.wksiteId] ?? null) : null,
             summary:    buildSummaryFromEntries(entries),
             trackers:   trackers.map(t => ({
               name:             t.name,
@@ -266,16 +294,20 @@ export function TrailLogMapPage() {
               segments:         t.segments,
             })),
             entries: entries.map(e => ({
-              id:           e.id,
-              sessionId:    e.sessionId,
-              timestamp:    e.timestamp,
-              lat:          e.lat,
-              lng:          e.lng,
-              type:         e.type,
-              hikerSubtype: e.hikerSubtype,
-              treeSubtype:  e.treeSubtype,
-              treeSize:     e.treeSize,
-              noteText:     e.noteText,
+              id:            e.id,
+              sessionId:     e.sessionId,
+              timestamp:     e.timestamp,
+              lat:           e.lat,
+              lng:           e.lng,
+              type:          e.type,
+              hikerSubtype:  e.hikerSubtype,
+              treeSubtype:   e.treeSubtype,
+              treeSize:      e.treeSize,
+              noteText:      e.noteText,
+              violationType: e.violationType,
+              violationNote: e.violationNote,
+              wksiteId:      e.wksiteId,
+              trailName:     e.trailName,
             })),
           })
         }
@@ -340,6 +372,18 @@ export function TrailLogMapPage() {
     return result
   }, [log])
 
+  // Every trail involved in this log: the session's selection plus any
+  // mid-session trail-change events.
+  const loggedTrailIds = useMemo((): number[] => {
+    if (!log) return []
+    const ids = new Set<number>()
+    if (log.wksiteId != null) ids.add(log.wksiteId)
+    for (const e of log.entries) {
+      if (e.type === 'trail' && e.wksiteId != null) ids.add(e.wksiteId)
+    }
+    return [...ids]
+  }, [log])
+
   const mapPoints = useMemo(
     () => [
       ...timelineItems
@@ -359,19 +403,12 @@ export function TrailLogMapPage() {
 
   const { distanceM: totalDistanceM, durationMs: totalDurationMs } = surveyTrackingStats(trackers)
 
-  const treeTotal = summary
-    ? Object.values(summary.trees.cleared).reduce((s, v) => s + v, 0) +
-      Object.values(summary.trees.noted).reduce((s, v) => s + v, 0)
+  const treeClearedTotal = summary
+    ? Object.values(summary.trees.cleared).reduce((s, v) => s + v, 0)
     : 0
-
-  const treeBySizeTotal = summary
-    ? {
-        small:  summary.trees.cleared.small  + summary.trees.noted.small,
-        medium: summary.trees.cleared.medium + summary.trees.noted.medium,
-        large:  summary.trees.cleared.large  + summary.trees.noted.large,
-        xl:     summary.trees.cleared.xl     + summary.trees.noted.xl,
-      }
-    : { small: 0, medium: 0, large: 0, xl: 0 }
+  const treeNotedTotal = summary
+    ? Object.values(summary.trees.noted).reduce((s, v) => s + v, 0)
+    : 0
 
   const timestamps  = log?.entries.map(e => e.timestamp) ?? []
   const sessionStart = timestamps.length > 0 ? Math.min(...timestamps) : null
@@ -425,6 +462,9 @@ export function TrailLogMapPage() {
             </div>
             <h1 className="text-2xl font-bold leading-tight">Data Logger Report</h1>
             <p className="text-sm text-emerald-200 mt-1">Patrol Member: {log.member}</p>
+            {log.trailName && (
+              <p className="text-sm text-emerald-200">Trail: {log.trailName}</p>
+            )}
           </div>
           <div className="text-sm text-emerald-100 space-y-1 sm:text-right shrink-0">
             <div>
@@ -482,18 +522,32 @@ export function TrailLogMapPage() {
               <div className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                 Trees Documented
               </div>
-              <span className="text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
-                {treeTotal} Total
-              </span>
+              <div className="flex gap-1.5">
+                <span className="text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+                  {treeClearedTotal} Cleared
+                </span>
+                <span className="text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
+                  {treeNotedTotal} Noted
+                </span>
+              </div>
             </div>
-            <div className="grid grid-cols-4 gap-1 text-center">
-              {(['small', 'medium', 'large', 'xl'] as const).map(size => (
-                <div key={size} className="bg-white dark:bg-stone-700/50 rounded-lg py-1.5">
-                  <div className="text-lg font-bold text-stone-900 dark:text-stone-100 leading-none">
-                    {treeBySizeTotal[size]}
-                  </div>
-                  <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5 capitalize">
-                    {size === 'xl' ? 'XL' : size[0].toUpperCase()}
+            <div className="space-y-1">
+              {(['cleared', 'noted'] as const).map(subtype => (
+                <div key={subtype} className="flex items-center gap-1.5">
+                  <span className="w-14 shrink-0 text-xs font-medium capitalize text-stone-500 dark:text-stone-400">
+                    {subtype}
+                  </span>
+                  <div className="flex-1 grid grid-cols-4 gap-1 text-center">
+                    {(['small', 'medium', 'large', 'xl'] as const).map(size => (
+                      <div key={size} className="bg-white dark:bg-stone-700/50 rounded-lg py-1">
+                        <span className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-none">
+                          {summary?.trees[subtype][size] ?? 0}
+                        </span>
+                        <span className="ml-1 text-xs text-stone-400 dark:text-stone-500">
+                          {size === 'xl' ? 'XL' : size[0].toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -543,6 +597,12 @@ export function TrailLogMapPage() {
                 Geographic Spatial Mapping
               </h2>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+                {loggedTrailIds.some(id => (trailPaths[id] ?? []).length > 0) && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-4 h-1 rounded-full bg-emerald-600 inline-block" />
+                    Trail
+                  </span>
+                )}
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-amber-400 dark:bg-amber-500 inline-block" />
                   Trees
@@ -575,6 +635,28 @@ export function TrailLogMapPage() {
                 {mapPoints.length > 0 && <MapBoundsController points={mapPoints} />}
                 <MapFocusController center={focusCenter} />
 
+                {/* Trail centerlines + trailhead pins (same data as the Trails map) */}
+                {loggedTrailIds.map(id =>
+                  (trailPaths[id] ?? []).map((coords, i) => (
+                    <Polyline
+                      key={`trail-path-${id}-${i}`}
+                      positions={coords.map(([lng, lat]) => [lat, lng])}
+                      pathOptions={{ color: '#059669', weight: 3, opacity: 0.6 }}
+                    />
+                  ))
+                )}
+                {loggedTrailIds.map(id => trailGeoData[id] && (
+                  <Marker
+                    key={`th-${id}`}
+                    position={[trailGeoData[id].lat, trailGeoData[id].lng]}
+                    icon={TRAILHEAD_PIN}
+                  >
+                    <Tooltip direction="top">
+                      {trailNames[id] ?? `Trail ${id}`} Trailhead
+                    </Tooltip>
+                  </Marker>
+                ))}
+
                 {waypointMarkers.map((wp, i) => (
                   <CircleMarker
                     key={`wp-${wp.trackerName}-${wp.ts}-${i}`}
@@ -602,6 +684,7 @@ export function TrailLogMapPage() {
                 {timelineItems.map((item, idx) => {
                   if (item.kind === 'waypoint') return null
                   const entry = item.entry
+                  if (entry.type === 'trail') return null
                   if (entry.lat === null || entry.lng === null) return null
                   const isTree      = entry.type === 'tree'
                   const isHiker     = entry.type === 'hiker'

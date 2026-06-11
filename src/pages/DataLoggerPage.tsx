@@ -21,6 +21,7 @@ import { trailGeoData, trailNames } from '../data/trailGeoData'
 import { updateSessionWksite } from '../services/dataLoggerService'
 import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker } from '../types/dataLogger'
 import { trackerDistanceM } from '../lib/gpsDistance'
+import { distFromTrailheadM } from '../lib/trailheadDistance'
 
 // Matches lu_viol_type in the database, sorted alphabetically, "Other" last
 const VIOLATION_TYPES: string[] = [
@@ -96,6 +97,44 @@ async function getPosition(): Promise<{ lat: number; lng: number } | null> {
   })
 }
 
+/** Trail in effect at a given time, from trail-change events (else the session's selection). */
+function activeWksiteAt(
+  ts: number,
+  trailEvents: LogEntry[],  // type 'trail', sorted ascending by timestamp
+  sessionWksiteId: number | undefined,
+): number | null {
+  if (trailEvents.length === 0) return sessionWksiteId ?? null
+  let active: number | null = null
+  for (const ev of trailEvents) {
+    if (ev.timestamp > ts) break
+    active = ev.wksiteId ?? null
+  }
+  return active
+}
+
+/**
+ * Stamp each entry (except trail events) with the trail it was logged under
+ * and its along-trail distance from that trailhead.
+ */
+function enrichEntriesWithTrailheadDist(
+  entries: LogEntry[],
+  sessionWksiteId: number | undefined,
+): LogEntry[] {
+  const trailEvents = entries
+    .filter(e => e.type === 'trail')
+    .sort((a, b) => a.timestamp - b.timestamp)
+  return entries.map(e => {
+    if (e.type === 'trail') return e
+    const wks = activeWksiteAt(e.timestamp, trailEvents, sessionWksiteId)
+    const d   = distFromTrailheadM(wks, e.lat, e.lng)
+    return {
+      ...e,
+      ...(wks != null ? { wksiteId: wks, trailName: trailNames[wks] } : {}),
+      ...(d   != null ? { distFromTrailheadM: d } : {}),
+    }
+  })
+}
+
 function fmtCoords(lat: number | null, lng: number | null): string {
   if (lat === null || lng === null) return 'GPS unavailable'
   const ns = lat >= 0 ? 'N' : 'S'
@@ -140,6 +179,10 @@ export function DataLoggerPage() {
     ? (trailGeoData[session.wksiteId] ?? null)
     : null
 
+  const refreshEntries = useCallback(async (sessionId: string) => {
+    setEntries(await getSessionEntries(sessionId))
+  }, [])
+
   const handleWksiteChange = useCallback(async (wksiteId: number | null) => {
     if (!session) return
     await updateSessionWksite(session.id, wksiteId)
@@ -147,7 +190,19 @@ export function DataLoggerPage() {
       ? { ...prev, wksiteId: wksiteId ?? undefined }
       : prev
     )
-  }, [session])
+    // Embed a trail-change event so the report can delineate trail sections
+    const pos = await getPosition()
+    await addEntry({
+      sessionId: session.id,
+      timestamp: Date.now(),
+      lat:       pos?.lat ?? null,
+      lng:       pos?.lng ?? null,
+      type:      'trail',
+      wksiteId,
+      trailName: wksiteId != null ? trailNames[wksiteId] : undefined,
+    })
+    await refreshEntries(session.id)
+  }, [session, refreshEntries])
 
   // Online / offline tracking
   useEffect(() => {
@@ -173,7 +228,8 @@ export function DataLoggerPage() {
       setLoading(false)
 
       // When the current session is empty, look for an unsent session with data
-      if (e.length === 0 && !s.emailedAt) {
+      // (trail-change events alone don't count as data)
+      if (e.filter(en => en.type !== 'trail').length === 0 && !s.emailedAt) {
         const all = await getAllSessions()
         const candidates = await Promise.all(
           all
@@ -183,7 +239,7 @@ export function DataLoggerPage() {
               const ts = await getSessionTrackers(sess.id)
               return {
                 session:        sess,
-                entryCount:     es.length,
+                entryCount:     es.filter(en => en.type !== 'trail').length,
                 trackerCount:   ts.length,
                 totalDistanceM: ts.reduce((sum, t) => sum + t.totalDistanceM, 0),
               }
@@ -196,10 +252,6 @@ export function DataLoggerPage() {
       }
     })()
   }, [isAuthenticated])
-
-  const refreshEntries = useCallback(async (sessionId: string) => {
-    setEntries(await getSessionEntries(sessionId))
-  }, [])
 
   const handleResumeSession = useCallback(async (candidate: RecoveryCandidate) => {
     const e = await getSessionEntries(candidate.session.id)
@@ -313,6 +365,40 @@ export function DataLoggerPage() {
     await refreshEntries(session.id)
   }, [session, lastAction, refreshEntries])
 
+  // Enriched report payload shared by member + guest send paths:
+  // per-entry distance from trailhead and trail metadata.
+  const buildReportPayload = useCallback(() => {
+    const sessionWksiteId = session?.wksiteId
+    const trailEvents = entries
+      .filter(e => e.type === 'trail')
+      .sort((a, b) => a.timestamp - b.timestamp)
+    return {
+      wksiteId:  sessionWksiteId ?? null,
+      trailName: sessionWksiteId != null ? (trailNames[sessionWksiteId] ?? null) : null,
+      entries:   enrichEntriesWithTrailheadDist(entries, sessionWksiteId),
+      trackers:  trackers.map(t => ({
+        name:            t.name || 'Unnamed',
+        state:           t.state,
+        totalDistanceM:  trackerDistanceM(t),
+        activeDurationMs: t.activeDurationMs,
+        startedAt:       t.startedAt,
+        segments:        t.segments.map(s => ({
+          startAt:    s.startAt,
+          endAt:      s.endAt,
+          distanceM:  s.distanceM,
+          startPoint: s.startPoint ?? null,
+          endPoint:   s.endPoint ?? null,
+          waypoints:  (s.waypoints ?? []).map(wp => {
+            if (!wp.name) return wp  // auto-waypoints: no trailhead distance
+            const d = distFromTrailheadM(
+              activeWksiteAt(wp.ts, trailEvents, sessionWksiteId), wp.lat, wp.lng)
+            return d != null ? { ...wp, distFromTrailheadM: d } : wp
+          }),
+        })),
+      })),
+    }
+  }, [entries, trackers, session])
+
   const handleSendReport = useCallback(async () => {
     if (!session || !user) return
     setSending(true)
@@ -330,23 +416,8 @@ export function DataLoggerPage() {
           reportDate:       session.id,
           emailFormat:      'text',
           appVersion:       version,
-          entries,
           includeLocations,
-          trackers:         trackers.map(t => ({
-            name:            t.name || 'Unnamed',
-            state:           t.state,
-            totalDistanceM:  trackerDistanceM(t),
-            activeDurationMs: t.activeDurationMs,
-            startedAt:       t.startedAt,
-            segments:        t.segments.map(s => ({
-              startAt:    s.startAt,
-              endAt:      s.endAt,
-              distanceM:  s.distanceM,
-              startPoint: s.startPoint ?? null,
-              endPoint:   s.endPoint ?? null,
-              waypoints:  s.waypoints ?? [],
-            })),
-          })),
+          ...buildReportPayload(),
         }),
       })
       const data = (await res.json()) as { success?: boolean; error?: string; logId?: string; email?: string }
@@ -362,7 +433,7 @@ export function DataLoggerPage() {
     } finally {
       setSending(false)
     }
-  }, [session, user, entries, trackers, includeLocations])
+  }, [session, user, includeLocations, buildReportPayload])
 
   const handleGuestSendReport = useCallback(async () => {
     if (!session || !guestEmail) return
@@ -378,23 +449,8 @@ export function DataLoggerPage() {
           reportDate:       session.id,
           emailFormat:      'text',
           appVersion:       version,
-          entries,
           includeLocations,
-          trackers:         trackers.map(t => ({
-            name:            t.name || 'Unnamed',
-            state:           t.state,
-            totalDistanceM:  trackerDistanceM(t),
-            activeDurationMs: t.activeDurationMs,
-            startedAt:       t.startedAt,
-            segments:        t.segments.map(s => ({
-              startAt:    s.startAt,
-              endAt:      s.endAt,
-              distanceM:  s.distanceM,
-              startPoint: s.startPoint ?? null,
-              endPoint:   s.endPoint ?? null,
-              waypoints:  s.waypoints ?? [],
-            })),
-          })),
+          ...buildReportPayload(),
         }),
       })
       const data = (await res.json()) as { success?: boolean; error?: string; logId?: string }
@@ -410,7 +466,7 @@ export function DataLoggerPage() {
     } finally {
       setSending(false)
     }
-  }, [session, guestEmail, entries, trackers, includeLocations])
+  }, [session, guestEmail, includeLocations, buildReportPayload])
 
   const handleNewSession = useCallback(async () => {
     const newKey = new Date().toISOString().slice(0, 16)

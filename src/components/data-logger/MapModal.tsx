@@ -1,7 +1,9 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, useMap } from 'react-leaflet'
-import { DivIcon, popup as createLPopup } from 'leaflet'
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Tooltip, useMap } from 'react-leaflet'
+import { popup as createLPopup } from 'leaflet'
 import { trailPaths } from '../../data/trailPaths'
+import { trailGeoData, trailNames } from '../../data/trailGeoData'
+import { TRAILHEAD_PIN } from '../../lib/trailheadPin'
 import 'leaflet/dist/leaflet.css'
 import type { LogEntry, Tracker } from '../../types/dataLogger'
 import { isValidLatLng } from '../../lib/geo'
@@ -34,12 +36,6 @@ function esc(s: string) {
 }
 
 // ── Constants ─────────────────────────────────────────────────────
-
-const TH_ICON = new DivIcon({
-  html: '<div style="background:#059669;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:2px 5px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.35)">TH</div>',
-  className: '',
-  iconAnchor: [18, 12],
-})
 
 const SIZE_LABELS: Record<string, string> = {
   small:  'Small (<8")',
@@ -74,6 +70,7 @@ function buildPopupHtml(item: TimelineItem, paceFormat: 'min-per-mi' | 'mph' = '
     if (e.type === 'hiker')     heading = `Hiker — ${subCap}`
     else if (e.type === 'tree') heading = `Tree — ${subCap}${e.treeSize ? ', ' + (SIZE_LABELS[e.treeSize] ?? e.treeSize) : ''}`
     else if (e.type === 'violation') heading = 'Violation'
+    else if (e.type === 'trail') heading = `Trail: ${e.trailName ?? 'none (off PWV trail)'}`
     else heading = 'Note'
     rows.push(`<div style="font-weight:600;margin-bottom:3px">${heading}</div>`)
     if (e.violationType) rows.push(`<div>${esc(e.violationType)}</div>`)
@@ -281,6 +278,16 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     return [...entryItems, ...waypointItems].sort((a, b) => a.ts - b.ts)
   }, [entries, trackers])
 
+  // Every trail involved in this session: current selection + trail-change events
+  const loggedTrailIds = useMemo((): number[] => {
+    const ids = new Set<number>()
+    if (wksiteId != null) ids.add(wksiteId)
+    for (const e of entries) {
+      if (e.type === 'trail' && e.wksiteId != null) ids.add(e.wksiteId)
+    }
+    return [...ids]
+  }, [wksiteId, entries])
+
   const mapPoints = useMemo((): [number, number][] => {
     const pts: [number, number][] = []
     for (const item of timelineItems) {
@@ -377,17 +384,27 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
             <MapFocusController center={focusCenter} />
             <MapPopupController item={selectedItem} />
 
-            {wksiteId != null && (trailPaths[wksiteId] ?? []).map((coords, i) => (
-              <Polyline
-                key={`trail-path-${i}`}
-                positions={coords.map(([lng, lat]) => [lat, lng])}
-                pathOptions={{ color: '#059669', weight: 3, opacity: 0.6 }}
-              />
-            ))}
-
-            {trailheadCoords && isValidLatLng(trailheadCoords.lat, trailheadCoords.lng) && (
-              <Marker position={[trailheadCoords.lat, trailheadCoords.lng]} icon={TH_ICON} />
+            {loggedTrailIds.map(id =>
+              (trailPaths[id] ?? []).map((coords, i) => (
+                <Polyline
+                  key={`trail-path-${id}-${i}`}
+                  positions={coords.map(([lng, lat]) => [lat, lng])}
+                  pathOptions={{ color: '#059669', weight: 3, opacity: 0.6 }}
+                />
+              ))
             )}
+
+            {loggedTrailIds.map(id => {
+              const th = trailGeoData[id]
+              if (!th || !isValidLatLng(th.lat, th.lng)) return null
+              return (
+                <Marker key={`th-${id}`} position={[th.lat, th.lng]} icon={TRAILHEAD_PIN}>
+                  <Tooltip direction="top">
+                    {trailNames[id] ?? `Trail ${id}`} Trailhead
+                  </Tooltip>
+                </Marker>
+              )
+            })}
 
             {livePos && isValidLatLng(livePos.lat, livePos.lng) && (
               <CircleMarker
@@ -424,6 +441,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
               .filter((item): item is Extract<TimelineItem, { kind: 'entry' }> => item.kind === 'entry')
               .map((item, i) => {
                 const e = item.entry
+                if (e.type === 'trail') return null
                 if (e.lat === null || e.lng === null) return null
                 const isTree      = e.type === 'tree'
                 const isHiker     = e.type === 'hiker'
@@ -534,13 +552,16 @@ function MapTimelineRow({ item, selected, onClick, paceFormat }: {
     const isTree      = e.type === 'tree'
     const isHiker     = e.type === 'hiker'
     const isViolation = e.type === 'violation'
-    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : 'NOTE'
+    const isTrail     = e.type === 'trail'
+    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : 'NOTE'
     badgeClass = isTree
       ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
       : isHiker
       ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
       : isViolation
       ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+      : isTrail
+      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
       : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
     const subCap = (s?: string) => s ? s[0].toUpperCase() + s.slice(1) : ''
     label = isTree
@@ -549,6 +570,8 @@ function MapTimelineRow({ item, selected, onClick, paceFormat }: {
       ? `Hiker — ${subCap(e.hikerSubtype)}`
       : isViolation
       ? (e.violationType ?? 'Violation')
+      : isTrail
+      ? `Trail: ${e.trailName ?? 'none (off PWV trail)'}`
       : (e.noteText ?? '')
     if (isViolation && e.violationNote) sublabel = e.violationNote
   }

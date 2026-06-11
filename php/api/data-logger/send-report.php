@@ -22,6 +22,8 @@ $includeLocations = !empty($body['includeLocations']);
 $trackers         = is_array($body['trackers'] ?? null) ? $body['trackers'] : [];
 $trackers         = trailLogNormalizeTrackers($trackers);
 $emailFormat      = (string)($body['emailFormat'] ?? 'text');
+$wksiteId         = isset($body['wksiteId']) && $body['wksiteId'] !== null ? (int) $body['wksiteId'] : null;
+$trailName        = trim((string)($body['trailName'] ?? ''));
 $isGuest          = ($token === '' && $guestEmailRaw !== '');
 
 if ($isGuest) {
@@ -75,6 +77,28 @@ $sessionStart   = null;
 $detailRows     = [];  // chronological list for the detail section
 $summaryNotes   = [];  // time + text only, for the summary block
 $violationRows  = [];  // type + note, for the violations summary block
+$trailSequence  = [];  // trail-change events, for the header trail line
+$byTrail        = [];  // per-trail tallies, keyed by trail name
+
+// Chronological order so the running "current trail" tracking is correct
+$entries = array_values(array_filter($entries, 'is_array'));
+usort($entries, fn($a, $b) => ((int) ($a['timestamp'] ?? 0)) <=> ((int) ($b['timestamp'] ?? 0)));
+
+$hasTrailEvents = false;
+foreach ($entries as $e) {
+  if ((string) ($e['type'] ?? '') === 'trail') { $hasTrailEvents = true; break; }
+}
+
+$noTrailKey  = '(no trail selected)';
+$emptyTally  = fn(): array => [
+  'seen' => 0, 'contacted' => 0,
+  'trees' => [
+    'cleared' => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
+    'noted'   => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
+  ],
+  'violations' => 0, 'notes' => 0, 'firstTs' => PHP_INT_MAX,
+];
+$currentTrail = '';
 
 $fmtCoords = function (?float $lat, ?float $lng): string {
   if ($lat === null || $lng === null) return 'GPS unavailable    ';
@@ -97,34 +121,70 @@ foreach ($entries as $e) {
   $time   = $ts ? date('g:i A', intdiv($ts, 1000)) : '--:--';
   $coords = $fmtCoords($lat, $lng);
 
+  // Along-trail distance from trailhead (computed client-side at send time)
+  $meta = "{$time} | {$coords}";
+  if (isset($e['distFromTrailheadM']) && $e['distFromTrailheadM'] !== null) {
+    $meta .= ' | ' . number_format((float) $e['distFromTrailheadM'] / 1609.344, 2) . ' mi from TH';
+  }
+
+  // Trail this entry belongs to: client stamp, else running trail from events,
+  // else the session's single trail (legacy payloads without trail events)
+  if ($type !== 'trail') {
+    $entryTrail = trim((string) ($e['trailName'] ?? '')) ?: $currentTrail;
+    if ($entryTrail === '' && !$hasTrailEvents && $trailName !== '') {
+      $entryTrail = $trailName;
+    }
+    $groupKey = $entryTrail !== '' ? $entryTrail : $noTrailKey;
+    if (!isset($byTrail[$groupKey])) $byTrail[$groupKey] = $emptyTally();
+    $byTrail[$groupKey]['firstTs'] = min($byTrail[$groupKey]['firstTs'], $ts ?? 0);
+  } else {
+    $groupKey = null;
+  }
+
   if ($type === 'hiker') {
     $sub = (string) ($e['hikerSubtype'] ?? '');
-    if ($sub === 'seen') $hikerSeen++;
-    elseif ($sub === 'contacted') $hikerContacted++;
+    if ($sub === 'seen') { $hikerSeen++; $byTrail[$groupKey]['seen']++; }
+    elseif ($sub === 'contacted') { $hikerContacted++; $byTrail[$groupKey]['contacted']++; }
     $label        = 'Hiker - ' . ucfirst($sub);
-    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => $sub, 'line' => "  [{$time} | {$coords}] {$label}"];
+    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => $sub, 'line' => "  [{$meta}] {$label}"];
 
   } elseif ($type === 'tree') {
     $sub  = (string) ($e['treeSubtype'] ?? '');
     $size = (string) ($e['treeSize']    ?? '');
-    if (isset($trees[$sub][$size])) $trees[$sub][$size]++;
+    if (isset($trees[$sub][$size])) {
+      $trees[$sub][$size]++;
+      $byTrail[$groupKey]['trees'][$sub][$size]++;
+    }
     $sizeLabel    = ['small' => 'Small (<8")', 'medium' => 'Medium (8-15")', 'large' => 'Large (16-23")', 'xl' => 'XL (24-36")'][$size] ?? $size;
     $label        = 'Tree - ' . ucfirst($sub) . ', ' . $sizeLabel;
-    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => $sub, 'line' => "  [{$time} | {$coords}] {$label}"];
+    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => $sub, 'line' => "  [{$meta}] {$label}"];
 
   } elseif ($type === 'note') {
     $text = trim((string) ($e['noteText'] ?? ''));
     if ($text === '') continue;
+    $byTrail[$groupKey]['notes']++;
     $summaryNotes[] = ['ts' => $ts ?? 0, 'line' => "  [{$time}] {$text}"];
-    $detailRows[]   = ['ts' => $ts ?? 0, 'subtype' => 'note', 'line' => "  [{$time} | {$coords}] Note: {$text}"];
+    $detailRows[]   = ['ts' => $ts ?? 0, 'subtype' => 'note', 'line' => "  [{$meta}] Note: {$text}"];
 
   } elseif ($type === 'violation') {
     $vType = trim((string) ($e['violationType'] ?? ''));
     $vNote = trim((string) ($e['violationNote'] ?? ''));
+    $byTrail[$groupKey]['violations']++;
     $violationRows[] = ['ts' => $ts ?? 0, 'type' => $vType, 'note' => $vNote];
     $label = 'Violation - ' . ($vType ?: 'Unknown');
     if ($vNote !== '') $label .= ': ' . $vNote;
-    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => 'violation', 'line' => "  [{$time} | {$coords}] {$label}"];
+    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => 'violation', 'line' => "  [{$meta}] {$label}"];
+
+  } elseif ($type === 'trail') {
+    $tn    = trim((string) ($e['trailName'] ?? ''));
+    $currentTrail = $tn;
+    $label = $tn !== '' ? $tn : 'No trail selected (off PWV trail)';
+    $trailSequence[] = ['ts' => $ts ?? 0, 'name' => $tn !== '' ? $tn : '(none)'];
+    $detailRows[] = [
+      'ts'      => $ts ?? 0,
+      'subtype' => 'trail',
+      'line'    => "\n  ===== TRAIL: {$label}  (from {$time}) =====\n",
+    ];
   }
 }
 
@@ -162,12 +222,25 @@ $hikerTotal = $hikerSeen;  // seen already includes auto-increments from contact
 $startTime  = $sessionStart ? date('g:i A', intdiv($sessionStart, 1000)) : 'n/a';
 $sentTime   = date('g:i A');
 
+// Header trail line: sequence of trail selections, or the session's final trail
+usort($trailSequence, fn($a, $b) => $a['ts'] <=> $b['ts']);
+$trailNamesSeq = [];
+foreach ($trailSequence as $tsq) {
+  if (end($trailNamesSeq) !== $tsq['name']) $trailNamesSeq[] = $tsq['name'];
+}
+if (empty($trailNamesSeq) && $trailName !== '') $trailNamesSeq = [$trailName];
+
 $div = str_repeat('-', 22);
 
 $lines = [
   'PWV Trail Patrol - Data Logger Report',
   "Member:  {$memberName}",
   "Date:    {$reportDate}",
+];
+if (!empty($trailNamesSeq)) {
+  $lines[] = (count($trailNamesSeq) === 1 ? 'Trail:   ' : 'Trails:  ') . implode(' -> ', $trailNamesSeq);
+}
+array_push($lines,
   '',
   $div,
   'SUMMARY',
@@ -180,7 +253,7 @@ $lines = [
   'TREES LOGGED',
   '  Cleared:  ' . $fmtRow($trees['cleared']),
   '  Noted:    ' . $fmtRow($trees['noted']),
-];
+);
 
 if (!empty($summaryNotes)) {
   usort($summaryNotes, fn($a, $b) => $a['ts'] <=> $b['ts']);
@@ -199,6 +272,24 @@ if (!empty($violationRows)) {
     $line = '  ' . ($vr['type'] ?: 'Unknown');
     if ($vr['note'] !== '') $line .= ': ' . $vr['note'];
     $lines[] = $line;
+  }
+}
+
+// ── Per-trail summary (PWV reports are segregated by trail) ─────────
+$knownTrailKeys = array_filter(array_keys($byTrail), fn($k) => $k !== $noTrailKey);
+if (!empty($knownTrailKeys)) {
+  uasort($byTrail, fn($a, $b) => $a['firstTs'] <=> $b['firstTs']);
+  $lines[] = '';
+  $lines[] = $div;
+  $lines[] = 'SUMMARY BY TRAIL';
+  foreach ($byTrail as $tKey => $tt) {
+    $lines[] = '';
+    $lines[] = "TRAIL: {$tKey}";
+    $lines[] = "  Hikers - Seen: {$tt['seen']}  |  Contacted: {$tt['contacted']}  |  Total: {$tt['seen']}";
+    $lines[] = '  Trees Cleared:  ' . $fmtRow($tt['trees']['cleared']);
+    $lines[] = '  Trees Noted:    ' . $fmtRow($tt['trees']['noted']);
+    if ($tt['violations'] > 0) $lines[] = "  Violations: {$tt['violations']}";
+    if ($tt['notes'] > 0)      $lines[] = "  Notes: {$tt['notes']}";
   }
 }
 
@@ -295,7 +386,10 @@ if ($includeLocations && !empty($trackers)) {
         $wpTs   = isset($wp['ts']) ? date('g:i A', intdiv((int)$wp['ts'], 1000)) : '--:--';
         $wpName = trim((string)($wp['name'] ?? ''));
         $nameStr = $wpName !== '' ? " \"{$wpName}\"" : '';
-        $lines[] = "    Waypoint " . ($wi + 1) . "{$nameStr} [{$wpTs}] (" . $fmtMi($wpDist) . "): " . $fmtPt($wp);
+        $thStr   = isset($wp['distFromTrailheadM']) && $wp['distFromTrailheadM'] !== null
+          ? ', ' . $fmtMi((float)$wp['distFromTrailheadM']) . ' from TH'
+          : '';
+        $lines[] = "    Waypoint " . ($wi + 1) . "{$nameStr} [{$wpTs}] (" . $fmtMi($wpDist) . "{$thStr}): " . $fmtPt($wp);
       }
       $lines[] = "    To:   " . $fmtPt(is_array($seg['endPoint']   ?? null) ? $seg['endPoint']   : null);
       $prev_end = $seg['endAt'] ?? null;
@@ -330,6 +424,8 @@ $logPayload = [
   'email'      => $memberEmail,
   'reportDate' => $reportDate,
   'savedAt'    => date('Y-m-d H:i:s'),
+  'wksiteId'   => $wksiteId,
+  'trailName'  => $trailName !== '' ? $trailName : null,
   'summary'    => [
     'hikers' => [
       'seen'      => $hikerSeen,
@@ -370,6 +466,8 @@ if ($emailFormat === 'json') {
     'member'     => $memberName,
     'date'       => $reportDate,
     'reportSent' => date('Y-m-d H:i:s'),
+    'wksiteId'   => $wksiteId,
+    'trailName'  => $trailName !== '' ? $trailName : null,
     'summary' => [
       'hikers' => [
         'seen'      => $hikerSeen,

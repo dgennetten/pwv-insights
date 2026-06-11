@@ -1,7 +1,7 @@
 export type HikerSubtype = 'seen' | 'contacted'
 export type TreeSubtype  = 'cleared' | 'noted'
 export type TreeSize     = 'small' | 'medium' | 'large' | 'xl'
-export type EntryType    = 'hiker' | 'tree' | 'note' | 'violation'
+export type EntryType    = 'hiker' | 'tree' | 'note' | 'violation' | 'trail'
 
 export interface LogEntry {
   id?: number
@@ -16,6 +16,11 @@ export interface LogEntry {
   noteText?: string
   violationType?: string
   violationNote?: string
+  /** type 'trail': trail selection changed mid-session (null = off PWV trail) */
+  wksiteId?: number | null
+  trailName?: string
+  /** along-trail distance from the trailhead, computed at send time */
+  distFromTrailheadM?: number
 }
 
 export interface LogSession {
@@ -41,6 +46,7 @@ export interface Waypoint {
   segmentDistanceM: number  // cumulative distance within this segment at the waypoint
   name?: string             // only present for manually added waypoints
   paceMinPerMi?: number     // avg pace since prior waypoint (or segment start); auto-waypoints only
+  distFromTrailheadM?: number // along-trail distance from trailhead; manual waypoints, set at send time
 }
 
 export interface TrackerSegment {

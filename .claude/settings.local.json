@@ -51,7 +51,10 @@
       "PowerShell(ls *)",
       "Bash(gunzip -c \"C:/Users/dougl/GIT/pwv-insights/db/fs_VOLDB_2026-05-01_10h00m.Friday.sql.gz\")",
       "Bash(Get-ChildItem *)",
-      "Bash(xargs -I {} basename {})"
+      "Bash(xargs -I {} basename {})",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

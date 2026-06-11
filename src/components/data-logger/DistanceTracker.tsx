@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { saveTracker, getSessionTrackers } from '../../services/dataLoggerService'
 import { getLoggerSettings } from '../../lib/loggerSettings'
 import { haversineMeters } from '../../lib/gpsDistance'
+import { distAlongPath } from '../../lib/trailheadDistance'
 import { trailPaths } from '../../data/trailPaths'
 import type { Tracker, TrackerSegment, TrackerState, GpsPoint, Waypoint } from '../../types/dataLogger'
 
@@ -9,46 +10,6 @@ import type { Tracker, TrackerSegment, TrackerState, GpsPoint, Waypoint } from '
 
 function fmtMiles(meters: number): string {
   return (meters / 1609.344).toFixed(2) + ' mi'
-}
-
-// Along-path distance from trailhead to user's closest point on the trail.
-// pathSegs is [lng, lat][][] (Overpass convention); TH/user coords are {lat, lng}.
-function distAlongPath(
-  pathSegs: [number, number][][],
-  thLat: number, thLng: number,
-  userLat: number, userLng: number,
-): number {
-  let bestPerpM = Infinity
-  let bestAlongM = 0
-
-  for (const seg of pathSegs) {
-    if (seg.length < 2) continue
-    const pts = seg.map(([lng, lat]): [number, number] => [lat, lng])
-    // Orient so the end nearest to the trailhead comes first
-    const d0 = haversineMeters(thLat, thLng, pts[0][0], pts[0][1])
-    const dN = haversineMeters(thLat, thLng, pts[pts.length - 1][0], pts[pts.length - 1][1])
-    if (dN < d0) pts.reverse()
-
-    let cum = 0
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [aLat, aLng] = pts[i]
-      const [bLat, bLng] = pts[i + 1]
-      const segM = haversineMeters(aLat, aLng, bLat, bLng)
-      // Flat-space projection onto segment (accurate enough for trail-length segments)
-      const dx = bLat - aLat, dy = bLng - aLng
-      const lenSq = dx * dx + dy * dy
-      const t = lenSq > 0
-        ? Math.max(0, Math.min(1, ((userLat - aLat) * dx + (userLng - aLng) * dy) / lenSq))
-        : 0
-      const perpM = haversineMeters(userLat, userLng, aLat + t * dx, aLng + t * dy)
-      if (perpM < bestPerpM) {
-        bestPerpM = perpM
-        bestAlongM = cum + t * segM
-      }
-      cum += segM
-    }
-  }
-  return bestAlongM
 }
 
 function fmtDuration(ms: number): string {
