@@ -7,6 +7,12 @@
 #                   Preserves any rows in pwvinsights that are NOT in the dump
 #                   (e.g. reports filed after the dump timestamp that arrived via
 #                   sync-aws-csv.php) and never overwrites t_member.last_login_at.
+#                   Exception: t_schedule and t_schedule_member use a selective
+#                   mirror — future schedules absent from the dump are deleted
+#                   (cancelled), member lists of schedules in the dump are
+#                   mirrored exactly (removals propagate), and past schedules
+#                   are preserved as local history since AWS purges a schedule
+#                   once its report is filed.
 #                   Use this for routine daily/weekly cron runs.
 #
 #   --full-replace  DELETE all rows first, then INSERT — complete mirror of the dump.
@@ -172,6 +178,8 @@ cat <<HEADER
 -- ============================================================
 -- Upserts t_member, t_report, t_report_member, and t_rpt_*
 -- from the AWS dump WITHOUT deleting existing rows first.
+-- t_schedule and t_schedule_member use a selective mirror so
+-- upstream removals propagate without losing older history.
 --
 -- Rows in pwvinsights that are newer than the dump (e.g. from
 -- sync-aws-csv.php) are preserved.  t_member.last_login_at is
@@ -205,14 +213,50 @@ HEADER
   echo "COMMIT;"
 
   echo ""
-  echo "-- ── t_schedule ──────────────────────────────────────────────────────────────"
-  emit_upsert "t_schedule"
-  echo "COMMIT;"
-
-  echo ""
-  echo "-- ── t_schedule_member ───────────────────────────────────────────────────────"
-  emit_upsert "t_schedule_member"
-  echo "COMMIT;"
+  echo "-- ── t_schedule + t_schedule_member (selective mirror) ───────────────────────"
+  # The AWS system purges a schedule from its live tables once its report is
+  # filed, so past schedules accumulate ONLY locally — the My Schedule
+  # "Completed" view depends on that history.  The dump is authoritative for
+  # future schedules (absent = cancelled) and for the member lists of any
+  # schedule it still contains (member removals propagate while the schedule
+  # is future-dated).  Past schedules absent from the dump are preserved.
+  # (Plain upsert leaves removed members behind; a full delete+reinsert wipes
+  # the accumulated history.  This does neither.)
+  if grep -q "^CREATE TABLE \`t_schedule\`" "$DUMP"; then
+    sched_upd=$(build_dup_update "$(get_columns t_schedule)" "ScheduleID")
+    smem_upd=$(build_dup_update "$(get_columns t_schedule_member)" "ScheduleID|PersonID")
+    echo "DROP TEMPORARY TABLE IF EXISTS \`_dump_schedule\`;"
+    echo "DROP TEMPORARY TABLE IF EXISTS \`_dump_schedule_member\`;"
+    echo "CREATE TEMPORARY TABLE \`_dump_schedule\` LIKE \`t_schedule\`;"
+    echo "CREATE TEMPORARY TABLE \`_dump_schedule_member\` LIKE \`t_schedule_member\`;"
+    extract_table "t_schedule"        | sed 's/^INSERT INTO `t_schedule` /INSERT INTO `_dump_schedule` /'
+    extract_table "t_schedule_member" | sed 's/^INSERT INTO `t_schedule_member` /INSERT INTO `_dump_schedule_member` /'
+    cat <<'SCHED_SQL'
+-- Future-dated schedules absent from the dump were cancelled upstream.
+-- Past-dated schedules absent from the dump are completed history: AWS
+-- purges a schedule as soon as its report is filed, so absence from the
+-- dump is expected — never delete those.
+DELETE s FROM `t_schedule` s
+WHERE s.ActivityDate >= CURDATE()
+  AND NOT EXISTS (SELECT 1 FROM `_dump_schedule` d WHERE d.ScheduleID = s.ScheduleID);
+-- Orphaned member rows (FK cascade does not fire with FOREIGN_KEY_CHECKS=0)
+DELETE sm FROM `t_schedule_member` sm
+WHERE NOT EXISTS (SELECT 1 FROM `t_schedule` s WHERE s.ScheduleID = sm.ScheduleID);
+-- For schedules the dump covers, mirror the member list exactly
+DELETE sm FROM `t_schedule_member` sm
+JOIN `_dump_schedule` d ON d.ScheduleID = sm.ScheduleID
+LEFT JOIN `_dump_schedule_member` dm
+  ON dm.ScheduleID = sm.ScheduleID AND dm.PersonID = sm.PersonID
+WHERE dm.ScheduleID IS NULL;
+SCHED_SQL
+    echo "INSERT INTO \`t_schedule\` SELECT * FROM \`_dump_schedule\` ON DUPLICATE KEY UPDATE ${sched_upd};"
+    echo "INSERT INTO \`t_schedule_member\` SELECT * FROM \`_dump_schedule_member\` ON DUPLICATE KEY UPDATE ${smem_upd};"
+    echo "DROP TEMPORARY TABLE \`_dump_schedule\`;"
+    echo "DROP TEMPORARY TABLE \`_dump_schedule_member\`;"
+    echo "COMMIT;"
+  else
+    echo "-- WARNING: t_schedule not found in dump — existing schedule rows left untouched"
+  fi
 
   echo ""
   echo "-- ── t_rpt_* detail tables ───────────────────────────────────────────────────"

@@ -19,7 +19,13 @@ What it does each run:
 2. **Generates** `db/repair-data.sql` via `db/generate-repair-sql.sh --upsert`.  
    Upsert mode uses `INSERT … ON DUPLICATE KEY UPDATE` — updates existing rows to match
    the dump but **never deletes** rows that are in pwvinsights but absent from the dump,
-   and never overwrites `t_member.last_login_at`.
+   and never overwrites `t_member.last_login_at`.  
+   Exception: `t_schedule` and `t_schedule_member` use a **selective mirror**. The AWS
+   system purges a schedule from its live tables as soon as its report is filed, so past
+   schedules accumulate only locally — they are what the My Schedule "Completed" view
+   shows, and they must never be deleted. The dump is authoritative for future schedules
+   (absent = cancelled upstream → deleted locally) and for the member list of any schedule
+   it still contains (a member removed upstream is removed locally too).
 3. **Applies** the SQL to `pwvinsights` on `mysql.gennetten.com`.
 4. Logs all output to `/home/dgennetten/db-repair/cron.log` on DreamHost.
 
