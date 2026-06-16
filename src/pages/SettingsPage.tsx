@@ -360,7 +360,7 @@ export function SettingsPage() {
                 <PrefRow label="Hikers Seen"        checked={prefs.dashboardKpi.hikersSeen}       onChange={v => updateKpi('hikersSeen', v)} />
                 <PrefRow label="Hikers Contacted"   checked={prefs.dashboardKpi.hikersContacted}  onChange={v => updateKpi('hikersContacted', v)} />
                 <PrefRow label="Days Patrolling"    checked={prefs.dashboardKpi.daysPatrolling}   onChange={v => updateKpi('daysPatrolling', v)} />
-                <PrefRow label="Days Weeding"       checked={prefs.dashboardKpi.daysWeeding}      onChange={v => updateKpi('daysWeeding', v)} />
+                <PrefRow label="Trail Work Days"    checked={prefs.dashboardKpi.daysWeeding}      onChange={v => updateKpi('daysWeeding', v)} />
                 <PrefRow label="Contact Efficiency" checked={prefs.dashboardKpi.patrolEfficiency} onChange={v => updateKpi('patrolEfficiency', v)} />
                 <PrefRow label="Volunteer Hours"    checked={prefs.dashboardKpi.volunteerHours}   onChange={v => updateKpi('volunteerHours', v)} />
               </SectionCard>

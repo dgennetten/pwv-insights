@@ -432,7 +432,7 @@ export function ActivityDashboard({
           <KpiCard label="Days Patrolling" value={summary.daysPatrolling ?? 0} delta={summary.daysPatrollingDelta ?? 0} icon={<CalendarDays className="w-4 h-4" strokeWidth={1.5} />} />
         )}
         {kpi.daysWeeding && (
-          <KpiCard label="Days Weeding" value={summary.daysWeeding ?? 0} delta={summary.daysWeedingDelta ?? 0} icon={<Scissors className="w-4 h-4" strokeWidth={1.5} />} />
+          <KpiCard label="Trail Work Days" value={summary.daysWeeding ?? 0} delta={summary.daysWeedingDelta ?? 0} icon={<Scissors className="w-4 h-4" strokeWidth={1.5} />} />
         )}
         {kpi.volunteerHours && (
           <KpiCard label="Volunteer Hours" value={Math.round(summary.volunteerHours)} delta={Math.round(summary.volunteerHoursDelta ?? 0)} icon={<Clock className="w-4 h-4" strokeWidth={1.5} />} />
