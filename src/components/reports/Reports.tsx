@@ -21,6 +21,10 @@ const segmentBase = 'px-3 py-1.5 text-xs font-medium transition-colors rounded-m
 const segmentActive = 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
 const segmentInactive = 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800'
 
+function reportUrl(reportId: number): string {
+  return `https://clrdvol.org/groups/index.php?option=com_fs&view=report&Itemid=136&id=${reportId}`
+}
+
 export function Reports({ reports, totalCount, memberContext, currentUserId, season, refreshing = false, onMemberContextChange, onSeasonChange }: ReportsProps) {
   const [sortCol, setSortCol] = useState<SortCol>('reportId')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
@@ -182,8 +186,15 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
               ) : (
                 sorted.map(r => (
                   <tr key={r.reportId} className="hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors">
-                    <td className="px-4 py-3 tabular-nums text-stone-700 dark:text-stone-300 font-medium">
-                      {r.reportId}
+                    <td className="px-4 py-3 tabular-nums font-medium">
+                      <a
+                        href={reportUrl(r.reportId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-600 dark:text-emerald-400 hover:underline underline-offset-2 transition-colors"
+                      >
+                        {r.reportId}
+                      </a>
                     </td>
                     <td className="px-4 py-3 tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">
                       {r.activityDate}
