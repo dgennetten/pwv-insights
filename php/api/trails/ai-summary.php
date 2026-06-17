@@ -140,6 +140,7 @@ try {
     $reportIds = array_map(function($r) { return (int)$r['ReportID']; }, $reports);
     sort($reportIds);
     $cacheKey = implode(',', $reportIds);
+    $latestReportDate = $reports[0]['ActivityDate'];
 
     // Return cached summary if the report set hasn't changed
     $cachedStmt = $db->prepare(
@@ -149,7 +150,7 @@ try {
     $cached = $cachedStmt->fetch(PDO::FETCH_ASSOC);
     if ($cached) {
         jsonOut(['summary' => $cached['summary'], 'generatedAt' => $cached['generated_at'],
-                 'reportIds' => $reportIds, 'cached' => true]);
+                 'reportIds' => $reportIds, 'latestReportDate' => $latestReportDate, 'cached' => true]);
     }
 
     // Build prompt and check for narrative content
@@ -167,7 +168,8 @@ try {
          ON DUPLICATE KEY UPDATE summary = VALUES(summary), generated_at = NOW()'
     )->execute([$wksiteId, $cacheKey, $summary]);
 
-    jsonOut(['summary' => $summary, 'generatedAt' => date('c'), 'reportIds' => $reportIds, 'cached' => false]);
+    jsonOut(['summary' => $summary, 'generatedAt' => date('c'), 'reportIds' => $reportIds,
+             'latestReportDate' => $latestReportDate, 'cached' => false]);
 
 } catch (Throwable $e) {
     error_log('ai-summary.php: ' . $e->getMessage());

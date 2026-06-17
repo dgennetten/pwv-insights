@@ -2,6 +2,7 @@ export interface TrailAISummaryResult {
   summary: string | null
   reason?: string
   generatedAt?: string
+  latestReportDate?: string
   reportIds?: number[]
   cached?: boolean
   error?: string
