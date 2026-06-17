@@ -52,6 +52,31 @@ function memberStatusLabel(
   return '—';
 }
 
+/** Comma-separated MemTypeIDs from t_mem_group → display names (e.g. "Hike, Stock"). */
+function resolveMemberTypes(PDO $db, ?string $memTypeIds): ?string {
+  $raw = trim((string) $memTypeIds);
+  if ($raw === '') {
+    return null;
+  }
+  $ids = [];
+  foreach (explode(',', $raw) as $part) {
+    $id = (int) trim($part);
+    if ($id > 0) {
+      $ids[] = $id;
+    }
+  }
+  if ($ids === []) {
+    return null;
+  }
+  $placeholders = implode(',', array_fill(0, count($ids), '?'));
+  $stmt = $db->prepare(
+    "SELECT MemTypeName FROM lu_member_type WHERE MemTypeID IN ($placeholders) ORDER BY DisplayOrder, MemTypeID"
+  );
+  $stmt->execute($ids);
+  $names = array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+  return $names !== [] ? implode(', ', $names) : null;
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -93,7 +118,7 @@ if (strtolower(trim($sess['EmailAddress'])) !== strtolower(ADMIN_EMAIL)) {
 // ── Member core info ──────────────────────────────────────────────────────────
 $stmt = $db->prepare(
   'SELECT m.PersonID, m.FirstName, m.LastName, m.BirthDate, m.EmailAddress, m.Photo,
-          mg.OrgStatusID, os.OrgStatusName, mg.MemberSince, mg.AgreementDate,
+          mg.OrgStatusID, os.OrgStatusName, mg.MemberSince, mg.AgreementDate, mg.MemTypeIDs,
           lo.IsInactive AS LockedInactive
    FROM t_member m
    LEFT JOIN t_mem_group mg ON mg.PersonID = m.PersonID AND mg.GroupID = ?
@@ -113,6 +138,7 @@ $statusLabel = memberStatusLabel(
   $m['AgreementDate'] ?? null,
   $m['LockedInactive'] ?? null
 );
+$memberType = resolveMemberTypes($db, $m['MemTypeIDs'] ?? null);
 
 // ── Address (t_mem_address — take lowest MemAddressID as primary) ─────────────
 $stmt = $db->prepare(
@@ -191,6 +217,7 @@ jsonOut([
     'state'       => ($addr['State']         ?? '') !== '' ? trim($addr['State'])         : null,
     'zip'         => ($addr['ZipCode']       ?? '') !== '' ? trim($addr['ZipCode'])       : null,
     'phone'       => ($phoneRow['PhoneNumber'] ?? '') !== '' ? trim($phoneRow['PhoneNumber']) : null,
+    'memberType'  => $memberType,
     'photoUrl'    => $photoUrl,
     'status'      => $statusLabel,
     'merit' => [

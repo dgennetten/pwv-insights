@@ -43,6 +43,19 @@ function memberStatusLabel(orgStatusName, memberSince, agreementDate, lockedInac
   return status || '—'
 }
 
+async function resolveMemberTypes(pool, memTypeIds) {
+  const raw = String(memTypeIds ?? '').trim()
+  if (!raw) return null
+  const ids = [...new Set(raw.split(',').map(s => Number(s.trim())).filter(n => Number.isFinite(n) && n > 0))]
+  if (!ids.length) return null
+  const [rows] = await pool.query(
+    `SELECT MemTypeName FROM lu_member_type WHERE MemTypeID IN (?) ORDER BY DisplayOrder, MemTypeID`,
+    [ids]
+  )
+  const names = rows.map(r => String(r.MemTypeName ?? '').trim()).filter(Boolean)
+  return names.length ? names.join(', ') : null
+}
+
 const pool = mysql.createPool({
   host:     process.env.DB_HOST,
   user:     process.env.DB_USER,
@@ -373,7 +386,7 @@ const routes = {
     // Fetch member core info
     const [memberRows] = await pool.query(
       `SELECT m.PersonID, m.FirstName, m.LastName, m.BirthDate, m.EmailAddress, m.Photo,
-              mg.OrgStatusID, os.OrgStatusName, mg.MemberSince, mg.AgreementDate,
+              mg.OrgStatusID, os.OrgStatusName, mg.MemberSince, mg.AgreementDate, mg.MemTypeIDs,
               lo.IsInactive AS LockedInactive
        FROM t_member m
        LEFT JOIN t_mem_group mg ON mg.PersonID = m.PersonID AND mg.GroupID = 10
@@ -439,6 +452,7 @@ const routes = {
     )
 
     const ratio = avgDays > 0 ? Math.round((Number(memberDays) / Number(avgDays)) * 100) / 100 : null
+    const memberType = await resolveMemberTypes(pool, m.MemTypeIDs)
 
     return send(res, {
       success: true,
@@ -453,6 +467,7 @@ const routes = {
         state:       addr.State        ?? null,
         zip:         addr.ZipCode      ?? null,
         phone:       phoneRow.PhoneNumber ?? null,
+        memberType,
         photoUrl:    memberPhotoUrl(m.Photo),
         status:      memberStatusLabel(
           m.OrgStatusName,

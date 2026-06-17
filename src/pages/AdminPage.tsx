@@ -136,6 +136,8 @@ function MemberCard({ result }: { result: import('../services/authService').Memb
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Phone</p>
         <p className="text-sm text-stone-700 dark:text-stone-200">{result.phone ?? '—'}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5 mt-3">Type</p>
+        <p className="text-sm text-stone-700 dark:text-stone-200">{result.memberType ?? '—'}</p>
       </div>
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Address</p>

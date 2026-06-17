@@ -63,6 +63,7 @@ export interface MemberLookupResult {
   state: string | null
   zip: string | null
   phone: string | null
+  memberType: string | null
   photoUrl: string | null
   status: string
   merit: MemberLookupMerit
