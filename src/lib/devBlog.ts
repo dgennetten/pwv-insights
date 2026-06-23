@@ -34,7 +34,7 @@ export const BLOG_ENTRIES: BlogEntry[] = [
   {
     id: 6,
     date: '2026-06-22',
-    content: `NEW MEMBERS TAB — All names are now hyperlinked for easy lookup in the new Members tab. Browser back button/swipe to return. — KDG (v1.19.0)`,
+    content: `NEW MEMBERS TAB — All names throughout the app are now hyperlinked for easy lookup in the new Members tab. Browser back button/swipe to return. Report IDs on the Reports tab are also hyperlinked to CLRD.org. — KDG (v1.19.0)`,
   },
 ]
 
