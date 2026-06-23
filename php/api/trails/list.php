@@ -282,7 +282,7 @@ try {
             r.ReportID,
             r.ActivityDate,
             COALESCE(GROUP_CONCAT(DISTINCT CONCAT(m.FirstName, ' ', m.LastName)
-                ORDER BY m.LastName SEPARATOR ' & '), 'Unknown') AS MemberName,
+                ORDER BY m.LastName SEPARATOR '|'), 'Unknown') AS MemberName,
             COALESCE(MAX(obs.HikersSeen),      0) AS HikersSeen,
             COALESCE(MAX(obs.HikersContacted), 0) AS HikersContacted
         FROM t_report r

@@ -189,6 +189,7 @@ $s = $db->prepare(
 );
 $s->execute([$memberId]);
 $memberDays = (int)($s->fetchColumn() ?? 0);
+$s->closeCursor();
 
 $s2 = $db->prepare(
   "SELECT ROUND(AVG(cnt), 1) FROM (
@@ -202,6 +203,27 @@ $s2 = $db->prepare(
 $s2->execute();
 $avgDays    = (float)($s2->fetchColumn() ?? 0);
 $meritRatio = $avgDays > 0 ? round($memberDays / $avgDays, 2) : null;
+$s2->closeCursor();
+
+// ── Last patrol date (all-time) ───────────────────────────────────────────────
+$lastPatrolDate = null;
+$s3 = $db->query(
+  'SELECT MAX(r.ActivityDate)
+   FROM t_report_member rm
+   JOIN t_report r ON r.ReportID = rm.ReportID
+   WHERE rm.PersonID = ' . $memberId . '
+     AND r.GroupID = ' . ML_PWV_GROUP . '
+     AND (r.IsDraft IS NULL OR r.IsDraft = 0)
+     AND (r.IsUnofficial IS NULL OR r.IsUnofficial = 0)'
+);
+if ($s3) {
+  $lastPatrolRaw = $s3->fetchColumn() ?: null;
+  if ($lastPatrolRaw && $lastPatrolRaw !== '0000-00-00') {
+    try {
+      $lastPatrolDate = (new DateTime($lastPatrolRaw))->format('F j, Y');
+    } catch (Throwable $_) {}
+  }
+}
 
 // ── Response ──────────────────────────────────────────────────────────────────
 jsonOut([
@@ -217,9 +239,10 @@ jsonOut([
     'state'       => ($addr['State']         ?? '') !== '' ? trim($addr['State'])         : null,
     'zip'         => ($addr['ZipCode']       ?? '') !== '' ? trim($addr['ZipCode'])       : null,
     'phone'       => ($phoneRow['PhoneNumber'] ?? '') !== '' ? trim($phoneRow['PhoneNumber']) : null,
-    'memberType'  => $memberType,
-    'photoUrl'    => $photoUrl,
-    'status'      => $statusLabel,
+    'memberType'     => $memberType,
+    'photoUrl'       => $photoUrl,
+    'status'         => $statusLabel,
+    'lastPatrolDate' => $lastPatrolDate,
     'merit' => [
       'memberDays'  => $memberDays,
       'avgDays'     => $avgDays,

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowUp, CalendarDays, ChevronDown, Clock, Users } from 'lucide-react'
+import { memberLinkUrl } from '../../lib/memberLink'
 import type { ScheduleEntry, ScheduleMemberOption } from '../../types/schedule'
 import type { ScheduleColumnsPrefs } from '../../types/settings'
 import { DEFAULT_PREFERENCES } from '../../types/settings'
@@ -347,14 +348,23 @@ export function Schedule({
                     {cols.members && (
                       <td className="px-4 py-3 text-stone-600 dark:text-stone-400">
                         {s.members.length > 0
-                          ? s.members.join(', ')
+                          ? s.members.map((name, i) => (
+                              <span key={name}>
+                                {i > 0 && ', '}
+                                <Link to={memberLinkUrl({ name })} className="text-emerald-700 dark:text-emerald-400 hover:underline">
+                                  {name}
+                                </Link>
+                              </span>
+                            ))
                           : <span className="text-stone-300 dark:text-stone-600">—</span>
                         }
                       </td>
                     )}
                     {cols.author && (
                       <td className="px-4 py-3 text-stone-600 dark:text-stone-400">
-                        {s.schedulerName ?? <span className="text-stone-300 dark:text-stone-600">—</span>}
+                        {s.schedulerName
+                          ? <Link to={memberLinkUrl({ name: s.schedulerName })} className="text-emerald-700 dark:text-emerald-400 hover:underline">{s.schedulerName}</Link>
+                          : <span className="text-stone-300 dark:text-stone-600">—</span>}
                       </td>
                     )}
                   </tr>

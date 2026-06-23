@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowLeft, Leaf, AlertTriangle, Footprints, PersonStanding, Lock, Map, Loader2, FileText } from 'lucide-react'
+import { memberLinkUrl } from '../../lib/memberLink'
 import type { Trail, Difficulty, TreeSizeBreakdown } from '../../types/trails'
 import { trailMetadata } from '../../data/trailMetadata'
 import { TrailAISummary } from './TrailAISummary'
@@ -183,8 +185,15 @@ function PatrolHistorySection({ history }: { history: Trail['patrolHistory'] }) 
                     <div>{formatDate(entry.date)}</div>
                     <div className="text-[10px] text-stone-400 dark:text-stone-600 tabular-nums mt-0.5">#{entry.reportId}</div>
                   </td>
-                  <td className="px-4 py-2.5 text-xs sm:text-sm font-medium text-stone-800 dark:text-stone-200 break-words max-w-[11rem] sm:max-w-none align-top">
-                    {entry.memberName}
+                  <td className="px-4 py-2.5 text-xs sm:text-sm font-medium break-words max-w-[11rem] sm:max-w-none align-top">
+                    {entry.memberName.split('|').map((name, i) => (
+                      <span key={name}>
+                        {i > 0 && ', '}
+                        <Link to={memberLinkUrl({ name })} className="text-emerald-700 dark:text-emerald-400 hover:underline">
+                          {name}
+                        </Link>
+                      </span>
+                    ))}
                   </td>
                   <td className="px-4 py-2.5 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">
                     {entry.hikersSeen}

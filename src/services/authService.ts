@@ -66,6 +66,7 @@ export interface MemberLookupResult {
   memberType: string | null
   photoUrl: string | null
   status: string
+  lastPatrolDate: string | null
   merit: MemberLookupMerit
 }
 

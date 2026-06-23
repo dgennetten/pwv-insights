@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowLeft, Footprints, Leaf, Map, TreePine } from 'lucide-react'
+import { memberLinkUrl } from '../../lib/memberLink'
 import { TrailMapModal } from './TrailMapModal'
 import type { TrailCoveragePatrolDetailProps } from '../../types/activity-dashboard'
 import { DEFAULT_PREFERENCES } from '../../types/settings'
@@ -129,7 +131,7 @@ export function TrailCoveragePatrolDetail({
                     Date / ID
                   </th>
                   <th className="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 min-w-[6rem]">
-                    Member
+                    Members
                   </th>
                   {td.treesCleared && (
                     <th className="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 whitespace-nowrap">
@@ -160,8 +162,15 @@ export function TrailCoveragePatrolDetail({
                       <div>{formatDate(row.date)}</div>
                       <div className="text-[10px] text-stone-400 dark:text-stone-600 tabular-nums mt-0.5">#{row.reportId}</div>
                     </td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-stone-800 dark:text-stone-200 break-words max-w-[11rem] sm:max-w-none align-top">
-                      {row.memberName}
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium break-words max-w-[11rem] sm:max-w-none align-top">
+                      {row.memberName.split('|').map((name, i) => (
+                        <span key={name}>
+                          {i > 0 && ', '}
+                          <Link to={memberLinkUrl({ name })} className="text-emerald-700 dark:text-emerald-400 hover:underline">
+                            {name}
+                          </Link>
+                        </span>
+                      ))}
                     </td>
                     {td.treesCleared && (
                       <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap align-top">

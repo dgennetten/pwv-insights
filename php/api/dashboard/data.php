@@ -1147,7 +1147,7 @@ function patrolsByTrail(PDO $db, ?string $s, ?string $e, $ctx): array {
       r.ReportID,
       DATE_FORMAT(r.ActivityDate,'%Y-%m-%d') AS date,
       COALESCE(GROUP_CONCAT(DISTINCT CONCAT(m.FirstName,' ',m.LastName)
-               ORDER BY m.LastName SEPARATOR ' & '), 'Unknown') AS memberName,
+               ORDER BY m.LastName SEPARATOR '|'), 'Unknown') AS memberName,
       COALESCE(obs.hikersSeen, 0)      AS hikersSeen,
       COALESCE(obs.hikersContacted, 0) AS hikersContacted,
       (

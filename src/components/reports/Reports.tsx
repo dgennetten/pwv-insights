@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import type { Report } from '../../types/reports'
 import { formatInteger } from '../../lib/formatNumber'
+import { memberLinkUrl } from '../../lib/memberLink'
 
 export interface ReportsProps {
   reports: Report[]
@@ -200,11 +202,18 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
                       {r.activityDate}
                     </td>
                     <td className="px-4 py-3 text-stone-800 dark:text-stone-200">
-                      {r.writerName ?? <span className="text-stone-400 dark:text-stone-600 italic">Unknown</span>}
+                      {r.writerName
+                        ? <Link to={memberLinkUrl({ name: r.writerName })} className="text-emerald-700 dark:text-emerald-400 hover:underline">{r.writerName}</Link>
+                        : <span className="text-stone-400 dark:text-stone-600 italic">Unknown</span>}
                     </td>
                     <td className="px-4 py-3 text-stone-600 dark:text-stone-400">
                       {r.otherMembers.length > 0
-                        ? r.otherMembers.join(', ')
+                        ? r.otherMembers.map((name, i) => (
+                            <span key={name}>
+                              {i > 0 && ', '}
+                              <Link to={memberLinkUrl({ name })} className="text-emerald-700 dark:text-emerald-400 hover:underline">{name}</Link>
+                            </span>
+                          ))
                         : <span className="text-stone-300 dark:text-stone-600">—</span>
                       }
                     </td>

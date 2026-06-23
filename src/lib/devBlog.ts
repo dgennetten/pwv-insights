@@ -31,6 +31,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-06-07',
     content: `DATA LOGGER SESSION RECOVERY — I was out tracking yesterday and lost data mid-session while fumbling around on my phone. I've added robust session recovery: if the app closes before you end a session, the next time you open it you'll be offered to resume right where you left off.\n\nAlso: the Data Logger is now available to non-members — no sign-in required. Anyone can track and get an emailed report. — KDG (v1.13.0)`,
   },
+  {
+    id: 6,
+    date: '2026-06-22',
+    content: `NEW MEMBERS TAB — All names are now hyperlinked for easy lookup in the new Members tab. Browser back button/swipe to return. — KDG (v1.19.0)`,
+  },
 ]
 
 export type BlogPref =

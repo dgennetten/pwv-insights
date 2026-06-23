@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { ActivityDashboardPage } from "./pages/ActivityDashboardPage";
 import { AdminPage } from "./pages/AdminPage";
+import { MembersPage } from "./pages/MembersPage";
 import { HelpPage } from "./pages/HelpPage";
 import { LeaderboardsPage } from "./pages/LeaderboardsPage";
 import { ReportsPage } from "./pages/ReportsPage";
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: "trails", element: <TrailsPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "leaderboards", element: <LeaderboardsPage /> },
+      { path: "members", element: <MembersPage /> },
       { path: "admin", element: <AdminPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "help", element: <HelpPage /> },

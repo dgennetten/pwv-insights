@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { memberLinkUrl } from '../../lib/memberLink'
 import {
   CalendarDays,
   ChevronDown,
@@ -353,8 +354,8 @@ export function ActivityDashboard({
           <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Activity Dashboard</h2>
           <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
             {summary.periodLabel}
-            {scope.memberContext !== 'all' && scopeMemberName != null && (
-              <> · {scopeMemberName}</>
+            {scope.memberContext !== 'all' && scopeMemberName != null && scopePid != null && (
+              <> · <Link to={memberLinkUrl({ memberId: scopePid })} className="text-emerald-600 dark:text-emerald-400 hover:underline">{scopeMemberName}</Link></>
             )}
           </p>
         </div>
