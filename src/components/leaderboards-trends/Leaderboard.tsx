@@ -93,7 +93,7 @@ function PodiumStage({ top3, currentUserId, metric, unit }: PodiumStageProps) {
 
             {/* Name + value */}
             <p className={`${textSize} text-stone-800 dark:text-stone-100 truncate max-w-[130px] text-center leading-tight`}>
-              <Link to={memberLinkUrl({ memberId: member.id })} className="hover:underline">{firstName}</Link>
+              <Link to={memberLinkUrl({ memberId: member.id })} className="text-emerald-700 dark:text-emerald-400 hover:underline">{firstName}</Link>
               {isCurrentUser && (
                 <span className="block text-[10px] font-normal text-emerald-500 leading-none mt-0.5">You</span>
               )}
@@ -153,7 +153,7 @@ function MemberRow({
       <span className={`flex-1 text-sm font-medium truncate ${
         isCurrentUser ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-800 dark:text-stone-200'
       }`}>
-        <Link to={memberLinkUrl({ memberId: member.id })} className="hover:underline">{member.name}</Link>
+        <Link to={memberLinkUrl({ memberId: member.id })} className="text-emerald-700 dark:text-emerald-400 hover:underline">{member.name}</Link>
         {isCurrentUser && (
           <span className="ml-1.5 text-[11px] font-normal text-emerald-500 dark:text-emerald-500">You</span>
         )}
