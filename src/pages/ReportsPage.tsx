@@ -8,6 +8,27 @@ import type { ReportsData } from '../types/reports'
 type MemberContext = 'all' | number
 type Season = 'current' | 'last'
 
+const REPORTS_SEASON_KEY = 'pwv-reports-season-v1'
+const REPORTS_MEMBER_KEY = 'pwv-reports-member-v1'
+
+function readPersistedSeason(): Season {
+  try {
+    const v = localStorage.getItem(REPORTS_SEASON_KEY)
+    if (v === 'current' || v === 'last') return v
+  } catch { /* ignore */ }
+  return 'current'
+}
+
+function readPersistedMemberContext(): MemberContext {
+  try {
+    const v = localStorage.getItem(REPORTS_MEMBER_KEY)
+    if (!v || v === 'all') return 'all'
+    const n = Number(v)
+    if (Number.isFinite(n) && n >= 1) return n
+  } catch { /* ignore */ }
+  return 'all'
+}
+
 function memberContextParam(ctx: MemberContext): string {
   if (ctx === 'all') return 'all'
   const n = Math.trunc(Number(ctx))
@@ -19,8 +40,8 @@ export function ReportsPage() {
   const navigate = useNavigate()
   const isAuthenticated = !!user?.personId
 
-  const [memberContext, setMemberContext] = useState<MemberContext>('all')
-  const [season, setSeason]               = useState<Season>('current')
+  const [memberContext, setMemberContext] = useState<MemberContext>(() => readPersistedMemberContext())
+  const [season, setSeason]               = useState<Season>(() => readPersistedSeason())
   const [data, setData]                   = useState<ReportsData | null>(null)
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState<string | null>(null)
@@ -55,8 +76,21 @@ export function ReportsPage() {
 
   // When user logs out, reset to 'all'
   useEffect(() => {
-    if (!user?.personId) setMemberContext('all')
+    if (!user?.personId) {
+      setMemberContext('all')
+      try { localStorage.removeItem(REPORTS_MEMBER_KEY) } catch { /* ignore */ }
+    }
   }, [user?.personId])
+
+  const handleMemberContextChange = useCallback((ctx: MemberContext) => {
+    setMemberContext(ctx)
+    try { localStorage.setItem(REPORTS_MEMBER_KEY, String(ctx)) } catch { /* ignore */ }
+  }, [])
+
+  const handleSeasonChange = useCallback((s: Season) => {
+    setSeason(s)
+    try { localStorage.setItem(REPORTS_SEASON_KEY, s) } catch { /* ignore */ }
+  }, [])
 
   const handleGoBack = useCallback(() => {
     navigate(-1)
@@ -115,8 +149,8 @@ export function ReportsPage() {
         currentUserId={user?.personId}
         season={season}
         refreshing={loading}
-        onMemberContextChange={setMemberContext}
-        onSeasonChange={setSeason}
+        onMemberContextChange={handleMemberContextChange}
+        onSeasonChange={handleSeasonChange}
       />
     </div>
   )
