@@ -63,6 +63,21 @@ const DEFAULT_VIEW: LeaderboardView = 'stats'
 
 const LEADERBOARD_UI_STORAGE_KEY = 'pwv-leaderboards-category-metric-v1'
 const LEADERBOARD_VIEW_STORAGE_KEY = 'pwv-leaderboards-view-v1'
+const LEADERBOARD_TIME_STORAGE_KEY = 'pwv-leaderboards-time-v1'
+
+function readPersistedTimeRange(defaultVal: TimeRange): TimeRange {
+  if (typeof localStorage === 'undefined') return defaultVal
+  try {
+    const v = localStorage.getItem(LEADERBOARD_TIME_STORAGE_KEY)
+    if (v && TIME_RANGES.some(r => r.value === v)) return v as TimeRange
+  } catch { /* ignore */ }
+  return defaultVal
+}
+
+function writePersistedTimeRange(range: TimeRange) {
+  if (typeof localStorage === 'undefined') return
+  try { localStorage.setItem(LEADERBOARD_TIME_STORAGE_KEY, range) } catch { /* quota */ }
+}
 
 function metricBelongsToCategory(metric: LeaderboardMetric, category: LeaderboardCategory): boolean {
   return METRICS_BY_CATEGORY[category].some(m => m.value === metric)
@@ -203,7 +218,7 @@ export function LeaderboardsTrends({
   const isAuthenticated =
     currentUserId !== undefined && currentUserId !== null && String(currentUserId).trim() !== ''
 
-  const [timeRange, setTimeRange] = useState<TimeRange>(defaultTimeRange)
+  const [timeRange, setTimeRange] = useState<TimeRange>(() => readPersistedTimeRange(defaultTimeRange))
   const [view, setView] = useState<LeaderboardView>(() => readPersistedView())
   const [leaderboardCategory, setLeaderboardCategory] = useState<LeaderboardCategory>(() =>
     resolveInitialLeaderboardUI(defaultLeaderboardCategory, defaultMetric).category
@@ -218,6 +233,7 @@ export function LeaderboardsTrends({
 
   const handleTimeRange = (range: TimeRange) => {
     setTimeRange(range)
+    writePersistedTimeRange(range)
     onTimeRangeChange?.(range)
   }
 
