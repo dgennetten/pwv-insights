@@ -42,7 +42,7 @@ export interface MemberSearchResult {
   memberId: number
   firstName: string
   lastName: string
-  dob: string // YYYYMMDD
+  dob?: string // YYYYMMDD — only returned by admin endpoint
 }
 
 export interface MemberLookupMerit {
@@ -129,6 +129,40 @@ export async function fetchAdminMemberSearch(token: string, query: string): Prom
     throw new Error(data.error ?? `HTTP ${res.status}`)
   }
   return Array.isArray(data.members) ? data.members : []
+}
+
+export async function fetchMemberSearch(token: string, query: string): Promise<MemberSearchResult[]> {
+  const res = await fetch('/api/user/member-search.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, query }),
+  })
+  const data = (await res.json()) as {
+    success?: boolean
+    members?: MemberSearchResult[]
+    error?: string
+  }
+  if (!res.ok || !data.success) {
+    throw new Error(data.error ?? `HTTP ${res.status}`)
+  }
+  return Array.isArray(data.members) ? data.members : []
+}
+
+export async function fetchMemberLookup(token: string, memberId: number): Promise<MemberLookupResult> {
+  const res = await fetch('/api/user/member-lookup.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, memberId }),
+  })
+  const data = (await res.json()) as {
+    success?: boolean
+    member?: MemberLookupResult
+    error?: string
+  }
+  if (!res.ok || !data.success || !data.member) {
+    throw new Error(data.error ?? `HTTP ${res.status}`)
+  }
+  return data.member
 }
 
 export async function requestOtp(email: string): Promise<void> {

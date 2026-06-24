@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  fetchAdminMemberLookup,
-  fetchAdminMemberSearch,
+  fetchMemberLookup,
+  fetchMemberSearch,
   getStoredAuthToken,
   type MemberLookupResult,
   type MemberSearchResult,
@@ -104,7 +104,7 @@ export function MemberLookupPanel({
     setLookupLoading(true)
     setLookupError(null)
     setLookupResult(null)
-    void fetchAdminMemberLookup(token, memberId)
+    void fetchMemberLookup(token, memberId)
       .then(r => { setLookupResult(r) })
       .catch(e => { setLookupError(e instanceof Error ? e.message : 'Lookup failed') })
       .finally(() => { setLookupLoading(false) })
@@ -125,7 +125,7 @@ export function MemberLookupPanel({
     const timer = setTimeout(() => {
       const token = getStoredAuthToken()
       if (!token) return
-      void fetchAdminMemberSearch(token, query.trim())
+      void fetchMemberSearch(token, query.trim())
         .then(found => {
           if (autoSelect.current && found.length > 0) {
             autoSelect.current = false
