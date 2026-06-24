@@ -25,7 +25,13 @@ export function LeaderboardsPage() {
   const { user, openLogin } = useAuth()
   const navigate = useNavigate()
 
-  const [timeRange, setTimeRange] = useState<TimeRange>('year')
+  const [timeRange, setTimeRange] = useState<TimeRange>(() => {
+    try {
+      const v = localStorage.getItem('pwv-leaderboards-time-v1')
+      if (v === 'month' || v === 'year' || v === 'last_season' || v === 'all') return v
+    } catch { /* ignore */ }
+    return 'year'
+  })
   const [data, setData]       = useState<LeaderboardsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
