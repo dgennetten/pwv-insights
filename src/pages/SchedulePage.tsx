@@ -15,7 +15,13 @@ export function SchedulePage() {
   const isAuthenticated = !!user?.personId
 
   const [memberContext, setMemberContext] = useState<number | null>(null)
-  const [view, setView]                   = useState<'upcoming' | 'completed'>('upcoming')
+  const [view, setView]                   = useState<'upcoming' | 'completed'>(() => {
+    try {
+      const v = localStorage.getItem('pwv-schedule-view-v1')
+      if (v === 'upcoming' || v === 'completed') return v
+    } catch { /* ignore */ }
+    return 'upcoming'
+  })
   const [data, setData]                   = useState<ScheduleData | null>(null)
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState<string | null>(null)
@@ -138,7 +144,10 @@ export function SchedulePage() {
         columnPrefs={columnPrefs}
         refreshing={loading}
         onMemberContextChange={handleMemberContextChange}
-        onViewChange={setView}
+        onViewChange={v => {
+          setView(v)
+          try { localStorage.setItem('pwv-schedule-view-v1', v) } catch { /* ignore */ }
+        }}
       />
     </div>
   )

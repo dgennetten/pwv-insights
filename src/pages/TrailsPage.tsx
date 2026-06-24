@@ -19,7 +19,13 @@ export function TrailsPage() {
   const [loading,    setLoading]    = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error,      setError]      = useState<string | null>(null)
-  const [season,     setSeason]     = useState<Season>('current')
+  const [season,     setSeason]     = useState<Season>(() => {
+    try {
+      const v = localStorage.getItem('pwv-trails-season-v1')
+      if (v === 'current' || v === 'last') return v
+    } catch { /* ignore */ }
+    return 'current'
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -84,7 +90,10 @@ export function TrailsPage() {
       isAuthenticated={isAuthenticated}
       onSignInPrompt={openLogin}
       season={season}
-      onSeasonChange={setSeason}
+      onSeasonChange={s => {
+        setSeason(s)
+        try { localStorage.setItem('pwv-trails-season-v1', s) } catch { /* ignore */ }
+      }}
       refreshing={refreshing}
     />
   )
