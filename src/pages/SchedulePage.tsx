@@ -29,10 +29,16 @@ export function SchedulePage() {
     getLocalPreferences().scheduleColumns ?? DEFAULT_PREFERENCES.scheduleColumns
   )
 
-  // Initialize to current user's personId
+  // Initialize: restore persisted member or fall back to current user
   useEffect(() => {
     if (user?.personId && memberContext === null) {
-      setMemberContext(Math.trunc(Number(user.personId)))
+      try {
+        const v = localStorage.getItem('pwv-schedule-member-v1')
+        const n = v ? Math.trunc(Number(v)) : NaN
+        setMemberContext(Number.isFinite(n) && n >= 1 ? n : Math.trunc(Number(user.personId)))
+      } catch {
+        setMemberContext(Math.trunc(Number(user.personId)))
+      }
     }
   }, [user?.personId, memberContext])
 
@@ -47,7 +53,10 @@ export function SchedulePage() {
 
   // Reset on logout
   useEffect(() => {
-    if (!user?.personId) setMemberContext(null)
+    if (!user?.personId) {
+      setMemberContext(null)
+      try { localStorage.removeItem('pwv-schedule-member-v1') } catch { /* ignore */ }
+    }
   }, [user?.personId])
 
   const fetchData = useCallback(async (ctx: number, v: 'upcoming' | 'completed') => {
@@ -83,6 +92,7 @@ export function SchedulePage() {
 
   const handleMemberContextChange = useCallback((personId: number) => {
     setMemberContext(personId)
+    try { localStorage.setItem('pwv-schedule-member-v1', String(personId)) } catch { /* ignore */ }
   }, [])
 
   const handleGoBack = useCallback(() => {

@@ -144,10 +144,22 @@ function normalizeDashData(raw: Record<string, unknown>, memberContext: MemberCo
 export function ActivityDashboardPage() {
   const { user } = useAuth()
 
-  const [scope, setScope] = useState<DashboardScope>(() => ({
-    timeRange: '3m',
-    memberContext: initialMemberContext(user?.personId),
-  }))
+  const [scope, setScope] = useState<DashboardScope>(() => {
+    let timeRange: TimeRange = '3m'
+    let memberContext: MemberContext = initialMemberContext(user?.personId)
+    try {
+      const tr = localStorage.getItem('pwv-dash-timerange-v1')
+      if (tr === '7d' || tr === '1m' || tr === '3m' || tr === '1y' || tr === 'all') timeRange = tr
+      const mc = localStorage.getItem('pwv-dash-member-v1')
+      if (mc && mc !== 'all') {
+        const n = Math.trunc(Number(mc))
+        if (Number.isFinite(n) && n >= 1) memberContext = n
+      } else if (mc === 'all') {
+        memberContext = 'all'
+      }
+    } catch { /* ignore */ }
+    return { timeRange, memberContext }
+  })
   const [data, setData]       = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
@@ -208,6 +220,7 @@ export function ActivityDashboardPage() {
     autoSwitchedRef.current = false
     if (pid == null) {
       setScope(prev => (prev.memberContext === 'all' ? prev : { ...prev, memberContext: 'all' }))
+      try { localStorage.removeItem('pwv-dash-member-v1') } catch { /* ignore */ }
       return
     }
     const me = initialMemberContext(pid)
@@ -226,11 +239,15 @@ export function ActivityDashboardPage() {
     })
   }, [user?.personId])
 
-  const handleTimeRangeChange = (range: TimeRange) =>
+  const handleTimeRangeChange = (range: TimeRange) => {
     setScope(prev => ({ ...prev, timeRange: range }))
+    try { localStorage.setItem('pwv-dash-timerange-v1', range) } catch { /* ignore */ }
+  }
 
-  const handleMemberChange = (ctx: MemberContext) =>
+  const handleMemberChange = (ctx: MemberContext) => {
     setScope(prev => ({ ...prev, memberContext: ctx }))
+    try { localStorage.setItem('pwv-dash-member-v1', String(ctx)) } catch { /* ignore */ }
+  }
 
   if (loading && !data) {
     return (
