@@ -9,6 +9,8 @@ import { surveyTrackingStats, fmtPaceMinPerMi } from '../lib/gpsDistance'
 import { trailPaths } from '../data/trailPaths'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
 import { TRAILHEAD_PIN } from '../lib/trailheadPin'
+import { getLoggerSettings } from '../lib/loggerSettings'
+import { PaceChart } from '../components/data-logger/PaceChart'
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -50,6 +52,7 @@ interface TrackerSegment {
     ts: number
     segmentDistanceM: number
     name?: string
+    paceMinPerMi?: number
   }>
 }
 
@@ -397,6 +400,21 @@ export function TrailLogMapPage() {
     [timelineItems, waypointMarkers]
   )
 
+  const paceDots = useMemo(
+    () => timelineItems.map(item => ({
+      ts: item.ts,
+      color: item.kind === 'waypoint'
+        ? '#7c3aed'
+        : item.entry.type === 'hiker'     ? '#0ea5e9'
+        : item.entry.type === 'tree'      ? '#f59e0b'
+        : item.entry.type === 'violation' ? '#ef4444'
+        : '#78716c',
+    })),
+    [timelineItems]
+  )
+
+  const paceFormat = useMemo(() => getLoggerSettings().waypointPaceFormat, [])
+
   const defaultCenter: [number, number] = [40.3772, -105.5217]
 
   const { summary, trackers } = log ?? { summary: null, trackers: [] }
@@ -621,6 +639,7 @@ export function TrailLogMapPage() {
                 </span>
               </div>
             </div>
+            <PaceChart trackers={trackers} dots={paceDots} paceFormat={paceFormat} />
             <div className="flex-1 relative" style={{ minHeight: '360px' }}>
               <MapContainer
                 center={defaultCenter}

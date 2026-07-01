@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css'
 import type { LogEntry, Tracker } from '../../types/dataLogger'
 import { isValidLatLng } from '../../lib/geo'
 import { getLoggerSettings } from '../../lib/loggerSettings'
+import { PaceChart } from './PaceChart'
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -129,92 +130,12 @@ function MapPopupController({ item }: { item: TimelineItem | null }) {
   return null
 }
 
-// ── Pace chart ────────────────────────────────────────────────────
+// ── Pace chart dot colors ─────────────────────────────────────────
 
-function PaceChart({ trackers, timelineItems, paceFormat }: {
-  trackers: Tracker[]
-  timelineItems: TimelineItem[]
-  paceFormat: 'min-per-mi' | 'mph'
-}) {
-  const rawPoints: { ts: number; pace: number }[] = []
-  for (const t of trackers)
-    for (const seg of t.segments)
-      for (const wp of seg.waypoints ?? [])
-        if (!wp.name && wp.paceMinPerMi != null)
-          rawPoints.push({ ts: wp.ts, pace: wp.paceMinPerMi })
-  rawPoints.sort((a, b) => a.ts - b.ts)
-  if (rawPoints.length < 2) return null
-
-  const W = 800; const H = 100
-  const PL = 42; const PR = 10; const PT = 8; const PB = 24
-  const plotW = W - PL - PR
-  const plotH = H - PT - PB
-
-  const allTs  = [...timelineItems.map(i => i.ts), ...rawPoints.map(p => p.ts)]
-  const tMin   = Math.min(...allTs); const tMax = Math.max(...allTs)
-  const tRange = tMax - tMin || 1
-  const xS = (ts: number) => PL + ((ts - tMin) / tRange) * plotW
-
-  const isMph = paceFormat === 'mph'
-  // For min/mi: slower (higher value) = top. For mph: faster (higher value) = top.
-  // Both modes: higher y-value = top of chart.
-  const plotValues = isMph ? rawPoints.map(p => 60 / p.pace) : rawPoints.map(p => p.pace)
-  const vMin = Math.min(...plotValues); const vMax = Math.max(...plotValues)
-  const pad  = (vMax - vMin) * 0.3 || 1
-  const yMin = Math.max(0, vMin - pad); const yMax = vMax + pad
-  const yRange = yMax - yMin
-  // Higher plotValue = top for both modes (min/mi: high=slow=top; mph: high=fast=top)
-  const yS = (v: number) => PT + plotH * (1 - (v - yMin) / yRange)
-
-  const axisY    = PT + plotH
-  const linePath = rawPoints.map((d, i) => {
-    const v = isMph ? 60 / d.pace : d.pace
-    return `${i === 0 ? 'M' : 'L'}${xS(d.ts).toFixed(1)},${yS(v).toFixed(1)}`
-  }).join(' ')
-  const yTicks = [yMin, (yMin + yMax) / 2, yMax]
-  const fmtTick = (v: number) => isMph ? v.toFixed(1) : fmtPace(v)
-
-  const dotColor = (item: TimelineItem) => {
-    if (item.kind === 'waypoint') return item.name ? '#7c3aed' : '#a78bfa'
-    const e = item.entry
-    return e.type === 'hiker' ? '#0ea5e9' : e.type === 'tree' ? '#f59e0b' : e.type === 'violation' ? '#ef4444' : '#78716c'
-  }
-
-  return (
-    <div className="shrink-0 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 px-2 pt-1.5 pb-0">
-      <div className="flex items-center gap-3 px-2 mb-0.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
-          {isMph
-            ? <>Speed · mph <span className="font-normal normal-case">(faster ↑)</span></>
-            : <>Pace · min/mi <span className="font-normal normal-case">(slower ↑)</span></>
-          }
-        </p>
-        <div className="flex gap-2.5 ml-auto text-[10px] text-stone-400 dark:text-stone-500">
-          <span><span style={{ color: '#0ea5e9' }}>●</span> Hiker</span>
-          <span><span style={{ color: '#f59e0b' }}>●</span> Tree</span>
-          <span><span style={{ color: '#ef4444' }}>●</span> Viol</span>
-          <span><span style={{ color: '#a78bfa' }}>●</span> WP</span>
-        </div>
-      </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: `${H}px`, display: 'block' }}>
-        {yTicks.map((v, i) => (
-          <g key={i}>
-            <line x1={PL} y1={yS(v)} x2={W - PR} y2={yS(v)} stroke="#e7e5e4" strokeWidth={0.5} />
-            <text x={PL - 4} y={yS(v) + 3.5} textAnchor="end" fontSize={8} fill="#a8a29e">{fmtTick(v)}</text>
-          </g>
-        ))}
-        <line x1={PL} y1={axisY} x2={W - PR} y2={axisY} stroke="#d6d3d1" strokeWidth={0.75} />
-        <path d={linePath} fill="none" stroke="#7c3aed" strokeWidth={1.5} strokeLinejoin="round" />
-        {rawPoints.map((d, i) => {
-          const v = isMph ? 60 / d.pace : d.pace
-          return <circle key={i} cx={xS(d.ts)} cy={yS(v)} r={2.5} fill="#7c3aed" />
-        })}
-        {timelineItems.map((item, i) => (
-          <circle key={i} cx={xS(item.ts)} cy={axisY + 11} r={2.5} fill={dotColor(item)} opacity={0.85} />
-        ))}
-      </svg>
-    </div>
-  )
+function paceDotColor(item: TimelineItem): string {
+  if (item.kind === 'waypoint') return item.name ? '#7c3aed' : '#a78bfa'
+  const e = item.entry
+  return e.type === 'hiker' ? '#0ea5e9' : e.type === 'tree' ? '#f59e0b' : e.type === 'violation' ? '#ef4444' : '#78716c'
 }
 
 // ── MapModal ──────────────────────────────────────────────────────
@@ -358,7 +279,13 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
       </div>
 
       {/* Page-wide pace chart */}
-      {hasPaceData && <PaceChart trackers={trackers} timelineItems={timelineItems} paceFormat={loggerSettings.waypointPaceFormat} />}
+      {hasPaceData && (
+        <PaceChart
+          trackers={trackers}
+          dots={timelineItems.map(item => ({ ts: item.ts, color: paceDotColor(item) }))}
+          paceFormat={loggerSettings.waypointPaceFormat}
+        />
+      )}
 
       {/* Map + Timeline */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
