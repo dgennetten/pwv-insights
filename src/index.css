@@ -23,3 +23,19 @@ body,
   margin: 0;
   font-family: var(--font-body);
 }
+
+/* Blinking hint arrow drawing attention to the Usage tips link */
+@keyframes tip-arrow-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+.tip-arrow-hint {
+  animation: tip-arrow-blink 0.5s ease-in-out 6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip-arrow-hint {
+    animation: none;
+  }
+}
