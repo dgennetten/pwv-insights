@@ -182,6 +182,20 @@ export function DataLoggerPage() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Reflect the geolocation permission state in the GPS indicator from load,
+  // and keep it live if the user changes the permission mid-session.
+  useEffect(() => {
+    if (!('geolocation' in navigator)) { setGpsStatus('unavailable'); return }
+    if (!navigator.permissions?.query) return
+    let permission: PermissionStatus | null = null
+    const apply = () =>
+      setGpsStatus(permission?.state === 'denied' ? 'denied' : 'ok')
+    navigator.permissions.query({ name: 'geolocation' })
+      .then(p => { permission = p; apply(); p.onchange = apply })
+      .catch(() => { /* permissions query unsupported — leave optimistic */ })
+    return () => { if (permission) permission.onchange = null }
+  }, [])
+
   const trailheadCoords = session?.wksiteId != null
     ? (trailGeoData[session.wksiteId] ?? null)
     : null
@@ -578,11 +592,23 @@ export function DataLoggerPage() {
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className={`w-2 h-2 rounded-full transition-colors ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
-          <span className="text-xs text-stone-500 dark:text-stone-400">
-            {isOnline ? 'Online' : 'Offline'}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5" title={
+            gpsStatus === 'ok' ? 'GPS available'
+            : gpsStatus === 'denied' ? 'Location permission denied'
+            : 'GPS unavailable on this device'
+          }>
+            <div className={`w-2 h-2 rounded-full transition-colors ${gpsStatus === 'ok' ? 'bg-emerald-500' : gpsStatus === 'denied' ? 'bg-red-500' : 'bg-stone-400'}`} />
+            <span className="text-xs text-stone-500 dark:text-stone-400">
+              {gpsStatus === 'ok' ? 'GPS' : gpsStatus === 'denied' ? 'GPS off' : 'No GPS'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className={`w-2 h-2 rounded-full transition-colors ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
+            <span className="text-xs text-stone-500 dark:text-stone-400">
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1173,6 +1199,21 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
             <Tip>
               <strong>Distance tracking resumes automatically</strong> — If GPS drops and comes back (e.g. after you unlock), the tracker picks up from where it left off. The distance gap during the lock period won't be counted, but the time will still accumulate.
             </Tip>
+          </TipSection>
+
+          <TipSection title="GPS Indicator">
+            <li className="flex items-center gap-2 text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span><strong>GPS</strong> — location is available; entries record your position.</span>
+            </li>
+            <li className="flex items-center gap-2 text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
+              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+              <span><strong>GPS off</strong> — location permission was denied. Entries are saved without coordinates. Re-enable location access to fix.</span>
+            </li>
+            <li className="flex items-center gap-2 text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
+              <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0" />
+              <span><strong>No GPS</strong> — this device or browser can't provide location. Entries are saved without coordinates.</span>
+            </li>
           </TipSection>
 
         </div>
