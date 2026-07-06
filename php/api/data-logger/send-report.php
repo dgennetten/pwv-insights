@@ -24,6 +24,9 @@ $trackers         = trailLogNormalizeTrackers($trackers);
 $emailFormat      = (string)($body['emailFormat'] ?? 'text');
 $wksiteId         = isset($body['wksiteId']) && $body['wksiteId'] !== null ? (int) $body['wksiteId'] : null;
 $trailName        = trim((string)($body['trailName'] ?? ''));
+// Logger profile: 'other' (e.g. sports) omits trail/hiker/tree/violation content.
+$profile          = (string)($body['profile'] ?? 'patrol');
+$isOther          = ($profile === 'other');
 $isGuest          = ($token === '' && $guestEmailRaw !== '');
 
 if ($isGuest) {
@@ -237,23 +240,27 @@ $lines = [
   "Member:  {$memberName}",
   "Date:    {$reportDate}",
 ];
-if (!empty($trailNamesSeq)) {
+if (!empty($trailNamesSeq) && !$isOther) {
   $lines[] = (count($trailNamesSeq) === 1 ? 'Trail:   ' : 'Trails:  ') . implode(' -> ', $trailNamesSeq);
 }
 array_push($lines,
   '',
   $div,
   'SUMMARY',
-  '',
-  'HIKERS ENCOUNTERED',
-  "  Seen:       {$hikerSeen}",
-  "  Contacted:  {$hikerContacted}",
-  "  Total:      {$hikerTotal}",
-  '',
-  'TREES LOGGED',
-  '  Cleared:  ' . $fmtRow($trees['cleared']),
-  '  Noted:    ' . $fmtRow($trees['noted']),
 );
+if (!$isOther) {
+  array_push($lines,
+    '',
+    'HIKERS ENCOUNTERED',
+    "  Seen:       {$hikerSeen}",
+    "  Contacted:  {$hikerContacted}",
+    "  Total:      {$hikerTotal}",
+    '',
+    'TREES LOGGED',
+    '  Cleared:  ' . $fmtRow($trees['cleared']),
+    '  Noted:    ' . $fmtRow($trees['noted']),
+  );
+}
 
 if (!empty($summaryNotes)) {
   usort($summaryNotes, fn($a, $b) => $a['ts'] <=> $b['ts']);
@@ -264,7 +271,7 @@ if (!empty($summaryNotes)) {
   }
 }
 
-if (!empty($violationRows)) {
+if (!empty($violationRows) && !$isOther) {
   usort($violationRows, fn($a, $b) => $a['ts'] <=> $b['ts']);
   $lines[] = '';
   $lines[] = 'VIOLATIONS (' . count($violationRows) . ')';
@@ -277,7 +284,7 @@ if (!empty($violationRows)) {
 
 // ── Per-trail summary (PWV reports are segregated by trail) ─────────
 $knownTrailKeys = array_filter(array_keys($byTrail), fn($k) => $k !== $noTrailKey);
-if (!empty($knownTrailKeys)) {
+if (!empty($knownTrailKeys) && !$isOther) {
   uasort($byTrail, fn($a, $b) => $a['firstTs'] <=> $b['firstTs']);
   $lines[] = '';
   $lines[] = $div;
@@ -424,6 +431,7 @@ $logPayload = [
   'email'      => $memberEmail,
   'reportDate' => $reportDate,
   'savedAt'    => date('Y-m-d H:i:s'),
+  'profile'    => $profile,
   'wksiteId'   => $wksiteId,
   'trailName'  => $trailName !== '' ? $trailName : null,
   'summary'    => [

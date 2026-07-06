@@ -393,11 +393,14 @@ export function DataLoggerPage() {
   // Enriched report payload shared by member + guest send paths:
   // per-entry distance from trailhead and trail metadata.
   const buildReportPayload = useCallback(() => {
-    const sessionWksiteId = session?.wksiteId
+    // 'other' profile has no trail context — drop the trail so neither the
+    // emailed report nor the saved map show trail data.
+    const sessionWksiteId = loggerProfile === 'other' ? undefined : session?.wksiteId
     const trailEvents = entries
       .filter(e => e.type === 'trail')
       .sort((a, b) => a.timestamp - b.timestamp)
     return {
+      profile:   loggerProfile,
       wksiteId:  sessionWksiteId ?? null,
       trailName: sessionWksiteId != null ? (trailNames[sessionWksiteId] ?? null) : null,
       entries:   enrichEntriesWithTrailheadDist(entries, sessionWksiteId),
@@ -422,7 +425,7 @@ export function DataLoggerPage() {
         })),
       })),
     }
-  }, [entries, trackers, session])
+  }, [entries, trackers, session, loggerProfile])
 
   const handleSendReport = useCallback(async () => {
     if (!session || !user) return
@@ -676,6 +679,8 @@ export function DataLoggerPage() {
         </div>
       )}
 
+      {showMaintUI && (
+      <>
       {/* ── TRAIL SELECTOR ──────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3">
         <div className="flex items-center gap-3">
@@ -698,8 +703,6 @@ export function DataLoggerPage() {
         </div>
       </div>
 
-      {showMaintUI && (
-      <>
       {/* ── HIKER COUNTER ───────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">

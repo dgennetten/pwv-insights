@@ -330,28 +330,6 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {/* ── Developer's Log ──────────────────────────────────────── */}
-          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
-            <div className="mb-1">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Developer's Log</h3>
-              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
-                Occasional notes on new features and changes.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                onClick={() => {
-                  clearBlogPref()
-                  setShowBlog(true)
-                }}
-                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
-              >
-                Show latest post
-              </button>
-            </div>
-          </div>
-          {showBlog && <DevBlogModal onClose={() => setShowBlog(false)} />}
-
           {/* ── Appearance ────────────────────────────────────────────── */}
           <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
             <div className="mb-3">
@@ -441,6 +419,28 @@ export function SettingsPage() {
               </div>
             </>
           )}
+
+          {/* ── Developer's Log ──────────────────────────────────────── */}
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
+            <div className="mb-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Developer's Log</h3>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
+                Occasional notes on new features and changes.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => {
+                  clearBlogPref()
+                  setShowBlog(true)
+                }}
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
+              >
+                Show latest post
+              </button>
+            </div>
+          </div>
+          {showBlog && <DevBlogModal onClose={() => setShowBlog(false)} />}
         </>
       )}
 

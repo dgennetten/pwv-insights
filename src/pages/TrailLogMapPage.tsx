@@ -70,6 +70,7 @@ interface TrailLog {
   member: string
   reportDate: string
   savedAt?: string
+  profile?: 'patrol' | 'other'
   wksiteId?: number | null
   trailName?: string | null
   summary: {
@@ -282,11 +283,13 @@ export function TrailLogMapPage() {
           const trackers = await getSessionTrackers(sessionId)
           const session  = await getOrCreateSession(sessionId)
 
+          const profile = getLoggerSettings().profile
           setLog({
             member:     user?.name ?? 'Patrol Member',
             reportDate: sessionId.slice(0, 10),
-            wksiteId:   session.wksiteId ?? null,
-            trailName:  session.wksiteId != null ? (trailNames[session.wksiteId] ?? null) : null,
+            profile,
+            wksiteId:   profile === 'other' ? null : (session.wksiteId ?? null),
+            trailName:  profile !== 'other' && session.wksiteId != null ? (trailNames[session.wksiteId] ?? null) : null,
             summary:    buildSummaryFromEntries(entries),
             trackers:   trackers.map(t => ({
               name:             t.name,
@@ -418,6 +421,7 @@ export function TrailLogMapPage() {
   const defaultCenter: [number, number] = [40.3772, -105.5217]
 
   const { summary, trackers } = log ?? { summary: null, trackers: [] }
+  const isOther = log?.profile === 'other'
 
   const { distanceM: totalDistanceM, durationMs: totalDurationMs } = surveyTrackingStats(trackers)
 
@@ -480,7 +484,7 @@ export function TrailLogMapPage() {
             </div>
             <h1 className="text-2xl font-bold leading-tight">Data Logger Report</h1>
             <p className="text-sm text-emerald-200 mt-1">Patrol Member: {log.member}</p>
-            {log.trailName && (
+            {log.trailName && !isOther && (
               <p className="text-sm text-emerald-200">Trail: {log.trailName}</p>
             )}
           </div>
@@ -512,9 +516,10 @@ export function TrailLogMapPage() {
 
       {/* ── Stats row ───────────────────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 px-5 py-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className={`max-w-7xl mx-auto grid gap-3 ${isOther ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-3'}`}>
 
           {/* Hikers */}
+          {!isOther && (
           <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 p-4">
             <div className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3">
               Hikers Encountered
@@ -533,8 +538,10 @@ export function TrailLogMapPage() {
               Contacted: <strong className="text-stone-700 dark:text-stone-300">{summary?.hikers.contacted ?? 0}</strong>
             </div>
           </div>
+          )}
 
           {/* Trees */}
+          {!isOther && (
           <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
@@ -574,6 +581,7 @@ export function TrailLogMapPage() {
               S &lt;8" · M 8–15" · L 16–23" · XL 24–36"
             </div>
           </div>
+          )}
 
           {/* Tracking */}
           <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 p-4">
@@ -621,14 +629,18 @@ export function TrailLogMapPage() {
                     Trail
                   </span>
                 )}
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-amber-400 dark:bg-amber-500 inline-block" />
-                  Trees
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-sky-500 inline-block" />
-                  Hikers
-                </span>
+                {!isOther && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-amber-400 dark:bg-amber-500 inline-block" />
+                    Trees
+                  </span>
+                )}
+                {!isOther && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-sky-500 inline-block" />
+                    Hikers
+                  </span>
+                )}
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-stone-400 dark:bg-stone-500 inline-block" />
                   Notes
