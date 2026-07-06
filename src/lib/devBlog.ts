@@ -36,6 +36,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-06-22',
     content: `NEW MEMBERS TAB — All names throughout the app are now hyperlinked for easy lookup in the new Members tab. Browser back button/swipe to return. Report IDs on the Reports tab are also hyperlinked to CLRD.org. — KDG (v1.19.0)`,
   },
+  {
+    id: 7,
+    date: '2026-07-06',
+    content: `GPS-TAGGED PHOTOS — The Data Logger now supports geotagged notes with photos! Tap the camera button on the Notes & Photos card to snap a picture — whatever note you've typed becomes its caption. Photos are geo-located and show up as tappable camera markers on your log map (with thumbnails), plus links in the emailed report. Give it a quick test around your neighborhood! — KDG (v1.25.0)`,
+  },
 ]
 
 export type BlogPref =

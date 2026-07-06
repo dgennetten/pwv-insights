@@ -802,7 +802,7 @@ export function TrailLogMapPage() {
                           <img
                             src={p.url}
                             alt={p.caption || 'Photo'}
-                            style={{ width: '100%', maxHeight: 150, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+                            style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 6, display: 'block' }}
                           />
                         </a>
                         {p.caption && <div className="font-medium">{p.caption}</div>}
