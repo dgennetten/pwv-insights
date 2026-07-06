@@ -1,7 +1,7 @@
 export type HikerSubtype = 'seen' | 'contacted'
 export type TreeSubtype  = 'cleared' | 'noted'
 export type TreeSize     = 'small' | 'medium' | 'large' | 'xl'
-export type EntryType    = 'hiker' | 'tree' | 'note' | 'violation' | 'trail'
+export type EntryType    = 'hiker' | 'tree' | 'note' | 'violation' | 'trail' | 'photo'
 
 export interface LogEntry {
   id?: number
@@ -21,6 +21,12 @@ export interface LogEntry {
   trailName?: string
   /** along-trail distance from the trailhead, computed at send time */
   distFromTrailheadM?: number
+  /** type 'photo': stable id used to name the uploaded file */
+  photoId?: string
+  /** type 'photo': compressed JPEG data URL held offline until the report is sent */
+  photoData?: string
+  /** type 'photo': public URL once the photo is uploaded at send time */
+  photoUrl?: string
 }
 
 export interface LogSession {

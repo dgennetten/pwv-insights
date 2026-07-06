@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Tooltip, useMap } from 'react-leaflet'
-import { popup as createLPopup } from 'leaflet'
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, Tooltip, useMap } from 'react-leaflet'
+import { popup as createLPopup, divIcon } from 'leaflet'
 import { trailPaths } from '../../data/trailPaths'
 import { trailGeoData, trailNames } from '../../data/trailGeoData'
 import { TRAILHEAD_PIN } from '../../lib/trailheadPin'
@@ -44,6 +44,13 @@ const SIZE_LABELS: Record<string, string> = {
   large:  'Large (16–23")',
   xl:     'XL (24–36")',
 }
+
+const CAMERA_ICON = divIcon({
+  html: '<div style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;background:#fff;border:2px solid #db2777;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);font-size:14px;line-height:1">📷</div>',
+  className: 'pwv-photo-marker',
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+})
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -368,7 +375,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
               .filter((item): item is Extract<TimelineItem, { kind: 'entry' }> => item.kind === 'entry')
               .map((item, i) => {
                 const e = item.entry
-                if (e.type === 'trail') return null
+                if (e.type === 'trail' || e.type === 'photo') return null
                 if (e.lat === null || e.lng === null) return null
                 const isTree      = e.type === 'tree'
                 const isHiker     = e.type === 'hiker'
@@ -388,6 +395,29 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                     }}
                     eventHandlers={{ click: () => handleMapPinClick(item) }}
                   />
+                )
+              })
+            }
+
+            {/* Photo markers — click to view the captured image */}
+            {timelineItems
+              .filter((item): item is Extract<TimelineItem, { kind: 'entry' }> => item.kind === 'entry')
+              .map((item, i) => {
+                const e = item.entry
+                if (e.type !== 'photo' || e.lat === null || e.lng === null) return null
+                const src = e.photoData ?? e.photoUrl
+                if (!src) return null
+                const caption = e.noteText?.trim()
+                return (
+                  <Marker key={`photo-${i}`} position={[e.lat, e.lng]} icon={CAMERA_ICON}>
+                    <Popup>
+                      <div className="text-xs space-y-1" style={{ maxWidth: 220 }}>
+                        <img src={src} alt={caption || 'Photo'} style={{ width: '100%', borderRadius: 6, display: 'block' }} />
+                        {caption && <div className="font-medium">{caption}</div>}
+                        <div className="text-stone-500">{fmtTime(e.timestamp)}</div>
+                      </div>
+                    </Popup>
+                  </Marker>
                 )
               })
             }
@@ -480,7 +510,8 @@ function MapTimelineRow({ item, selected, onClick, paceFormat }: {
     const isHiker     = e.type === 'hiker'
     const isViolation = e.type === 'violation'
     const isTrail     = e.type === 'trail'
-    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : 'NOTE'
+    const isPhoto     = e.type === 'photo'
+    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : isPhoto ? 'PHOTO' : 'NOTE'
     badgeClass = isTree
       ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
       : isHiker
@@ -489,6 +520,8 @@ function MapTimelineRow({ item, selected, onClick, paceFormat }: {
       ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
       : isTrail
       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+      : isPhoto
+      ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300'
       : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
     const subCap = (s?: string) => s ? s[0].toUpperCase() + s.slice(1) : ''
     label = isTree
@@ -499,8 +532,11 @@ function MapTimelineRow({ item, selected, onClick, paceFormat }: {
       ? (e.violationType ?? 'Violation')
       : isTrail
       ? `Trail: ${e.trailName ?? 'none (off PWV trail)'}`
+      : isPhoto
+      ? (e.noteText?.trim() || 'Photo')
       : (e.noteText ?? '')
     if (isViolation && e.violationNote) sublabel = e.violationNote
+    if (isPhoto) sublabel = '📷 Tap marker on map to view'
   }
 
   return (

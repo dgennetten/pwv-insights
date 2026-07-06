@@ -404,16 +404,7 @@ if ($includeLocations && !empty($trackers)) {
   }
 }
 
-$lines[] = '';
-$lines[] = $div;
-$lines[] = "Session started: {$startTime}";
-$lines[] = "Report sent:     {$sentTime}";
-$lines[] = '';
-$lines[] = "\u{2014} KDG" . ($appVersion !== '' ? " (v{$appVersion})" : '');
-
-$subject = "PWV Data Logger Report - {$reportDate}";
-
-// ── Generate unique log ID and save to file ───────────────────────
+// ── Generate unique log ID (needed to name photo files) ───────────
 $logDate  = date('Ymd');
 $logTime  = date('Hi');
 $logId    = $isGuest
@@ -423,6 +414,54 @@ $logId    = $isGuest
 $protocol   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host       = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $spaUrl     = "{$protocol}://{$host}/trail-log/{$logId}";
+
+// ── Save captured photos to disk; swap base64 for a public URL ─────
+$dataLoggerDir = dirname(dirname(dirname(__DIR__))) . '/data-logger';
+$photosDir     = $dataLoggerDir . '/photos';
+$photoLinks    = [];
+foreach ($entries as $ei => $pe) {
+  if (!is_array($pe) || ($pe['type'] ?? '') !== 'photo') continue;
+  $raw = (string) ($pe['photoData'] ?? '');
+  unset($entries[$ei]['photoData']); // never persist base64 in the log JSON
+  if ($raw !== '' && preg_match('#^data:image/[\w.+-]+;base64,#', $raw)) {
+    $raw = substr($raw, strpos($raw, ',') + 1);
+  }
+  $bin = $raw !== '' ? base64_decode($raw, true) : false;
+  if ($bin === false) continue;
+  $pid = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($pe['photoId'] ?? ''));
+  if ($pid === '') $pid = 'p' . $ei;
+  $fname = "{$logId}_{$pid}.jpg";
+  if (!is_dir($photosDir)) @mkdir($photosDir, 0755, true);
+  if (is_dir($photosDir) && @file_put_contents($photosDir . '/' . $fname, $bin) !== false) {
+    $url = "/data-logger/photos/{$fname}";
+    $entries[$ei]['photoUrl'] = $url;
+    $photoLinks[] = [
+      'ts'      => (int) ($pe['timestamp'] ?? 0),
+      'caption' => trim((string) ($pe['noteText'] ?? '')),
+      'url'     => "{$protocol}://{$host}{$url}",
+    ];
+  }
+}
+if (!empty($photoLinks)) {
+  usort($photoLinks, fn($a, $b) => $a['ts'] <=> $b['ts']);
+  $lines[] = '';
+  $lines[] = $div;
+  $lines[] = 'PHOTOS (' . count($photoLinks) . ')';
+  foreach ($photoLinks as $pl) {
+    $ptime = $pl['ts'] ? date('g:i A', intdiv($pl['ts'], 1000)) : '--:--';
+    $lines[] = "  [{$ptime}] " . ($pl['caption'] !== '' ? $pl['caption'] : '(no caption)');
+    $lines[] = "    {$pl['url']}";
+  }
+}
+
+$lines[] = '';
+$lines[] = $div;
+$lines[] = "Session started: {$startTime}";
+$lines[] = "Report sent:     {$sentTime}";
+$lines[] = '';
+$lines[] = "\u{2014} KDG" . ($appVersion !== '' ? " (v{$appVersion})" : '');
+
+$subject = "PWV Data Logger Report - {$reportDate}";
 
 $logPayload = [
   'logId'      => $logId,
@@ -447,7 +486,6 @@ $logPayload = [
 ];
 
 $savedLogId = null;
-$dataLoggerDir = dirname(dirname(dirname(__DIR__))) . '/data-logger';
 if (!is_dir($dataLoggerDir)) {
   @mkdir($dataLoggerDir, 0755, true);
 }

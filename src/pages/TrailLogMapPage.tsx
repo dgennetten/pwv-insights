@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, Tooltip, useMap } from 'react-leaflet'
+import { divIcon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getSessionEntries, getSessionTrackers, getOrCreateSession } from '../services/dataLoggerService'
 import { useAuth } from '../contexts/AuthContext'
@@ -20,7 +21,7 @@ interface LogEntry {
   timestamp: number
   lat: number | null
   lng: number | null
-  type: 'hiker' | 'tree' | 'note' | 'violation' | 'trail'
+  type: 'hiker' | 'tree' | 'note' | 'violation' | 'trail' | 'photo'
   hikerSubtype?: 'seen' | 'contacted'
   treeSubtype?: 'cleared' | 'noted'
   treeSize?: 'small' | 'medium' | 'large' | 'xl'
@@ -30,6 +31,7 @@ interface LogEntry {
   wksiteId?: number | null
   trailName?: string
   distFromTrailheadM?: number
+  photoUrl?: string
 }
 
 function fmtMiFromTh(m: number): string {
@@ -92,6 +94,13 @@ const SIZE_LABELS: Record<string, string> = {
   large:  'Large (16–23")',
   xl:     'XL (24–36")',
 }
+
+const CAMERA_ICON = divIcon({
+  html: '<div style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;background:#fff;border:2px solid #db2777;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);font-size:14px;line-height:1">📷</div>',
+  className: 'pwv-photo-marker',
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+})
 
 
 function fmtTime(ms: number): string {
@@ -178,6 +187,7 @@ function TimelineEntry({
   let badgeClass: string
   let label: string
   let thDistM: number | undefined
+  let photoUrl: string | undefined
 
   if (item.kind === 'waypoint') {
     badge      = 'WPT'
@@ -189,8 +199,10 @@ function TimelineEntry({
     const isHiker     = entry.type === 'hiker'
     const isViolation = entry.type === 'violation'
     const isTrail     = entry.type === 'trail'
+    const isPhoto     = entry.type === 'photo'
     thDistM    = entry.distFromTrailheadM
-    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : 'NOTE'
+    photoUrl   = isPhoto ? entry.photoUrl : undefined
+    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : isPhoto ? 'PHOTO' : 'NOTE'
     badgeClass = isTree
       ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
       : isHiker
@@ -199,6 +211,8 @@ function TimelineEntry({
       ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
       : isTrail
       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+      : isPhoto
+      ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300'
       : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
     label = isTree
       ? `Tree — ${entry.treeSubtype ? entry.treeSubtype[0].toUpperCase() + entry.treeSubtype.slice(1) : ''}, ${SIZE_LABELS[entry.treeSize ?? ''] ?? entry.treeSize}`
@@ -208,6 +222,8 @@ function TimelineEntry({
       ? (entry.violationType ?? 'Violation')
       : isTrail
       ? `Trail: ${entry.trailName ?? 'none (off PWV trail)'}`
+      : isPhoto
+      ? (entry.noteText?.trim() || 'Photo')
       : (entry.noteText ?? '')
   }
 
@@ -235,6 +251,17 @@ function TimelineEntry({
         <div className="text-xs font-medium text-stone-800 dark:text-stone-200 leading-snug">
           {label}
         </div>
+        {photoUrl && (
+          <a
+            href={photoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="text-xs text-pink-600 dark:text-pink-400 underline underline-offset-2 hover:text-pink-500"
+          >
+            View photo
+          </a>
+        )}
         <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
           {fmtTime(item.ts)}
           {thDistM != null && <span className="ml-1.5">· {fmtMiFromTh(thDistM)}</span>}
@@ -376,6 +403,19 @@ export function TrailLogMapPage() {
       }
     }
     return result
+  }, [log])
+
+  const photoMarkers = useMemo(() => {
+    if (!log) return []
+    return log.entries
+      .filter(e => e.type === 'photo' && e.photoUrl && e.lat !== null && e.lng !== null)
+      .map(e => ({
+        lat:     e.lat as number,
+        lng:     e.lng as number,
+        ts:      e.timestamp,
+        url:     e.photoUrl as string,
+        caption: (e.noteText ?? '').trim(),
+      }))
   }, [log])
 
   // Every trail involved in this log: the session's selection plus any
@@ -649,6 +689,12 @@ export function TrailLogMapPage() {
                   <span className="w-3 h-3 rounded-full bg-violet-500 inline-block" />
                   Waypoints
                 </span>
+                {photoMarkers.length > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[13px] leading-none">📷</span>
+                    Photos
+                  </span>
+                )}
               </div>
             </div>
             <PaceChart trackers={trackers} dots={paceDots} paceFormat={paceFormat} />
@@ -712,10 +758,28 @@ export function TrailLogMapPage() {
                   </CircleMarker>
                 ))}
 
+                {photoMarkers.map((p, i) => (
+                  <Marker key={`photo-${p.ts}-${i}`} position={[p.lat, p.lng]} icon={CAMERA_ICON}>
+                    <Popup>
+                      <div className="text-xs space-y-1" style={{ maxWidth: 220 }}>
+                        <a href={p.url} target="_blank" rel="noopener noreferrer">
+                          <img src={p.url} alt={p.caption || 'Photo'} style={{ width: '100%', borderRadius: 6, display: 'block' }} />
+                        </a>
+                        {p.caption && <div className="font-medium">{p.caption}</div>}
+                        <div className="text-stone-500">{fmtTime(p.ts)}</div>
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">
+                          Open full photo
+                        </a>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+
                 {timelineItems.map((item, idx) => {
                   if (item.kind === 'waypoint') return null
                   const entry = item.entry
                   if (entry.type === 'trail') return null
+                  if (entry.type === 'photo') return null
                   if (entry.lat === null || entry.lng === null) return null
                   const isTree      = entry.type === 'tree'
                   const isHiker     = entry.type === 'hiker'

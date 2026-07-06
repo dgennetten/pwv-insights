@@ -1,4 +1,4 @@
-import { Undo2, ArrowLeft } from 'lucide-react'
+import { Undo2, ArrowLeft, Camera } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -24,6 +24,7 @@ import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryTy
 import { trackerDistanceM } from '../lib/gpsDistance'
 import { distFromTrailheadM } from '../lib/trailheadDistance'
 import { getLoggerSettings } from '../lib/loggerSettings'
+import { fileToCompressedDataUrl } from '../lib/photo'
 
 // Matches lu_viol_type in the database, sorted alphabetically, "Other" last
 const VIOLATION_TYPES: string[] = [
@@ -173,6 +174,8 @@ export function DataLoggerPage() {
   const [showMap,       setShowMap]       = useState(false)
   const [showAllNotes,      setShowAllNotes]      = useState(false)
   const [showAllViolations, setShowAllViolations] = useState(false)
+  const [capturingPhoto,    setCapturingPhoto]    = useState(false)
+  const [viewPhoto,         setViewPhoto]         = useState<string | null>(null)
   const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
   const [loading,           setLoading]           = useState(true)
   const [confirmClear,      setConfirmClear]      = useState(false)
@@ -366,6 +369,35 @@ export function DataLoggerPage() {
     await refreshEntries(session.id)
   }, [session, noteText, capturePosition, refreshEntries])
 
+  const logPhoto = useCallback(async (file: File) => {
+    if (!session) return
+    setCapturingPhoto(true)
+    setSendError(null)
+    try {
+      const photoData = await fileToCompressedDataUrl(file)
+      const pos = await capturePosition()
+      const caption = noteText.trim()
+      const id = await addEntry({
+        sessionId: session.id,
+        timestamp: Date.now(),
+        lat:       pos?.lat ?? null,
+        lng:       pos?.lng ?? null,
+        type:      'photo',
+        // The note text (if any) becomes the photo's caption
+        noteText:  caption || undefined,
+        photoId:   crypto.randomUUID(),
+        photoData,
+      })
+      setNoteText('')
+      setLastAction([id])
+      await refreshEntries(session.id)
+    } catch (e) {
+      setSendError(e instanceof Error ? `Photo capture failed: ${e.message}` : 'Photo capture failed')
+    } finally {
+      setCapturingPhoto(false)
+    }
+  }, [session, noteText, capturePosition, refreshEntries])
+
   const logViolation = useCallback(async () => {
     if (!session || !violationType) return
     const pos = await capturePosition()
@@ -548,6 +580,11 @@ export function DataLoggerPage() {
     [entries],
   )
 
+  const photoEntries = useMemo(
+    () => entries.filter(e => e.type === 'photo').slice().reverse(),
+    [entries],
+  )
+
   const violationEntries = useMemo(
     () => entries.filter(e => e.type === 'violation').slice().reverse(),
     [entries],
@@ -565,7 +602,7 @@ export function DataLoggerPage() {
   const treeTotal  = TREE_SIZES.reduce(
     (sum, s) => sum + treeCounts.cleared[s.key] + treeCounts.noted[s.key], 0
   )
-  const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0
+  const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0 || photoEntries.length > 0
   const reportEmail = user?.email?.trim() ?? ''
 
   return (
@@ -878,7 +915,7 @@ export function DataLoggerPage() {
       {/* ── NOTES ───────────────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
         <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-          Notes
+          Notes &amp; Photos
         </span>
         <div className="flex gap-2">
           <input
@@ -887,16 +924,56 @@ export function DataLoggerPage() {
             onChange={e => setNoteText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') void logNote() }}
             placeholder="Observation…"
-            className="flex-1 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
+            className="flex-1 min-w-0 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
           />
+          <label
+            title="Take a photo — the note text becomes its caption"
+            className={`shrink-0 flex items-center justify-center px-3 py-2 rounded-lg border transition-colors ${
+              capturingPhoto
+                ? 'bg-stone-100 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-400 cursor-wait'
+                : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 cursor-pointer'
+            }`}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              disabled={capturingPhoto}
+              onChange={e => {
+                const f = e.target.files?.[0]
+                if (f) void logPhoto(f)
+                e.target.value = ''
+              }}
+            />
+            <Camera className="w-4 h-4" strokeWidth={2} aria-hidden />
+          </label>
           <button
             onClick={() => void logNote()}
             disabled={!noteText.trim()}
-            className="px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-200 transition-colors"
+            className="shrink-0 px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-200 transition-colors"
           >
             Add
           </button>
         </div>
+        {photoEntries.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {photoEntries.map(e => {
+              const src = e.photoData ?? e.photoUrl
+              if (!src) return null
+              return (
+                <button
+                  key={e.id}
+                  onClick={() => setViewPhoto(src)}
+                  title={e.noteText || 'Photo'}
+                  className="w-16 h-16 rounded-lg overflow-hidden border border-stone-200 dark:border-stone-700 hover:border-emerald-400 transition-colors"
+                >
+                  <img src={src} alt={e.noteText || 'Photo'} className="w-full h-full object-cover" />
+                </button>
+              )
+            })}
+          </div>
+        )}
         {noteEntries.length > 0 && (
           <div className="space-y-1.5">
             {(showAllNotes ? noteEntries : noteEntries.slice(0, 1)).map(e => (
@@ -1125,6 +1202,15 @@ export function DataLoggerPage() {
         wksiteId={session.wksiteId}
         onClose={() => setShowMap(false)}
       />
+    )}
+
+    {viewPhoto && (
+      <div
+        className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4"
+        onClick={() => setViewPhoto(null)}
+      >
+        <img src={viewPhoto} alt="Captured photo" className="max-w-full max-h-full rounded-lg" />
+      </div>
     )}
     </>
   )
