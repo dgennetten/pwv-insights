@@ -22,6 +22,7 @@ import { updateSessionWksite } from '../services/dataLoggerService'
 import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker } from '../types/dataLogger'
 import { trackerDistanceM } from '../lib/gpsDistance'
 import { distFromTrailheadM } from '../lib/trailheadDistance'
+import { getLoggerSettings } from '../lib/loggerSettings'
 
 // Matches lu_viol_type in the database, sorted alphabetically, "Other" last
 const VIOLATION_TYPES: string[] = [
@@ -153,6 +154,9 @@ export function DataLoggerPage() {
   const [isOnline,      setIsOnline]      = useState(navigator.onLine)
   const [showTips,      setShowTips]      = useState(false)
   const [showTipsHint,  setShowTipsHint]  = useState(true)
+  // 'patrol' shows the full trail-maintenance UI; 'other' hides Tree & Violation.
+  const [loggerProfile] = useState(() => getLoggerSettings().profile)
+  const showMaintUI = loggerProfile === 'patrol'
   const [session,       setSession]       = useState<LogSession | null>(null)
   const [entries,       setEntries]       = useState<LogEntry[]>([])
   const [treeMode,        setTreeMode]        = useState<TreeSubtype>('cleared')
@@ -694,6 +698,8 @@ export function DataLoggerPage() {
         </div>
       </div>
 
+      {showMaintUI && (
+      <>
       {/* ── HIKER COUNTER ───────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -792,62 +798,6 @@ export function DataLoggerPage() {
         </div>
       </div>
 
-      {/* ── DISTANCE TRACKER ────────────────────────────── */}
-      <DistanceTracker
-        key={trackerResetKey}
-        sessionId={session?.id ?? null}
-        trailheadCoords={trailheadCoords ?? undefined}
-        wksiteId={session?.wksiteId}
-        onTrackersChange={setTrackers}
-      />
-
-      {/* ── NOTES ───────────────────────────────────────── */}
-      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-          Notes
-        </span>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={noteText}
-            onChange={e => setNoteText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') void logNote() }}
-            placeholder="Observation…"
-            className="flex-1 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
-          />
-          <button
-            onClick={() => void logNote()}
-            disabled={!noteText.trim()}
-            className="px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-200 transition-colors"
-          >
-            Add
-          </button>
-        </div>
-        {noteEntries.length > 0 && (
-          <div className="space-y-1.5">
-            {(showAllNotes ? noteEntries : noteEntries.slice(0, 1)).map(e => (
-              <div
-                key={e.id}
-                className="text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
-              >
-                <div>{e.noteText}</div>
-                <div className="text-stone-400 dark:text-stone-500 mt-0.5">
-                  {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
-                </div>
-              </div>
-            ))}
-            {noteEntries.length > 1 && (
-              <button
-                onClick={() => setShowAllNotes(p => !p)}
-                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
-              >
-                {showAllNotes ? 'Show less' : `Show all ${noteEntries.length} notes`}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* ── VIOLATIONS ──────────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -904,6 +854,64 @@ export function DataLoggerPage() {
                 className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
               >
                 {showAllViolations ? 'Show less' : `Show all ${violationEntries.length} violations`}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      </>
+      )}
+
+      {/* ── DISTANCE TRACKER ────────────────────────────── */}
+      <DistanceTracker
+        key={trackerResetKey}
+        sessionId={session?.id ?? null}
+        trailheadCoords={trailheadCoords ?? undefined}
+        wksiteId={session?.wksiteId}
+        onTrackersChange={setTrackers}
+      />
+
+      {/* ── NOTES ───────────────────────────────────────── */}
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+          Notes
+        </span>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={noteText}
+            onChange={e => setNoteText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') void logNote() }}
+            placeholder="Observation…"
+            className="flex-1 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
+          />
+          <button
+            onClick={() => void logNote()}
+            disabled={!noteText.trim()}
+            className="px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-200 transition-colors"
+          >
+            Add
+          </button>
+        </div>
+        {noteEntries.length > 0 && (
+          <div className="space-y-1.5">
+            {(showAllNotes ? noteEntries : noteEntries.slice(0, 1)).map(e => (
+              <div
+                key={e.id}
+                className="text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
+              >
+                <div>{e.noteText}</div>
+                <div className="text-stone-400 dark:text-stone-500 mt-0.5">
+                  {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
+                </div>
+              </div>
+            ))}
+            {noteEntries.length > 1 && (
+              <button
+                onClick={() => setShowAllNotes(p => !p)}
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
+              >
+                {showAllNotes ? 'Show less' : `Show all ${noteEntries.length} notes`}
               </button>
             )}
           </div>

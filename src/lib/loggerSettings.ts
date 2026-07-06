@@ -1,4 +1,7 @@
 export interface LoggerSettings {
+  // What the logger is configured for. 'patrol' shows the full trail
+  // maintenance/patrol UI; 'other' hides Tree and Violation logging.
+  profile: 'patrol' | 'other'
   waypointsEnabled: boolean
   waypointMode: 'distance' | 'time'
   waypointDistanceMi: number
@@ -12,6 +15,7 @@ export interface LoggerSettings {
 const STORAGE_KEY = 'pwv_logger_settings'
 
 const DEFAULTS: LoggerSettings = {
+  profile: 'patrol',
   waypointsEnabled: true,
   waypointMode: 'distance',
   waypointDistanceMi: 0.1,

@@ -204,6 +204,35 @@ export function SettingsPage() {
               <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Screen wake lock and auto-waypoint recording for distance tracking. All settings are saved locally.</p>
             </div>
             {showLoggerTips && <UsageTipsModal onClose={() => setShowLoggerTips(false)} />}
+
+            {/* Configure-for profile toggle */}
+            <div className="pb-3 mb-1 border-b border-stone-100 dark:border-stone-800">
+              <span className="text-sm text-stone-700 dark:text-stone-300">Configure for</span>
+              <div className="mt-2 flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
+                {([
+                  { value: 'patrol', label: 'Trail Maint/Patrol' },
+                  { value: 'other',  label: 'Other (sports, etc)' },
+                ] as const).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => updateLoggerSettings({ profile: value })}
+                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      loggerSettings.profile === value
+                        ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
+                        : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1.5">
+                {loggerSettings.profile === 'other'
+                  ? 'Hiker, Tree, and Violation logging are hidden — just distance tracking and notes.'
+                  : 'Full trail patrol logging: hikers, trees, and violations.'}
+              </p>
+            </div>
+
             <div className="divide-y divide-stone-100 dark:divide-stone-800">
               <PrefRow
                 label="Keep screen awake while tracking"
