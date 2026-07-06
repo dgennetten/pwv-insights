@@ -38,6 +38,13 @@ function fmtMiFromTh(m: number): string {
   return (m / 1609.344).toFixed(2) + ' mi from TH'
 }
 
+// Photos are served via get-photo.php. Older logs stored a static
+// /data-logger/photos/… path (outside the web root, 404) — rewrite those.
+function photoHref(url: string): string {
+  const m = url.match(/\/data-logger\/photos\/(.+)$/)
+  return m ? `/api/data-logger/get-photo.php?file=${encodeURIComponent(m[1])}` : url
+}
+
 type TimelineItem =
   | { kind: 'entry';    entry: LogEntry; ts: number }
   | { kind: 'waypoint'; lat: number; lng: number; ts: number; name: string; trackerName: string }
@@ -201,7 +208,7 @@ function TimelineEntry({
     const isTrail     = entry.type === 'trail'
     const isPhoto     = entry.type === 'photo'
     thDistM    = entry.distFromTrailheadM
-    photoUrl   = isPhoto ? entry.photoUrl : undefined
+    photoUrl   = isPhoto && entry.photoUrl ? photoHref(entry.photoUrl) : undefined
     badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : isPhoto ? 'PHOTO' : 'NOTE'
     badgeClass = isTree
       ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
@@ -415,7 +422,7 @@ export function TrailLogMapPage() {
         lat:     e.lat as number,
         lng:     e.lng as number,
         ts:      e.timestamp,
-        url:     e.photoUrl as string,
+        url:     photoHref(e.photoUrl as string),
         caption: (e.noteText ?? '').trim(),
       }))
   }, [log])
@@ -768,14 +775,18 @@ export function TrailLogMapPage() {
                     ref={m => { if (m) photoMarkerRefs.current[p.ts] = m }}
                   >
                     <Popup>
-                      <div className="text-xs space-y-1" style={{ maxWidth: 220 }}>
-                        <a href={p.url} target="_blank" rel="noopener noreferrer">
-                          <img src={p.url} alt={p.caption || 'Photo'} style={{ width: '100%', borderRadius: 6, display: 'block' }} />
+                      <div className="text-xs space-y-1" style={{ width: 200 }}>
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" title="View full size">
+                          <img
+                            src={p.url}
+                            alt={p.caption || 'Photo'}
+                            style={{ width: '100%', maxHeight: 150, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+                          />
                         </a>
                         {p.caption && <div className="font-medium">{p.caption}</div>}
                         <div className="text-stone-500">{fmtTime(p.ts)}</div>
                         <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">
-                          Open full photo
+                          View full size
                         </a>
                       </div>
                     </Popup>

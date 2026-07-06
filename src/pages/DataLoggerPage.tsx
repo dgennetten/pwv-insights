@@ -994,7 +994,7 @@ export function DataLoggerPage() {
                 onClick={() => setShowAllNotes(p => !p)}
                 className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
               >
-                {showAllNotes ? 'Show less' : 'Show more'}
+                {showAllNotes ? 'Show less' : `Show ${notePhotoEntries.length - 2} more`}
               </button>
             )}
           </div>

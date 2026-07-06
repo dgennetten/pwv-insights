@@ -433,11 +433,15 @@ foreach ($entries as $ei => $pe) {
   $fname = "{$logId}_{$pid}.jpg";
   if (!is_dir($photosDir)) @mkdir($photosDir, 0755, true);
   if (is_dir($photosDir) && @file_put_contents($photosDir . '/' . $fname, $bin) !== false) {
-    $url = "/data-logger/photos/{$fname}";
+    // Photos live outside the web root, so serve them via get-photo.php
+    $url = "/api/data-logger/get-photo.php?file={$fname}";
     $entries[$ei]['photoUrl'] = $url;
+    $plat = isset($pe['lat']) && $pe['lat'] !== null ? (float) $pe['lat'] : null;
+    $plng = isset($pe['lng']) && $pe['lng'] !== null ? (float) $pe['lng'] : null;
     $photoLinks[] = [
       'ts'      => (int) ($pe['timestamp'] ?? 0),
       'caption' => trim((string) ($pe['noteText'] ?? '')),
+      'coords'  => $fmtCoords($plat, $plng),
       'url'     => "{$protocol}://{$host}{$url}",
     ];
   }
@@ -449,7 +453,9 @@ if (!empty($photoLinks)) {
   $lines[] = 'PHOTOS (' . count($photoLinks) . ')';
   foreach ($photoLinks as $pl) {
     $ptime = $pl['ts'] ? date('g:i A', intdiv($pl['ts'], 1000)) : '--:--';
-    $lines[] = "  [{$ptime}] " . ($pl['caption'] !== '' ? $pl['caption'] : '(no caption)');
+    // GPS shown only when the sender opted to include locations
+    $meta  = $includeLocations ? "{$ptime} | {$pl['coords']}" : $ptime;
+    $lines[] = "  [{$meta}] " . ($pl['caption'] !== '' ? $pl['caption'] : '(no caption)');
     $lines[] = "    {$pl['url']}";
   }
 }

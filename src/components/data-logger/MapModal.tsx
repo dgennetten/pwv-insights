@@ -411,8 +411,8 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                 return (
                   <Marker key={`photo-${i}`} position={[e.lat, e.lng]} icon={CAMERA_ICON}>
                     <Popup>
-                      <div className="text-xs space-y-1" style={{ maxWidth: 220 }}>
-                        <img src={src} alt={caption || 'Photo'} style={{ width: '100%', borderRadius: 6, display: 'block' }} />
+                      <div className="text-xs space-y-1" style={{ width: 200 }}>
+                        <img src={src} alt={caption || 'Photo'} style={{ width: '100%', maxHeight: 150, objectFit: 'cover', borderRadius: 6, display: 'block' }} />
                         {caption && <div className="font-medium">{caption}</div>}
                         <div className="text-stone-500">{fmtTime(e.timestamp)}</div>
                       </div>
