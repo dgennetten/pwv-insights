@@ -1,5 +1,6 @@
 import { Undo2, ArrowLeft } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { version } from '../../package.json'
 import { DistanceTracker } from '../components/data-logger/DistanceTracker'
@@ -1094,12 +1095,21 @@ export function DataLoggerPage() {
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => setConfirmClear(true)}
-            className="text-xs text-stone-400 dark:text-stone-500 hover:text-red-500 dark:hover:text-red-400 underline underline-offset-2 transition-colors"
-          >
-            Clear all data
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/settings"
+              className="text-xs text-stone-400 dark:text-stone-500 hover:text-emerald-600 dark:hover:text-emerald-400 underline underline-offset-2 transition-colors"
+            >
+              Data Logger Settings
+            </Link>
+            <span className="text-stone-300 dark:text-stone-600">·</span>
+            <button
+              onClick={() => setConfirmClear(true)}
+              className="text-xs text-stone-400 dark:text-stone-500 hover:text-red-500 dark:hover:text-red-400 underline underline-offset-2 transition-colors"
+            >
+              Clear all data
+            </button>
+          </div>
         )}
       </div>
 
