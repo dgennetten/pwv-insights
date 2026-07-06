@@ -585,6 +585,12 @@ export function DataLoggerPage() {
     [entries],
   )
 
+  // Combined, newest-first list of notes and photos for the card below
+  const notePhotoEntries = useMemo(
+    () => entries.filter(e => e.type === 'note' || e.type === 'photo').slice().reverse(),
+    [entries],
+  )
+
   const violationEntries = useMemo(
     () => entries.filter(e => e.type === 'violation').slice().reverse(),
     [entries],
@@ -956,43 +962,39 @@ export function DataLoggerPage() {
             Add
           </button>
         </div>
-        {photoEntries.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {photoEntries.map(e => {
-              const src = e.photoData ?? e.photoUrl
-              if (!src) return null
+        {notePhotoEntries.length > 0 && (
+          <div className="space-y-1.5">
+            {(showAllNotes ? notePhotoEntries : notePhotoEntries.slice(0, 2)).map(e => {
+              const src = e.type === 'photo' ? (e.photoData ?? e.photoUrl) : null
               return (
-                <button
+                <div
                   key={e.id}
-                  onClick={() => setViewPhoto(src)}
-                  title={e.noteText || 'Photo'}
-                  className="w-16 h-16 rounded-lg overflow-hidden border border-stone-200 dark:border-stone-700 hover:border-emerald-400 transition-colors"
+                  className="flex items-start gap-2 text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
                 >
-                  <img src={src} alt={e.noteText || 'Photo'} className="w-full h-full object-cover" />
-                </button>
+                  {src && (
+                    <button
+                      onClick={() => setViewPhoto(src)}
+                      title={e.noteText || 'Photo'}
+                      className="shrink-0 w-12 h-12 rounded-md overflow-hidden border border-stone-200 dark:border-stone-700 hover:border-emerald-400 transition-colors"
+                    >
+                      <img src={src} alt={e.noteText || 'Photo'} className="w-full h-full object-cover" />
+                    </button>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="break-words">{e.noteText || (e.type === 'photo' ? 'Photo' : '')}</div>
+                    <div className="text-stone-400 dark:text-stone-500 mt-0.5">
+                      {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
+                    </div>
+                  </div>
+                </div>
               )
             })}
-          </div>
-        )}
-        {noteEntries.length > 0 && (
-          <div className="space-y-1.5">
-            {(showAllNotes ? noteEntries : noteEntries.slice(0, 1)).map(e => (
-              <div
-                key={e.id}
-                className="text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
-              >
-                <div>{e.noteText}</div>
-                <div className="text-stone-400 dark:text-stone-500 mt-0.5">
-                  {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
-                </div>
-              </div>
-            ))}
-            {noteEntries.length > 1 && (
+            {notePhotoEntries.length > 2 && (
               <button
                 onClick={() => setShowAllNotes(p => !p)}
                 className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
               >
-                {showAllNotes ? 'Show less' : `Show all ${noteEntries.length} notes`}
+                {showAllNotes ? 'Show less' : 'Show more'}
               </button>
             )}
           </div>

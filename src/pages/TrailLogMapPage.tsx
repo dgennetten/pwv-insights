@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, Tooltip, useMap } from 'react-leaflet'
-import { divIcon } from 'leaflet'
+import { divIcon, type Marker as LeafletMarker } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getSessionEntries, getSessionTrackers, getOrCreateSession } from '../services/dataLoggerService'
 import { useAuth } from '../contexts/AuthContext'
@@ -290,6 +290,8 @@ export function TrailLogMapPage() {
   const [error,   setError]   = useState<string | null>(null)
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const [selectedTs,  setSelectedTs]  = useState<number | null>(null)
+  // Refs to each photo marker so tapping its timeline row can open its popup
+  const photoMarkerRefs = useRef<Record<number, LeafletMarker>>({})
 
   useEffect(() => { applyTheme(getStoredTheme()) }, [])
 
@@ -759,7 +761,12 @@ export function TrailLogMapPage() {
                 ))}
 
                 {photoMarkers.map((p, i) => (
-                  <Marker key={`photo-${p.ts}-${i}`} position={[p.lat, p.lng]} icon={CAMERA_ICON}>
+                  <Marker
+                    key={`photo-${p.ts}-${i}`}
+                    position={[p.lat, p.lng]}
+                    icon={CAMERA_ICON}
+                    ref={m => { if (m) photoMarkerRefs.current[p.ts] = m }}
+                  >
                     <Popup>
                       <div className="text-xs space-y-1" style={{ maxWidth: 220 }}>
                         <a href={p.url} target="_blank" rel="noopener noreferrer">
@@ -848,6 +855,10 @@ export function TrailLogMapPage() {
                       const lat = item.kind === 'entry' ? item.entry.lat : item.lat
                       const lng = item.kind === 'entry' ? item.entry.lng : item.lng
                       if (lat !== null && lng !== null) setFocusCenter([lat, lng])
+                      // A photo row pops open its map marker (caption + clickable thumbnail)
+                      if (item.kind === 'entry' && item.entry.type === 'photo') {
+                        photoMarkerRefs.current[item.ts]?.openPopup()
+                      }
                     }}
                   />
                 ))
