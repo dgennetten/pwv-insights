@@ -297,6 +297,7 @@ export function TrailLogMapPage() {
   const [error,   setError]   = useState<string | null>(null)
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const [selectedTs,  setSelectedTs]  = useState<number | null>(null)
+  const [baseLayer,   setBaseLayer]   = useState<'street' | 'aerial'>('street')
   // Refs to each photo marker so tapping its timeline row can open its popup
   const photoMarkerRefs = useRef<Record<number, LeafletMarker>>({})
 
@@ -708,6 +709,21 @@ export function TrailLogMapPage() {
             </div>
             <PaceChart trackers={trackers} dots={paceDots} paceFormat={paceFormat} />
             <div className="flex-1 relative" style={{ minHeight: '360px' }}>
+              <div className="absolute top-2 right-2 z-[1000] flex bg-white/90 dark:bg-stone-900/90 backdrop-blur rounded-lg shadow p-0.5 gap-0.5">
+                {(['street', 'aerial'] as const).map(l => (
+                  <button
+                    key={l}
+                    onClick={() => setBaseLayer(l)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                      baseLayer === l
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800'
+                    }`}
+                  >
+                    {l === 'street' ? 'Street' : 'Aerial'}
+                  </button>
+                ))}
+              </div>
               <MapContainer
                 center={defaultCenter}
                 zoom={13}
@@ -715,8 +731,14 @@ export function TrailLogMapPage() {
                 scrollWheelZoom
               >
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  key={baseLayer}
+                  attribution={baseLayer === 'aerial'
+                    ? 'Tiles &copy; Esri'
+                    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}
+                  url={baseLayer === 'aerial'
+                    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+                  maxZoom={19}
                 />
                 {mapPoints.length > 0 && <MapBoundsController points={mapPoints} />}
                 <MapFocusController center={focusCenter} />
