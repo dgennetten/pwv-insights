@@ -298,6 +298,7 @@ export function TrailLogMapPage() {
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const [selectedTs,  setSelectedTs]  = useState<number | null>(null)
   const [baseLayer,   setBaseLayer]   = useState<'street' | 'aerial'>('street')
+  const [viewPhoto,   setViewPhoto]   = useState<string | null>(null)
   // Refs to each photo marker so tapping its timeline row can open its popup
   const photoMarkerRefs = useRef<Record<number, LeafletMarker>>({})
 
@@ -798,18 +799,28 @@ export function TrailLogMapPage() {
                   >
                     <Popup>
                       <div className="text-xs space-y-1" style={{ width: 200 }}>
-                        <a href={p.url} target="_blank" rel="noopener noreferrer" title="View full size">
+                        <button
+                          type="button"
+                          onClick={() => setViewPhoto(p.url)}
+                          title="Tap to view full size"
+                          style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
+                        >
                           <img
                             src={p.url}
                             alt={p.caption || 'Photo'}
                             style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 6, display: 'block' }}
                           />
-                        </a>
+                        </button>
                         {p.caption && <div className="font-medium">{p.caption}</div>}
                         <div className="text-stone-500">{fmtTime(p.ts)}</div>
-                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">
+                        <button
+                          type="button"
+                          onClick={() => setViewPhoto(p.url)}
+                          className="text-emerald-600 underline"
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                        >
                           View full size
-                        </a>
+                        </button>
                       </div>
                     </Popup>
                   </Marker>
@@ -916,6 +927,15 @@ export function TrailLogMapPage() {
           </span>
         )}
       </footer>
+
+      {viewPhoto && (
+        <div
+          className="fixed inset-0 z-[2000] bg-black/85 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setViewPhoto(null)}
+        >
+          <img src={viewPhoto} alt="Photo" className="max-w-full max-h-full rounded-lg" />
+        </div>
+      )}
 
     </div>
   )
