@@ -304,6 +304,22 @@ export function TrailLogMapPage() {
 
   useEffect(() => { applyTheme(getStoredTheme()) }, [])
 
+  // Count every saved-log view with the site hit tracker (index.html). A hard
+  // page load already fires it once for this URL; if it has already fired
+  // (i.e. we arrived here via in-app navigation), re-arm and fire again so the
+  // saved-log view isn't missed.
+  useEffect(() => {
+    if (!logId) return
+    const w = window as unknown as {
+      hitNotifierSent?: boolean
+      initHitNotifier?: (url: string) => void
+    }
+    if (w.hitNotifierSent && typeof w.initHitNotifier === 'function') {
+      w.hitNotifierSent = false
+      w.initHitNotifier('https://auth.gennetten.org/hit-test/notify.php')
+    }
+  }, [logId])
+
   useEffect(() => {
     async function load() {
       try {

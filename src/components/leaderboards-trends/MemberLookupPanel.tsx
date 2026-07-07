@@ -56,10 +56,16 @@ function MemberCard({ result }: { result: MemberLookupResult }) {
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Address</p>
           {addrLine1 || addrLine2 ? (
-            <>
-              {addrLine1 && <p className="text-sm text-stone-700 dark:text-stone-200">{addrLine1}</p>}
-              {addrLine2 && <p className="text-sm text-stone-700 dark:text-stone-200">{addrLine2}</p>}
-            </>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([addrLine1, addrLine2].filter(Boolean).join(', '))}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open in Google Maps"
+              className="block text-sm text-emerald-700 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:underline underline-offset-2"
+            >
+              {addrLine1 && <span className="block">{addrLine1}</span>}
+              {addrLine2 && <span className="block">{addrLine2}</span>}
+            </a>
           ) : (
             <p className="text-sm text-stone-700 dark:text-stone-200">—</p>
           )}
