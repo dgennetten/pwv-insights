@@ -611,13 +611,17 @@ export function DataLoggerPage() {
       await enqueueSend(item)
       // The report is frozen in the queue — stop this log and start a fresh
       // session so each successive offline send is unique data (mirrors the
-      // online Stop Logger behavior).
+      // online Stop Logger behavior). Second precision guarantees a key
+      // distinct from the session we just queued (minute precision collided
+      // when queuing twice within a minute).
       await markSessionEmailed(session.id)
-      const newKey = new Date().toISOString().slice(0, 16)
+      const newKey = new Date().toISOString().slice(0, 19)
       const freshSession = await getOrCreateSession(newKey)
       setSession(freshSession)
       setEntries([])
       setTrackers([])
+      setSentOk(false)
+      setSendError(null)
       setLastAction(null)
       setTrackerResetKey(k => k + 1)
       await refreshQueue()
