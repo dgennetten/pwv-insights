@@ -36,6 +36,41 @@ export interface LogSession {
   wksiteId?: number // selected worksite/trail for this session
 }
 
+// ── Offline email send queue ───────────────────────────────────────
+
+export interface QueuedReportPayload {
+  profile: 'patrol' | 'other'
+  wksiteId: number | null
+  trailName: string | null
+  entries: LogEntry[]     // frozen snapshot; photo entries still carry photoData
+  trackers: unknown[]     // already-serialized tracker payloads
+}
+
+export interface QueuedSendSummary {
+  hikers: number
+  trees: number
+  photos: number
+  notes: number
+  violations: number
+}
+
+export interface QueuedSend {
+  id?: number
+  queuedAt: number
+  sessionId: string
+  reportDate: string
+  appVersion: string
+  includeLocations: boolean
+  memberName?: string     // member send
+  token?: string          // member send
+  guestEmail?: string     // guest send
+  payload: QueuedReportPayload
+  summary: QueuedSendSummary
+  status: 'queued' | 'sending' | 'sent' | 'failed'
+  error?: string
+  logId?: string
+}
+
 // ── Distance Tracker ───────────────────────────────────────────────
 
 export interface GpsPoint {

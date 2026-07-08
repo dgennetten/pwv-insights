@@ -1,5 +1,5 @@
 import { Undo2, ArrowLeft, Camera } from 'lucide-react'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { version } from '../../package.json'
@@ -17,11 +17,15 @@ import {
   clearSessionEntries,
   clearSessionTrackers,
   resetSession,
+  enqueueSend,
+  getSendQueue,
+  updateQueuedSend,
+  deleteQueuedSend,
 } from '../services/dataLoggerService'
 import { getStoredAuthToken } from '../services/authService'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
 import { updateSessionWksite } from '../services/dataLoggerService'
-import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker } from '../types/dataLogger'
+import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker, QueuedSend, QueuedSendSummary } from '../types/dataLogger'
 import { trackerDistanceM } from '../lib/gpsDistance'
 import { distFromTrailheadM } from '../lib/trailheadDistance'
 import { getLoggerSettings } from '../lib/loggerSettings'
@@ -139,6 +143,18 @@ function enrichEntriesWithTrailheadDist(
   })
 }
 
+function queueSummaryText(s: QueuedSendSummary): string {
+  const plural = (n: number, w: string) => `${n} ${w}${n > 1 ? 's' : ''}`
+  const parts = [
+    s.photos     ? plural(s.photos, 'photo') : null,
+    s.hikers     ? plural(s.hikers, 'hiker') : null,
+    s.trees      ? plural(s.trees, 'tree') : null,
+    s.notes      ? plural(s.notes, 'note') : null,
+    s.violations ? plural(s.violations, 'violation') : null,
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : 'No entries'
+}
+
 function fmtCoords(lat: number | null, lng: number | null): string {
   if (lat === null || lng === null) return 'GPS unavailable'
   const ns = lat >= 0 ? 'N' : 'S'
@@ -177,6 +193,8 @@ export function DataLoggerPage() {
   const [showAllViolations, setShowAllViolations] = useState(false)
   const [capturingPhoto,    setCapturingPhoto]    = useState(false)
   const [viewPhoto,         setViewPhoto]         = useState<string | null>(null)
+  const [sendQueue,         setSendQueue]         = useState<QueuedSend[]>([])
+  const processingQueueRef = useRef(false)
   const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
   const [loading,           setLoading]           = useState(true)
   const [confirmClear,      setConfirmClear]      = useState(false)
@@ -559,6 +577,104 @@ export function DataLoggerPage() {
     }
   }, [session, guestEmail, includeLocations, buildReportPayload, uploadPendingPhotos])
 
+  // ── Offline email send queue ──────────────────────────────────────
+
+  const refreshQueue = useCallback(async () => {
+    setSendQueue(await getSendQueue())
+  }, [])
+
+  const handleQueueSend = useCallback(async () => {
+    if (!session) return
+    setSendError(null)
+    try {
+      const token = getStoredAuthToken()
+      const fresh = await getSessionEntries(session.id)
+      const item: Omit<QueuedSend, 'id'> = {
+        queuedAt:         Date.now(),
+        sessionId:        session.id,
+        reportDate:       session.id,
+        appVersion:       version,
+        includeLocations,
+        ...(isAuthenticated && token
+          ? { token, memberName: user?.name }
+          : { guestEmail }),
+        payload:  buildReportPayload(fresh),
+        summary: {
+          hikers:     fresh.filter(e => e.type === 'hiker').length,
+          trees:      fresh.filter(e => e.type === 'tree').length,
+          photos:     fresh.filter(e => e.type === 'photo').length,
+          notes:      fresh.filter(e => e.type === 'note').length,
+          violations: fresh.filter(e => e.type === 'violation').length,
+        },
+        status: 'queued',
+      }
+      await enqueueSend(item)
+      // Data is now safely frozen in the queue; mark the session done so
+      // recovery won't re-offer it.
+      await markSessionEmailed(session.id)
+      setSession(prev => (prev ? { ...prev, emailedAt: Date.now() } : prev))
+      await refreshQueue()
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Could not queue report')
+    }
+  }, [session, includeLocations, isAuthenticated, user, guestEmail, buildReportPayload, refreshQueue])
+
+  const processQueue = useCallback(async () => {
+    if (processingQueueRef.current || !navigator.onLine) return
+    processingQueueRef.current = true
+    try {
+      const items = await getSendQueue()
+      for (const item of items) {
+        if (item.id == null || item.status === 'sent') continue
+        await updateQueuedSend({ ...item, status: 'sending', error: undefined })
+        setSendQueue(await getSendQueue())
+        try {
+          // Upload any not-yet-uploaded photos in the frozen payload
+          for (const e of item.payload.entries) {
+            if (e.type !== 'photo' || !e.photoData || e.photoUrl) continue
+            const r = await fetch('/api/data-logger/upload-photo.php', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ photoId: e.photoId, photoData: e.photoData }),
+            })
+            const d = (await r.json()) as { success?: boolean; url?: string; error?: string }
+            if (!r.ok || !d.success || !d.url) throw new Error(`Photo upload failed: ${d.error ?? `HTTP ${r.status}`}`)
+            e.photoUrl = d.url
+            delete e.photoData
+            await updateQueuedSend({ ...item, status: 'sending' }) // persist progress
+          }
+          const body = item.token
+            ? { token: item.token, memberName: item.memberName, sessionId: item.sessionId, reportDate: item.reportDate, emailFormat: 'text', appVersion: item.appVersion, includeLocations: item.includeLocations, ...item.payload }
+            : { guestEmail: item.guestEmail, sessionId: item.sessionId, reportDate: item.reportDate, emailFormat: 'text', appVersion: item.appVersion, includeLocations: item.includeLocations, ...item.payload }
+          const res  = await fetch('/api/data-logger/send-report.php', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body),
+          })
+          const data = (await res.json()) as { success?: boolean; error?: string; logId?: string }
+          if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
+          await updateQueuedSend({ ...item, status: 'sent', logId: data.logId, error: undefined })
+        } catch (err) {
+          await updateQueuedSend({ ...item, status: 'failed', error: err instanceof Error ? err.message : 'Send failed' })
+        }
+        setSendQueue(await getSendQueue())
+        if (!navigator.onLine) break
+      }
+    } finally {
+      processingQueueRef.current = false
+      setSendQueue(await getSendQueue())
+    }
+  }, [])
+
+  const handleRemoveQueued = useCallback(async (id: number) => {
+    await deleteQueuedSend(id)
+    await refreshQueue()
+  }, [refreshQueue])
+
+  // Load the queue on mount; flush it whenever we're (re)connected.
+  useEffect(() => { void refreshQueue() }, [refreshQueue])
+  useEffect(() => { if (isOnline) void processQueue() }, [isOnline, processQueue])
+
   const handleNewSession = useCallback(async () => {
     const newKey = new Date().toISOString().slice(0, 16)
     const s = await getOrCreateSession(newKey)
@@ -640,6 +756,7 @@ export function DataLoggerPage() {
   )
   const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0 || photoEntries.length > 0
   const reportEmail = user?.email?.trim() ?? ''
+  const currentSessionQueued = sendQueue.some(q => q.sessionId === session?.id && q.status !== 'sent')
 
   return (
     <>
@@ -1056,17 +1173,35 @@ export function DataLoggerPage() {
               </p>
             )}
             <div className="flex gap-2">
-              <button
-                onClick={() => void handleSendReport()}
-                disabled={!isOnline || sending || !hasData || sentOk || !reportEmail}
-                className="flex-[3] min-w-0 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {sending
-                  ? `Sending to ${reportEmail}…`
-                  : sentOk
-                    ? 'Report Sent ✓'
-                    : 'STOP Logger & Email Report'}
-              </button>
+              {!isOnline && !sentOk && hasData && reportEmail ? (
+                currentSessionQueued ? (
+                  <button
+                    disabled
+                    className="flex-[3] min-w-0 py-3 bg-amber-500/60 text-white text-sm font-semibold rounded-xl cursor-default"
+                  >
+                    Queued ✓ — sends when online
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => void handleQueueSend()}
+                    className="flex-[3] min-w-0 py-3 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-400 transition-colors"
+                  >
+                    Queue Email Send
+                  </button>
+                )
+              ) : (
+                <button
+                  onClick={() => void handleSendReport()}
+                  disabled={!isOnline || sending || !hasData || sentOk || !reportEmail}
+                  className="flex-[3] min-w-0 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {sending
+                    ? `Sending to ${reportEmail}…`
+                    : sentOk
+                      ? 'Report Sent ✓'
+                      : 'STOP Logger & Email Report'}
+                </button>
+              )}
               <button
                 onClick={() => setShowMap(true)}
                 disabled={!hasData}
@@ -1085,7 +1220,13 @@ export function DataLoggerPage() {
               <span className="text-xs text-stone-600 dark:text-stone-400">Include GPS data in emailed report</span>
             </label>
             {!isOnline && (
-              <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Connect to network to send report</p>
+              <p className="text-xs text-stone-400 dark:text-stone-500 text-center">
+                {currentSessionQueued
+                  ? 'Report queued — will send automatically when back online.'
+                  : hasData && reportEmail
+                    ? 'Offline — queue the report to send when reconnected.'
+                    : 'Connect to network to send report'}
+              </p>
             )}
             {isOnline && !hasData && !sentOk && (
               <p className="text-xs text-stone-400 dark:text-stone-500 text-center">Log some data first</p>
@@ -1180,6 +1321,58 @@ export function DataLoggerPage() {
           </p>
         )}
       </div>
+
+      {/* ── QUEUED SENDS ────────────────────────────────── */}
+      {sendQueue.length > 0 && (
+        <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+              Queued Sends
+            </span>
+            <span className="text-xs text-stone-400 dark:text-stone-500">
+              {isOnline ? 'Processing…' : 'Sends when reconnected'}
+            </span>
+          </div>
+          {sendQueue.map(q => (
+            <div key={q.id} className="flex items-start justify-between gap-3 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2">
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-stone-700 dark:text-stone-200">{q.reportDate}</div>
+                <div className="text-[11px] text-stone-400 dark:text-stone-500 truncate">{queueSummaryText(q.summary)}</div>
+                {q.status === 'failed' && q.error && (
+                  <div className="text-[11px] text-red-500 mt-0.5">{q.error}</div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  q.status === 'sent'    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                  : q.status === 'sending' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                  : q.status === 'failed'  ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                }`}>
+                  {q.status === 'sent' ? 'Sent ✓' : q.status === 'sending' ? 'Sending…' : q.status === 'failed' ? 'Failed' : 'Queued'}
+                </span>
+                {q.status === 'failed' && isOnline && (
+                  <button
+                    onClick={() => void processQueue()}
+                    className="text-xs text-emerald-600 dark:text-emerald-400 underline underline-offset-2"
+                  >
+                    Retry
+                  </button>
+                )}
+                {q.status !== 'sending' && q.id != null && (
+                  <button
+                    onClick={() => void handleRemoveQueued(q.id!)}
+                    aria-label="Remove from queue"
+                    className="text-stone-400 hover:text-red-500 text-sm leading-none px-1"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── CLEAR DATA ──────────────────────────────────── */}
       <div className="pb-6 flex flex-col items-center gap-2">
