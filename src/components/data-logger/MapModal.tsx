@@ -266,6 +266,28 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     setSelectedItem(prev => prev?.ts === item.ts ? null : item)
   }
 
+  // Save a self-contained JSON backup of the log (entries incl. photos +
+  // trackers) to the device — a local safety net independent of the email.
+  const handleSaveLocal = () => {
+    const payload = {
+      savedAt:    new Date().toISOString(),
+      member:     memberName,
+      reportDate,
+      wksiteId:   wksiteId ?? null,
+      entries,
+      trackers,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `pwv-log-${reportDate}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-stone-900">
 
@@ -275,15 +297,24 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
           <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Map Report</h2>
           <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">{reportDate} · {memberName}</p>
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Close map"
-          className="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSaveLocal}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+            title="Download a local JSON backup of this log (entries, photos, trackers)"
+          >
+            Save Local
+          </button>
+          <button
+            onClick={onClose}
+            aria-label="Close map"
+            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Page-wide pace chart */}

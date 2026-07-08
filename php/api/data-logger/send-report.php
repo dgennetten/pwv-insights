@@ -421,30 +421,39 @@ $photosDir     = $dataLoggerDir . '/photos';
 $photoLinks    = [];
 foreach ($entries as $ei => $pe) {
   if (!is_array($pe) || ($pe['type'] ?? '') !== 'photo') continue;
+  $url = '';
   $raw = (string) ($pe['photoData'] ?? '');
-  unset($entries[$ei]['photoData']); // never persist base64 in the log JSON
-  if ($raw !== '' && preg_match('#^data:image/[\w.+-]+;base64,#', $raw)) {
-    $raw = substr($raw, strpos($raw, ',') + 1);
+  if ($raw !== '') {
+    // Inline base64 fallback (e.g. a photo captured/sent without the pre-upload step)
+    unset($entries[$ei]['photoData']); // never persist base64 in the log JSON
+    if (preg_match('#^data:image/[\w.+-]+;base64,#', $raw)) {
+      $raw = substr($raw, strpos($raw, ',') + 1);
+    }
+    $bin = base64_decode($raw, true);
+    if ($bin !== false) {
+      $pid = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($pe['photoId'] ?? ''));
+      if ($pid === '') $pid = 'p' . $ei;
+      $fname = "{$logId}_{$pid}.jpg";
+      if (!is_dir($photosDir)) @mkdir($photosDir, 0755, true);
+      if (is_dir($photosDir) && @file_put_contents($photosDir . '/' . $fname, $bin) !== false) {
+        $url = "/api/data-logger/get-photo.php?file={$fname}";
+        $entries[$ei]['photoUrl'] = $url;
+      }
+    }
+  } elseif (!empty($pe['photoUrl'])) {
+    // Already uploaded via upload-photo.php — just reference it
+    $url = (string) $pe['photoUrl'];
   }
-  $bin = $raw !== '' ? base64_decode($raw, true) : false;
-  if ($bin === false) continue;
-  $pid = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($pe['photoId'] ?? ''));
-  if ($pid === '') $pid = 'p' . $ei;
-  $fname = "{$logId}_{$pid}.jpg";
-  if (!is_dir($photosDir)) @mkdir($photosDir, 0755, true);
-  if (is_dir($photosDir) && @file_put_contents($photosDir . '/' . $fname, $bin) !== false) {
-    // Photos live outside the web root, so serve them via get-photo.php
-    $url = "/api/data-logger/get-photo.php?file={$fname}";
-    $entries[$ei]['photoUrl'] = $url;
-    $plat = isset($pe['lat']) && $pe['lat'] !== null ? (float) $pe['lat'] : null;
-    $plng = isset($pe['lng']) && $pe['lng'] !== null ? (float) $pe['lng'] : null;
-    $photoLinks[] = [
-      'ts'      => (int) ($pe['timestamp'] ?? 0),
-      'caption' => trim((string) ($pe['noteText'] ?? '')),
-      'coords'  => $fmtCoords($plat, $plng),
-      'url'     => "{$protocol}://{$host}{$url}",
-    ];
-  }
+  if ($url === '') continue;
+  $plat = isset($pe['lat']) && $pe['lat'] !== null ? (float) $pe['lat'] : null;
+  $plng = isset($pe['lng']) && $pe['lng'] !== null ? (float) $pe['lng'] : null;
+  $fullUrl = preg_match('#^https?://#', $url) ? $url : "{$protocol}://{$host}{$url}";
+  $photoLinks[] = [
+    'ts'      => (int) ($pe['timestamp'] ?? 0),
+    'caption' => trim((string) ($pe['noteText'] ?? '')),
+    'coords'  => $fmtCoords($plat, $plng),
+    'url'     => $fullUrl,
+  ];
 }
 if (!empty($photoLinks)) {
   usort($photoLinks, fn($a, $b) => $a['ts'] <=> $b['ts']);

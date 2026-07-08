@@ -6,8 +6,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $file = basename(trim($_GET['file'] ?? ''));
 
-// Only serve our own generated JPEG names — blocks traversal and other types.
-if (!preg_match('/^trailLog\.[A-Za-z0-9._-]+\.jpg$/', $file)) {
+// Only serve safe JPEG names — basename() already blocks traversal.
+if (!preg_match('/^[A-Za-z0-9._-]+\.jpg$/', $file)) {
   http_response_code(400);
   exit;
 }

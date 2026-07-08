@@ -10,6 +10,7 @@ import {
   getAllSessions,
   addEntry,
   deleteEntry,
+  updateEntry,
   getSessionEntries,
   getSessionTrackers,
   markSessionEmailed,
@@ -423,20 +424,47 @@ export function DataLoggerPage() {
     await refreshEntries(session.id)
   }, [session, lastAction, refreshEntries])
 
+  // Upload any not-yet-uploaded photos individually so the report POST stays
+  // small (14 base64 photos in one request overflow PHP's post_max_size).
+  // Persists the returned URL and drops the base64 locally — salvages the log
+  // even if the subsequent send fails. Returns the fresh entries.
+  const uploadPendingPhotos = useCallback(async (): Promise<LogEntry[]> => {
+    if (!session) return entries
+    const current = await getSessionEntries(session.id)
+    for (const e of current) {
+      if (e.type !== 'photo' || !e.photoData || e.photoUrl || e.id == null) continue
+      const res = await fetch('/api/data-logger/upload-photo.php', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ photoId: e.photoId, photoData: e.photoData }),
+      })
+      const data = (await res.json()) as { success?: boolean; url?: string; error?: string }
+      if (!res.ok || !data.success || !data.url) {
+        throw new Error(`Photo upload failed: ${data.error ?? `HTTP ${res.status}`}`)
+      }
+      const updated: LogEntry = { ...e, photoUrl: data.url }
+      delete updated.photoData
+      await updateEntry(updated)
+    }
+    const fresh = await getSessionEntries(session.id)
+    setEntries(fresh)
+    return fresh
+  }, [session, entries])
+
   // Enriched report payload shared by member + guest send paths:
   // per-entry distance from trailhead and trail metadata.
-  const buildReportPayload = useCallback(() => {
+  const buildReportPayload = useCallback((srcEntries: LogEntry[]) => {
     // 'other' profile has no trail context — drop the trail so neither the
     // emailed report nor the saved map show trail data.
     const sessionWksiteId = loggerProfile === 'other' ? undefined : session?.wksiteId
-    const trailEvents = entries
+    const trailEvents = srcEntries
       .filter(e => e.type === 'trail')
       .sort((a, b) => a.timestamp - b.timestamp)
     return {
       profile:   loggerProfile,
       wksiteId:  sessionWksiteId ?? null,
       trailName: sessionWksiteId != null ? (trailNames[sessionWksiteId] ?? null) : null,
-      entries:   enrichEntriesWithTrailheadDist(entries, sessionWksiteId),
+      entries:   enrichEntriesWithTrailheadDist(srcEntries, sessionWksiteId),
       trackers:  trackers.map(t => ({
         name:            t.name || 'Unnamed',
         state:           t.state,
@@ -458,7 +486,7 @@ export function DataLoggerPage() {
         })),
       })),
     }
-  }, [entries, trackers, session, loggerProfile])
+  }, [trackers, session, loggerProfile])
 
   const handleSendReport = useCallback(async () => {
     if (!session || !user) return
@@ -467,6 +495,7 @@ export function DataLoggerPage() {
     try {
       const token = getStoredAuthToken()
       if (!token) throw new Error('Not authenticated')
+      const freshEntries = await uploadPendingPhotos()
       const res  = await fetch('/api/data-logger/send-report.php', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -478,7 +507,7 @@ export function DataLoggerPage() {
           emailFormat:      'text',
           appVersion:       version,
           includeLocations,
-          ...buildReportPayload(),
+          ...buildReportPayload(freshEntries),
         }),
       })
       const data = (await res.json()) as { success?: boolean; error?: string; logId?: string; email?: string }
@@ -494,13 +523,14 @@ export function DataLoggerPage() {
     } finally {
       setSending(false)
     }
-  }, [session, user, includeLocations, buildReportPayload])
+  }, [session, user, includeLocations, buildReportPayload, uploadPendingPhotos])
 
   const handleGuestSendReport = useCallback(async () => {
     if (!session || !guestEmail) return
     setSending(true)
     setSendError(null)
     try {
+      const freshEntries = await uploadPendingPhotos()
       const res  = await fetch('/api/data-logger/send-report.php', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -511,7 +541,7 @@ export function DataLoggerPage() {
           emailFormat:      'text',
           appVersion:       version,
           includeLocations,
-          ...buildReportPayload(),
+          ...buildReportPayload(freshEntries),
         }),
       })
       const data = (await res.json()) as { success?: boolean; error?: string; logId?: string }
@@ -527,7 +557,7 @@ export function DataLoggerPage() {
     } finally {
       setSending(false)
     }
-  }, [session, guestEmail, includeLocations, buildReportPayload])
+  }, [session, guestEmail, includeLocations, buildReportPayload, uploadPendingPhotos])
 
   const handleNewSession = useCallback(async () => {
     const newKey = new Date().toISOString().slice(0, 16)
