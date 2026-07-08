@@ -609,10 +609,17 @@ export function DataLoggerPage() {
         status: 'queued',
       }
       await enqueueSend(item)
-      // Data is now safely frozen in the queue; mark the session done so
-      // recovery won't re-offer it.
+      // The report is frozen in the queue — stop this log and start a fresh
+      // session so each successive offline send is unique data (mirrors the
+      // online Stop Logger behavior).
       await markSessionEmailed(session.id)
-      setSession(prev => (prev ? { ...prev, emailedAt: Date.now() } : prev))
+      const newKey = new Date().toISOString().slice(0, 16)
+      const freshSession = await getOrCreateSession(newKey)
+      setSession(freshSession)
+      setEntries([])
+      setTrackers([])
+      setLastAction(null)
+      setTrackerResetKey(k => k + 1)
       await refreshQueue()
     } catch (e) {
       setSendError(e instanceof Error ? e.message : 'Could not queue report')
@@ -1186,7 +1193,7 @@ export function DataLoggerPage() {
                     onClick={() => void handleQueueSend()}
                     className="flex-[3] min-w-0 py-3 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-400 transition-colors"
                   >
-                    Queue Email Send
+                    STOP Logger &amp; Queue Send
                   </button>
                 )
               ) : (
