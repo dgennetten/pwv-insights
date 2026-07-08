@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchMemberLookup,
   fetchMemberSearch,
@@ -6,6 +6,102 @@ import {
   type MemberLookupResult,
   type MemberSearchResult,
 } from '../../services/authService'
+import type { Report } from '../../types/reports'
+
+function reportUrl(reportId: number): string {
+  return `https://clrdvol.org/groups/index.php?option=com_fs&view=report&Itemid=136&id=${reportId}`
+}
+
+function MemberSeasonActivity({ memberId }: { memberId: number }) {
+  const [reports, setReports] = useState<Report[] | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setReports(null)
+    setFailed(false)
+    fetch(`/api/reports/list.php?memberContext=${memberId}&season=current`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(j => { if (!cancelled) setReports(j.reports ?? []) })
+      .catch(() => { if (!cancelled) { setReports([]); setFailed(true) } })
+    return () => { cancelled = true }
+  }, [memberId])
+
+  const stats = useMemo(() => {
+    if (!reports) return null
+    return {
+      patrols:         reports.length,
+      treesCleared:    reports.reduce((s, r) => s + r.treesCleared, 0),
+      hikersContacted: reports.reduce((s, r) => s + r.hikersContacted, 0),
+      hikersSeen:      reports.reduce((s, r) => s + r.hikersSeen, 0),
+    }
+  }, [reports])
+
+  if (failed) return null
+  if (reports === null) {
+    return (
+      <div className="border-t border-stone-100 dark:border-stone-800 pt-4">
+        <p className="text-xs text-stone-400 dark:text-stone-500 animate-pulse">Loading activity…</p>
+      </div>
+    )
+  }
+  if (reports.length === 0) {
+    return (
+      <div className="border-t border-stone-100 dark:border-stone-800 pt-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">This Season</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">No patrols recorded this season.</p>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="border-t border-stone-100 dark:border-stone-800 pt-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-2">This Season</p>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: 'Patrols',   value: stats!.patrols },
+            { label: 'Trees',     value: stats!.treesCleared },
+            { label: 'Contacted', value: stats!.hikersContacted },
+            { label: 'Seen',      value: stats!.hikersSeen },
+          ].map(s => (
+            <div key={s.label} className="rounded-lg bg-stone-50 dark:bg-stone-800/60 border border-stone-100 dark:border-stone-800 px-2 py-2 text-center">
+              <div className="text-lg font-bold tabular-nums text-stone-800 dark:text-stone-100 leading-none">{s.value}</div>
+              <div className="text-[10px] text-stone-400 dark:text-stone-500 mt-1">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-stone-100 dark:border-stone-800 pt-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-2">Recent Patrols</p>
+        <ul className="space-y-1.5">
+          {reports.slice(0, 5).map(r => {
+            const bits = [
+              r.treesCleared > 0 ? `${r.treesCleared} trees` : null,
+              r.hikersContacted > 0 ? `${r.hikersContacted} contacted` : null,
+            ].filter(Boolean)
+            return (
+              <li key={r.reportId} className="flex items-center justify-between gap-3 text-sm">
+                <a
+                  href={reportUrl(r.reportId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-700 dark:text-emerald-400 hover:underline underline-offset-2 shrink-0"
+                >
+                  {r.activityDate}
+                </a>
+                <span className="text-xs text-stone-400 dark:text-stone-500 truncate text-right">
+                  {bits.length > 0 ? bits.join(' · ') : `Report #${r.reportId}`}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </>
+  )
+}
 
 function MemberCard({ result }: { result: MemberLookupResult }) {
   const addrLine1 = result.address ?? null
@@ -111,6 +207,8 @@ function MemberCard({ result }: { result: MemberLookupResult }) {
           <p className="text-sm text-stone-700 dark:text-stone-200">{result.lastPatrolDate ?? '—'}</p>
         </div>
       </div>
+
+      <MemberSeasonActivity memberId={result.memberId} />
     </div>
   )
 }

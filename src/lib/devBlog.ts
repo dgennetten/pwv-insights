@@ -34,7 +34,7 @@ export const BLOG_ENTRIES: BlogEntry[] = [
   {
     id: 6,
     date: '2026-06-22',
-    content: `NEW MEMBERS TAB — All names throughout the app are now hyperlinked for easy lookup in the new Members tab. Browser back button/swipe to return. Report IDs on the Reports tab are also hyperlinked to CLRD.org. — KDG (v1.19.0)`,
+    content: `NEW MEMBERS TAB — All names throughout the app are now hyperlinked for easy lookup in the new Members tab. Browser back button/swipe to return. Report IDs on the Reports tab are also hyperlinked to CLRD.org.\n\nUPDATE: The member card now does more — tap a phone number to call or an email to compose, and tap an address to open it in Google Maps. Each member also shows this-season stats (patrols, trees, hikers contacted/seen), how their patrol days compare to the club average, and a list of recent patrols linking to the full reports. — KDG (v1.19.0, expanded v1.28.0)`,
   },
   {
     id: 7,
