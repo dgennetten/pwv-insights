@@ -181,28 +181,6 @@ function MemberCard({ result }: { result: MemberLookupResult }) {
           )}
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Season Patrol Days</p>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-stone-700 dark:text-stone-200">{result.merit.memberDays}</p>
-            {result.merit.ratio != null && (
-              <span
-                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                  result.merit.ratio >= 1
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-                    : 'bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400'
-                }`}
-              >
-                {result.merit.ratio.toFixed(1)}× club avg
-              </span>
-            )}
-          </div>
-          {result.merit.avgDays > 0 && (
-            <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-0.5">
-              Club average: {result.merit.avgDays} days this season
-            </p>
-          )}
-        </div>
-        <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Last Patrol</p>
           <p className="text-sm text-stone-700 dark:text-stone-200">{result.lastPatrolDate ?? '—'}</p>
         </div>
