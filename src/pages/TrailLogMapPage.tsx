@@ -162,6 +162,16 @@ function MapFocusController({ center }: { center: [number, number] | null }) {
   return null
 }
 
+// Reflow Leaflet tiles after the map container changes size (fullscreen toggle)
+function MapResizeController({ trigger }: { trigger: unknown }) {
+  const map = useMap()
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 60)
+    return () => clearTimeout(t)
+  }, [trigger, map])
+  return null
+}
+
 function MapBoundsController({ points }: { points: [number, number][] }) {
   const map = useMap()
   useEffect(() => {
@@ -299,6 +309,7 @@ export function TrailLogMapPage() {
   const [selectedTs,  setSelectedTs]  = useState<number | null>(null)
   const [baseLayer,   setBaseLayer]   = useState<'street' | 'aerial'>('street')
   const [viewPhoto,   setViewPhoto]   = useState<string | null>(null)
+  const [mapExpanded, setMapExpanded] = useState(false)
   // Refs to each photo marker so tapping its timeline row can open its popup
   const photoMarkerRefs = useRef<Record<number, LeafletMarker>>({})
 
@@ -684,7 +695,11 @@ export function TrailLogMapPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 h-full">
 
           {/* Map panel */}
-          <div className="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden flex flex-col min-h-[420px]">
+          <div className={
+            mapExpanded
+              ? 'fixed inset-0 z-[1500] bg-white dark:bg-stone-900 flex flex-col'
+              : 'bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden flex flex-col min-h-[420px]'
+          }>
             <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100 dark:border-stone-800 shrink-0">
               <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-200">
                 Geographic Spatial Mapping
@@ -726,6 +741,22 @@ export function TrailLogMapPage() {
             </div>
             <PaceChart trackers={trackers} dots={paceDots} paceFormat={paceFormat} />
             <div className="flex-1 relative" style={{ minHeight: '360px' }}>
+              <button
+                onClick={() => setMapExpanded(v => !v)}
+                title={mapExpanded ? 'Exit full screen' : 'Expand map to full screen'}
+                aria-label={mapExpanded ? 'Exit full screen' : 'Expand map to full screen'}
+                className="absolute top-2 left-2 z-[1000] p-1.5 rounded-lg bg-white/90 dark:bg-stone-900/90 backdrop-blur shadow text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+              >
+                {mapExpanded ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0v4m0-4h4M15 9l5-5m0 0v4m0-4h-4M9 15l-5 5m0 0v-4m0 4h4M15 15l5 5m0 0v-4m0 4h-4" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
+                  </svg>
+                )}
+              </button>
               <div className="absolute top-2 right-2 z-[1000] flex bg-white/90 dark:bg-stone-900/90 backdrop-blur rounded-lg shadow p-0.5 gap-0.5">
                 {(['street', 'aerial'] as const).map(l => (
                   <button
@@ -759,6 +790,7 @@ export function TrailLogMapPage() {
                 />
                 {mapPoints.length > 0 && <MapBoundsController points={mapPoints} />}
                 <MapFocusController center={focusCenter} />
+                <MapResizeController trigger={mapExpanded} />
 
                 {/* Trail centerlines + trailhead pins (same data as the Trails map) */}
                 {loggedTrailIds.map(id =>
