@@ -495,6 +495,7 @@ export function TrailLogMapPage() {
   )
 
   const paceFormat = useMemo(() => getLoggerSettings().waypointPaceFormat, [])
+  const paceLogScale = useMemo(() => getLoggerSettings().waypointPaceLogScale, [])
 
   const defaultCenter: [number, number] = [40.3772, -105.5217]
 
@@ -739,7 +740,7 @@ export function TrailLogMapPage() {
                 )}
               </div>
             </div>
-            <PaceChart trackers={trackers} dots={paceDots} paceFormat={paceFormat} />
+            <PaceChart trackers={trackers} dots={paceDots} paceFormat={paceFormat} logScale={paceLogScale} />
             <div className="flex-1 relative" style={{ minHeight: '360px' }}>
               <button
                 onClick={() => setMapExpanded(v => !v)}

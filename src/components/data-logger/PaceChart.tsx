@@ -16,10 +16,11 @@ function fmtPace(minPerMi: number) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export function PaceChart({ trackers, dots, paceFormat }: {
+export function PaceChart({ trackers, dots, paceFormat, logScale = false }: {
   trackers:   PaceChartTracker[]
   dots:       PaceChartDot[]
   paceFormat: 'min-per-mi' | 'mph'
+  logScale?:  boolean
 }) {
   const rawPoints: { ts: number; pace: number }[] = []
   for (const t of trackers)
@@ -45,17 +46,27 @@ export function PaceChart({ trackers, dots, paceFormat }: {
   // Both modes: higher y-value = top of chart.
   const plotValues = isMph ? rawPoints.map(p => 60 / p.pace) : rawPoints.map(p => p.pace)
   const vMin = Math.min(...plotValues); const vMax = Math.max(...plotValues)
-  const pad  = (vMax - vMin) * 0.3 || 1
-  const yMin = Math.max(0, vMin - pad); const yMax = vMax + pad
-  const yRange = yMax - yMin
-  const yS = (v: number) => PT + plotH * (1 - (v - yMin) / yRange)
+  // On a log scale, proportional changes take equal vertical space. Pace/speed
+  // values are always positive, so log is safe.
+  const tf  = logScale ? Math.log : (x: number) => x
+  const inv = logScale ? Math.exp : (x: number) => x
+  let yLo: number, yHi: number
+  if (logScale) {
+    const lpad = (Math.log(vMax) - Math.log(vMin)) * 0.3 || Math.log(1.1)
+    yLo = Math.log(vMin) - lpad; yHi = Math.log(vMax) + lpad
+  } else {
+    const pad = (vMax - vMin) * 0.3 || 1
+    yLo = Math.max(0, vMin - pad); yHi = vMax + pad
+  }
+  const yRange = yHi - yLo || 1
+  const yS = (v: number) => PT + plotH * (1 - (tf(v) - yLo) / yRange)
 
   const axisY    = PT + plotH
   const linePath = rawPoints.map((d, i) => {
     const v = isMph ? 60 / d.pace : d.pace
     return `${i === 0 ? 'M' : 'L'}${xS(d.ts).toFixed(1)},${yS(v).toFixed(1)}`
   }).join(' ')
-  const yTicks = [yMin, (yMin + yMax) / 2, yMax]
+  const yTicks = [0, 0.5, 1].map(f => inv(yLo + f * yRange))
   const fmtTick = (v: number) => isMph ? v.toFixed(1) : fmtPace(v)
 
   return (

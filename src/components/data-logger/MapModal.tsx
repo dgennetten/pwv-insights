@@ -323,6 +323,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
           trackers={trackers}
           dots={timelineItems.map(item => ({ ts: item.ts, color: paceDotColor(item) }))}
           paceFormat={loggerSettings.waypointPaceFormat}
+          logScale={loggerSettings.waypointPaceLogScale}
         />
       )}
 

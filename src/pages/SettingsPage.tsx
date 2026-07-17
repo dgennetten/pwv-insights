@@ -324,6 +324,13 @@ export function SettingsPage() {
                         </div>
                       </div>
                     )}
+                    {loggerSettings.waypointPace && (
+                      <PrefRow
+                        label="Plot using log scale"
+                        checked={loggerSettings.waypointPaceLogScale}
+                        onChange={v => updateLoggerSettings({ waypointPaceLogScale: v })}
+                      />
+                    )}
                   </div>
                 )}
               </div>
