@@ -306,7 +306,7 @@ export function SettingsPage() {
                       onChange={v => updateLoggerSettings({ waypointPace: v })}
                     />
                     {loggerSettings.waypointPace && (
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
                           {(['min-per-mi', 'mph'] as const).map(fmt => (
                             <button
@@ -322,14 +322,27 @@ export function SettingsPage() {
                             </button>
                           ))}
                         </div>
+                        <label className="flex items-center gap-2 cursor-pointer group select-none">
+                          <div className={`
+                            relative w-4 h-4 rounded border transition-colors shrink-0
+                            ${loggerSettings.waypointPaceLogScale
+                              ? 'bg-emerald-600 border-emerald-600 dark:bg-emerald-500 dark:border-emerald-500'
+                              : 'bg-white dark:bg-stone-800 border-stone-300 dark:border-stone-600 group-hover:border-stone-400 dark:group-hover:border-stone-500'
+                            }
+                          `}>
+                            <input
+                              type="checkbox"
+                              checked={loggerSettings.waypointPaceLogScale}
+                              onChange={e => updateLoggerSettings({ waypointPaceLogScale: e.target.checked })}
+                              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                            />
+                            {loggerSettings.waypointPaceLogScale && (
+                              <Check className="absolute inset-0 w-full h-full p-0.5 text-white" strokeWidth={3} />
+                            )}
+                          </div>
+                          <span className="text-xs text-stone-600 dark:text-stone-300">Plot using log scale</span>
+                        </label>
                       </div>
-                    )}
-                    {loggerSettings.waypointPace && (
-                      <PrefRow
-                        label="Plot using log scale"
-                        checked={loggerSettings.waypointPaceLogScale}
-                        onChange={v => updateLoggerSettings({ waypointPaceLogScale: v })}
-                      />
                     )}
                   </div>
                 )}
