@@ -404,20 +404,42 @@ if ($includeLocations && !empty($trackers)) {
   }
 }
 
+$dataLoggerDir = dirname(dirname(dirname(__DIR__))) . '/data-logger';
+$photosDir     = $dataLoggerDir . '/photos';
+if (!is_dir($dataLoggerDir)) {
+  @mkdir($dataLoggerDir, 0755, true);
+}
+
 // ── Generate unique log ID (needed to name photo files) ───────────
-$logDate  = date('Ymd');
-$logTime  = date('Hi');
-$logId    = $isGuest
-  ? 'trailLog.g' . $logDate . $logTime . sprintf('%04d', mt_rand(0, 9999))
-  : "trailLog.{$personId}{$logDate}{$logTime}";
+// The id encodes {personId}{Ymd}{His}. It used to carry only {Hi}, which
+// collided when the offline queue flushed several reports inside one minute
+// on reconnect — each write silently overwrote the last. Seconds shrink that
+// window; the claim loop below closes it, appending a 2-digit sequence when
+// the name is already taken. Everything stays digit-only so get-log.php's
+// /^trailLog\.[0-9]+$/ validator keeps accepting it.
+$logStamp = date('YmdHis');
+$logBase  = $isGuest
+  ? 'trailLog.g' . $logStamp
+  : "trailLog.{$personId}{$logStamp}";
+
+$logId = $logBase;
+for ($seq = 0; $seq < 100; $seq++) {
+  $candidate = $seq === 0 ? $logBase : $logBase . sprintf('%02d', $seq);
+  // 'x' fails rather than truncating if the name was claimed since we looked,
+  // so concurrent flushes of the same queue can't land on one file.
+  $h = @fopen($dataLoggerDir . '/' . $candidate . '.json', 'x');
+  if ($h !== false) {
+    fclose($h);
+    $logId = $candidate;
+    break;
+  }
+}
 
 $protocol   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host       = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $spaUrl     = "{$protocol}://{$host}/trail-log/{$logId}";
 
 // ── Save captured photos to disk; swap base64 for a public URL ─────
-$dataLoggerDir = dirname(dirname(dirname(__DIR__))) . '/data-logger';
-$photosDir     = $dataLoggerDir . '/photos';
 $photoLinks    = [];
 foreach ($entries as $ei => $pe) {
   if (!is_array($pe) || ($pe['type'] ?? '') !== 'photo') continue;
@@ -501,16 +523,18 @@ $logPayload = [
 ];
 
 $savedLogId = null;
-if (!is_dir($dataLoggerDir)) {
-  @mkdir($dataLoggerDir, 0755, true);
-}
 if (is_dir($dataLoggerDir)) {
+  // The name was already claimed as an empty file above; this fills it in.
+  $logFile = $dataLoggerDir . '/' . $logId . '.json';
   $written = @file_put_contents(
-    $dataLoggerDir . '/' . $logId . '.json',
+    $logFile,
     json_encode($logPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
   );
   if ($written !== false) {
     $savedLogId = $logId;
+  } else {
+    // Don't leave the zero-byte placeholder sitting there as a phantom log.
+    @unlink($logFile);
   }
 }
 

@@ -635,8 +635,16 @@ export function DataLoggerPage() {
     processingQueueRef.current = true
     try {
       const items = await getSendQueue()
+      let sentOne = false
       for (const item of items) {
         if (item.id == null || item.status === 'sent') continue
+        // Space successive sends past a second boundary. The server names each
+        // saved log from its own clock, so a burst landing inside one tick used
+        // to collapse onto a single file. The server now claims names
+        // atomically, but staying a second apart keeps the ids readable and
+        // in send order rather than seq-suffixed.
+        if (sentOne) await new Promise(r => setTimeout(r, 1100))
+        sentOne = true
         await updateQueuedSend({ ...item, status: 'sending', error: undefined })
         setSendQueue(await getSendQueue())
         try {

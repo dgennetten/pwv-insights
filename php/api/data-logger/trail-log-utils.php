@@ -1,6 +1,7 @@
 <?php
 /**
- * Shared helpers for trail log IDs: trailLog.{personId}{Ymd}{Hi}
+ * Shared helpers for trail log IDs: trailLog.{personId}{Ymd}{His}[{seq}]
+ * ({Hi} without seconds is the legacy form and is still parsed.)
  */
 
 /** Extract PersonID prefix from a trail log id (0 when unknown). */
@@ -9,23 +10,41 @@ function trailLogPersonIdFromLogId(string $logId): int {
     return 0;
   }
   $inner = $m[1];
-  if (strlen($inner) < 13) {
-    return 0;
+
+  // Stamp widths, newest first: Ymd+His+2-digit collision sequence (16),
+  // Ymd+His (14), and the legacy Ymd+Hi (12). Try widest first so a
+  // sequence-suffixed id isn't misread as a legacy one with a fatter pid.
+  foreach ([16, 14, 12] as $width) {
+    if (strlen($inner) < $width + 1) {
+      continue;
+    }
+    $stamp   = substr($inner, -$width);
+    $dateStr = substr($stamp, 0, 8);
+    $timeStr = substr($stamp, 8, $width === 12 ? 4 : 6);
+
+    // Validate strictly. DateTime::createFromFormat is lenient enough to
+    // accept overflow like month 26, which let a legacy id be misread as a
+    // wider one and yield a truncated pid.
+    $y = (int) substr($dateStr, 0, 4);
+    $m = (int) substr($dateStr, 4, 2);
+    $d = (int) substr($dateStr, 6, 2);
+    if ($y < 2000 || $y > 2099 || !checkdate($m, $d, $y)) {
+      continue;
+    }
+    $timeOk = $width === 12
+      ? preg_match('/^([01]\d|2[0-3])[0-5]\d$/', $timeStr)
+      : preg_match('/^([01]\d|2[0-3])[0-5]\d[0-5]\d$/', $timeStr);
+    if (!$timeOk) {
+      continue;
+    }
+    $pid = substr($inner, 0, -$width);
+    if ($pid === '' || !ctype_digit($pid)) {
+      continue;
+    }
+    return (int) $pid;
   }
-  $dateTime = substr($inner, -12);
-  if (!preg_match('/^\d{12}$/', $dateTime)) {
-    return 0;
-  }
-  $dateStr = substr($dateTime, 0, 8);
-  $timeStr = substr($dateTime, 8, 4);
-  if (!DateTime::createFromFormat('Ymd', $dateStr) || !DateTime::createFromFormat('Hi', $timeStr)) {
-    return 0;
-  }
-  $pid = substr($inner, 0, -12);
-  if ($pid === '' || !ctype_digit($pid)) {
-    return 0;
-  }
-  return (int) $pid;
+
+  return 0;
 }
 
 /** Resolve PersonID from saved log JSON + log id, with email fallback for legacy files. */
