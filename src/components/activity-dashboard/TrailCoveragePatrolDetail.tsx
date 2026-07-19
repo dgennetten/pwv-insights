@@ -48,14 +48,14 @@ export function TrailCoveragePatrolDetail({
               <button
                 type="button"
                 onClick={() => setMapOpen(true)}
-                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors"
                 title="View on map"
               >
                 <Map className="w-3 h-3" strokeWidth={2} />
                 Map
               </button>
               {trail.inWilderness && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                   <Leaf className="w-3 h-3" strokeWidth={2} />
                   Wilderness
                 </span>
