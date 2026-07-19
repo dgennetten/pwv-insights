@@ -48,7 +48,7 @@ export function TrailCoveragePatrolDetail({
               <button
                 type="button"
                 onClick={() => setMapOpen(true)}
-                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-600 text-white border border-emerald-600 hover:bg-emerald-500 shadow-sm transition-colors"
                 title="View on map"
               >
                 <Map className="w-3 h-3" strokeWidth={2} />
