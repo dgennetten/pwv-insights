@@ -194,6 +194,10 @@ export function DataLoggerPage() {
   const [capturingPhoto,    setCapturingPhoto]    = useState(false)
   const [viewPhoto,         setViewPhoto]         = useState<string | null>(null)
   const [sendQueue,         setSendQueue]         = useState<QueuedSend[]>([])
+  // Trail the user picked while results were still accumulating on another
+  // trail; held here until they confirm the send/save. null = "no trail".
+  const [pendingWksite,     setPendingWksite]     = useState<number | null | undefined>(undefined)
+  const [switchingTrail,    setSwitchingTrail]    = useState(false)
   const processingQueueRef = useRef(false)
   const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
   const [loading,           setLoading]           = useState(true)
@@ -506,8 +510,47 @@ export function DataLoggerPage() {
     }
   }, [trackers, session, loggerProfile])
 
+  /**
+   * Close out the current log and open a new one. Pass a wksiteId to land the
+   * new session on a specific trail (the trail-switch flow); omit it to start
+   * untrailed, as Stop Logger does. Second precision keeps the key distinct
+   * from the session we just finished.
+   */
+  const startFreshSession = useCallback(async (wksiteId?: number | null) => {
+    const newKey = new Date().toISOString().slice(0, 19)
+    const base   = await getOrCreateSession(newKey)
+    let fresh    = base
+    if (wksiteId !== undefined) {
+      await updateSessionWksite(base.id, wksiteId)
+      fresh = { ...base, wksiteId: wksiteId ?? undefined }
+    }
+    setSession(fresh)
+    setEntries([])
+    setTrackers([])
+    setSentOk(false)
+    setSendError(null)
+    setLastAction(null)
+    setTrackerResetKey(k => k + 1)
+    // Open the new log with a trail event so its report has trail context
+    // from the first entry, matching what handleWksiteChange records.
+    if (wksiteId != null) {
+      const pos = await getPosition()
+      await addEntry({
+        sessionId: fresh.id,
+        timestamp: Date.now(),
+        lat:       pos?.lat ?? null,
+        lng:       pos?.lng ?? null,
+        type:      'trail',
+        wksiteId,
+        trailName: trailNames[wksiteId],
+      })
+      await refreshEntries(fresh.id)
+    }
+    return fresh
+  }, [refreshEntries])
+
   const handleSendReport = useCallback(async () => {
-    if (!session || !user) return
+    if (!session || !user) return false
     setSending(true)
     setSendError(null)
     try {
@@ -536,15 +579,17 @@ export function DataLoggerPage() {
       await markSessionEmailed(session.id)
       setSession(prev => (prev ? { ...prev, emailedAt: Date.now() } : prev))
       setSentOk(true)
+      return true
     } catch (e) {
       setSendError(e instanceof Error ? e.message : 'Failed to send report')
+      return false
     } finally {
       setSending(false)
     }
   }, [session, user, includeLocations, buildReportPayload, uploadPendingPhotos])
 
   const handleGuestSendReport = useCallback(async () => {
-    if (!session || !guestEmail) return
+    if (!session || !guestEmail) return false
     setSending(true)
     setSendError(null)
     try {
@@ -570,8 +615,10 @@ export function DataLoggerPage() {
       await markSessionEmailed(session.id)
       setSession(prev => (prev ? { ...prev, emailedAt: Date.now() } : prev))
       setSentOk(true)
+      return true
     } catch (e) {
       setSendError(e instanceof Error ? e.message : 'Failed to send report')
+      return false
     } finally {
       setSending(false)
     }
@@ -583,8 +630,8 @@ export function DataLoggerPage() {
     setSendQueue(await getSendQueue())
   }, [])
 
-  const handleQueueSend = useCallback(async () => {
-    if (!session) return
+  const handleQueueSend = useCallback(async (nextWksiteId?: number | null) => {
+    if (!session) return false
     setSendError(null)
     try {
       const token = getStoredAuthToken()
@@ -611,24 +658,16 @@ export function DataLoggerPage() {
       await enqueueSend(item)
       // The report is frozen in the queue — stop this log and start a fresh
       // session so each successive offline send is unique data (mirrors the
-      // online Stop Logger behavior). Second precision guarantees a key
-      // distinct from the session we just queued (minute precision collided
-      // when queuing twice within a minute).
+      // online Stop Logger behavior).
       await markSessionEmailed(session.id)
-      const newKey = new Date().toISOString().slice(0, 19)
-      const freshSession = await getOrCreateSession(newKey)
-      setSession(freshSession)
-      setEntries([])
-      setTrackers([])
-      setSentOk(false)
-      setSendError(null)
-      setLastAction(null)
-      setTrackerResetKey(k => k + 1)
+      await startFreshSession(nextWksiteId)
       await refreshQueue()
+      return true
     } catch (e) {
       setSendError(e instanceof Error ? e.message : 'Could not queue report')
+      return false
     }
-  }, [session, includeLocations, isAuthenticated, user, guestEmail, buildReportPayload, refreshQueue])
+  }, [session, includeLocations, isAuthenticated, user, guestEmail, buildReportPayload, refreshQueue, startFreshSession])
 
   const processQueue = useCallback(async () => {
     if (processingQueueRef.current || !navigator.onLine) return
@@ -689,6 +728,39 @@ export function DataLoggerPage() {
     await deleteQueuedSend(id)
     await refreshQueue()
   }, [refreshQueue])
+
+  // ── Trail switching ───────────────────────────────────────────────
+  // Each trail gets its own report, so leaving a trail with results on it
+  // closes out that report first. Only prompt when there is something to
+  // lose: results logged, and an actual trail to attribute them to.
+  const handleTrailSelect = useCallback((nextWksiteId: number | null) => {
+    const current = session?.wksiteId ?? null
+    if (nextWksiteId === current) return
+    const hasResults = entries.some(e => e.type !== 'trail')
+    if (!session || !hasResults || current == null) {
+      void handleWksiteChange(nextWksiteId)
+      return
+    }
+    setPendingWksite(nextWksiteId)
+  }, [session, entries, handleWksiteChange])
+
+  const confirmTrailSwitch = useCallback(async () => {
+    if (pendingWksite === undefined) return
+    const next = pendingWksite
+    setSwitchingTrail(true)
+    try {
+      if (!navigator.onLine) {
+        if (!(await handleQueueSend(next))) return   // stay put; error is shown
+      } else {
+        const sent = isAuthenticated ? await handleSendReport() : await handleGuestSendReport()
+        if (!sent) return
+        await startFreshSession(next)
+      }
+      setPendingWksite(undefined)
+    } finally {
+      setSwitchingTrail(false)
+    }
+  }, [pendingWksite, isAuthenticated, handleQueueSend, handleSendReport, handleGuestSendReport, startFreshSession])
 
   // Load the queue on mount; flush it whenever we're (re)connected.
   useEffect(() => { void refreshQueue() }, [refreshQueue])
@@ -899,7 +971,7 @@ export function DataLoggerPage() {
           </span>
           <select
             value={session?.wksiteId ?? ''}
-            onChange={e => void handleWksiteChange(e.target.value ? parseInt(e.target.value, 10) : null)}
+            onChange={e => handleTrailSelect(e.target.value ? parseInt(e.target.value, 10) : null)}
             className="flex-1 min-w-0 px-2.5 py-1.5 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
           >
             <option value="">— Select trail IF on a PWV trail —</option>
@@ -1456,7 +1528,90 @@ export function DataLoggerPage() {
         <img src={viewPhoto} alt="Captured photo" className="max-w-full max-h-full rounded-lg" />
       </div>
     )}
+
+    {pendingWksite !== undefined && session?.wksiteId != null && (
+      <TrailSwitchModal
+        fromTrail={trailNames[session.wksiteId]}
+        toTrail={pendingWksite != null ? trailNames[pendingWksite] : null}
+        isOnline={isOnline}
+        busy={switchingTrail}
+        error={sendError}
+        onConfirm={() => void confirmTrailSwitch()}
+        onCancel={() => { setPendingWksite(undefined); setSendError(null) }}
+      />
+    )}
     </>
+  )
+}
+
+// ── Trail Switch Confirmation ──────────────────────────────────
+// Leaving a trail that has results on it closes out its report, so say so
+// plainly — and name the action the user will actually get: online the
+// report goes out now, offline it waits in the queue for a connection.
+
+function TrailSwitchModal({
+  fromTrail, toTrail, isOnline, busy, error, onConfirm, onCancel,
+}: {
+  fromTrail: string
+  toTrail:   string | null
+  isOnline:  boolean
+  busy:      boolean
+  error:     string | null
+  onConfirm: () => void
+  onCancel:  () => void
+}) {
+  const destination = toTrail ? `to ${toTrail}` : 'away from this trail'
+  const outcome     = isOnline
+    ? 'will be sent'
+    : 'will be saved and sent when you reconnect'
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="trail-switch-title"
+      onClick={e => { if (e.target === e.currentTarget && !busy) onCancel() }}
+    >
+      <div className="w-full max-w-sm bg-white dark:bg-stone-900 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
+        <div className="px-5 pt-5 pb-4">
+          <h3 id="trail-switch-title" className="text-sm font-bold text-stone-900 dark:text-stone-100 mb-2">
+            Finish logging {fromTrail}?
+          </h3>
+          <p className="text-sm text-stone-600 dark:text-stone-400">
+            Before switching {destination}, your accumulated results from{' '}
+            <span className="font-semibold text-stone-800 dark:text-stone-200">{fromTrail}</span>{' '}
+            {outcome}.
+          </p>
+          {!isOnline && (
+            <p className="text-xs text-amber-700 dark:text-amber-500 mt-2">
+              You're offline — the report will be queued.
+            </p>
+          )}
+          {error && (
+            <p className="text-xs text-red-600 dark:text-red-400 mt-3">{error}</p>
+          )}
+        </div>
+        <div className="flex gap-2 px-5 pb-5">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 disabled:opacity-50 transition-colors"
+          >
+            Stay on {fromTrail}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 px-3 py-2 text-xs font-medium rounded-lg bg-emerald-600 text-white border border-emerald-600 hover:bg-emerald-500 disabled:opacity-50 shadow-sm transition-colors"
+          >
+            {busy ? 'Working…' : isOnline ? 'Send & switch' : 'Save & switch'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
