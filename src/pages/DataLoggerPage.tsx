@@ -767,16 +767,8 @@ export function DataLoggerPage() {
   useEffect(() => { if (isOnline) void processQueue() }, [isOnline, processQueue])
 
   const handleNewSession = useCallback(async () => {
-    const newKey = new Date().toISOString().slice(0, 16)
-    const s = await getOrCreateSession(newKey)
-    setSession(s)
-    setEntries([])
-    setTrackers([])
-    setSentOk(false)
-    setSendError(null)
-    setLastAction(null)
-    setTrackerResetKey(k => k + 1)
-  }, [])
+    await startFreshSession()
+  }, [startFreshSession])
 
   const handleClearData = useCallback(async () => {
     if (!session) return
