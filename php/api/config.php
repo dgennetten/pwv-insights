@@ -290,7 +290,10 @@ function sendOtpMail(
       $mail->Timeout    = (int) ($smtp['timeout'] ?? 10);
       $mail->setFrom($smtp['from_email'] ?? MAIL_FROM, $smtp['from_name'] ?? MAIL_FROM_NAME);
       $mail->addAddress($to);
-      if ($bccAdmin) {
+      // Skip the admin BCC when the recipient is already the admin — otherwise
+      // that mailbox gets two envelope copies of every message, doubling the
+      // rapid-fire delivery volume Gmail throttles on.
+      if ($bccAdmin && strtolower(trim($to)) !== strtolower(ADMIN_EMAIL)) {
         $mail->addBCC(ADMIN_EMAIL);
       }
       if ($replyTo !== null && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
@@ -331,7 +334,7 @@ function sendOtpMail(
 
   $headers = 'From: ' . MAIL_FROM_NAME . ' <' . MAIL_FROM . ">\r\n"
            . "Content-Type: text/plain; charset=UTF-8\r\n";
-  if ($bccAdmin) {
+  if ($bccAdmin && strtolower(trim($to)) !== strtolower(ADMIN_EMAIL)) {
     $headers .= 'Bcc: ' . ADMIN_EMAIL . "\r\n";
   }
   if ($replyTo !== null && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {

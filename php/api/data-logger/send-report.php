@@ -17,7 +17,14 @@ $guestEmailRaw    = trim($body['guestEmail']  ?? '');
 $appVersion       = trim($body['appVersion']  ?? '');
 $entries          = is_array($body['entries'] ?? null) ? $body['entries'] : [];
 $memberName       = trim($body['memberName']  ?? '');
-$reportDate       = trim($body['reportDate']  ?? date('Y-m-d'));
+// reportDate is the client session id, which since the trail-switch feature
+// can carry an ISO time (2026-07-21T16:58:20). The report only wants the
+// date — normalize here so the subject, the body "Date:" line, the saved
+// payload and the map link all get a clean value.
+$reportDate       = trim((string)($body['reportDate'] ?? ''));
+$reportDate       = preg_match('/^\d{4}-\d{2}-\d{2}/', $reportDate)
+  ? substr($reportDate, 0, 10)
+  : date('Y-m-d');
 $includeLocations = !empty($body['includeLocations']);
 $trackers         = is_array($body['trackers'] ?? null) ? $body['trackers'] : [];
 $trackers         = trailLogNormalizeTrackers($trackers);
@@ -498,7 +505,11 @@ $lines[] = "Report sent:     {$sentTime}";
 $lines[] = '';
 $lines[] = "\u{2014} KDG" . ($appVersion !== '' ? " (v{$appVersion})" : '');
 
-$subject = "PWV Data Logger Report - {$reportDate}";
+// Name the trail in the subject so each per-trail report is distinct in the
+// inbox — without it, same-day reports share one subject and Gmail threads
+// them into a single conversation, hiding all but the latest.
+$subjectTrail = (!$isOther && $trailName !== '') ? " - {$trailName}" : '';
+$subject = "PWV Data Logger Report{$subjectTrail} - {$reportDate}";
 
 $logPayload = [
   'logId'      => $logId,
