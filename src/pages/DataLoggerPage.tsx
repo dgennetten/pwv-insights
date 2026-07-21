@@ -626,9 +626,20 @@ export function DataLoggerPage() {
 
   // ── Offline email send queue ──────────────────────────────────────
 
-  const refreshQueue = useCallback(async () => {
-    setSendQueue(await getSendQueue())
+  // Load the queue, dropping terminal 'sent' items. A sent report is done —
+  // keeping it only accumulated "Sent ✓" rows that piled up across sessions
+  // (nothing ever deleted them). Queued/sending/failed items stay visible.
+  const loadQueue = useCallback(async (): Promise<QueuedSend[]> => {
+    const items = await getSendQueue()
+    const done  = items.filter(i => i.status === 'sent' && i.id != null)
+    if (done.length === 0) return items
+    await Promise.all(done.map(i => deleteQueuedSend(i.id!)))
+    return getSendQueue()
   }, [])
+
+  const refreshQueue = useCallback(async () => {
+    setSendQueue(await loadQueue())
+  }, [loadQueue])
 
   const handleQueueSend = useCallback(async (nextWksiteId?: number | null) => {
     if (!session) return false
@@ -720,9 +731,11 @@ export function DataLoggerPage() {
       }
     } finally {
       processingQueueRef.current = false
-      setSendQueue(await getSendQueue())
+      // Items flashed "Sent ✓" during the loop above; clear them now so the
+      // card doesn't keep growing. Failed items remain for retry.
+      setSendQueue(await loadQueue())
     }
-  }, [])
+  }, [loadQueue])
 
   const handleRemoveQueued = useCallback(async (id: number) => {
     await deleteQueuedSend(id)
@@ -1412,9 +1425,13 @@ export function DataLoggerPage() {
             <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
               Queued Sends
             </span>
-            <span className="text-xs text-stone-400 dark:text-stone-500">
-              {isOnline ? 'Processing…' : 'Sends when reconnected'}
-            </span>
+            {(() => {
+              const pending = sendQueue.some(q => q.status === 'queued' || q.status === 'sending')
+              const label = !isOnline ? 'Sends when reconnected' : pending ? 'Processing…' : null
+              return label && (
+                <span className="text-xs text-stone-400 dark:text-stone-500">{label}</span>
+              )
+            })()}
           </div>
           {sendQueue.map(q => (
             <div key={q.id} className="flex items-start justify-between gap-3 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2">
