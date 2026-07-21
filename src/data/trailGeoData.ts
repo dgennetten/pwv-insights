@@ -35,7 +35,6 @@ export const trailGeoData: Record<number, { lat: number; lng: number }> = {
   201: { lat: 40.79783,        lng: -105.92883 },  // McIntyre
   204: { lat: 40.774,          lng: -105.99683 },  // McIntyre Creek
   207: { lat: 40.69633,        lng: -105.95417 },  // McIntyre Lake
-  210: { lat: 40.80833,        lng: -106.05033 },  // Medicine Bow
   216: { lat: 40.57883,        lng: -105.7475  },  // Mirror Lake
   225: { lat: 40.54,           lng: -105.88217 },  // Montgomery Pass
   234: { lat: 40.68283,        lng: -105.464   },  // Mt. McConnel
@@ -43,7 +42,6 @@ export const trailGeoData: Record<number, { lat: number; lng: number }> = {
   243: { lat: 40.48083,        lng: -105.822   },  // Neota Creek
   249: { lat: 40.4755,         lng: -105.4605  },  // North Fork
   252: { lat: 40.80833,        lng: -105.6705  },  // North Lone Pine
-  261: { lat: 40.65667,        lng: -105.90317 },  // Rawah
   264: { lat: 40.71417,        lng: -105.735   },  // Roaring Creek
   267: { lat: 40.42017,        lng: -105.28533 },  // Round Mountain
   270: { lat: 40.69867,        lng: -105.94    },  // Sandbar Lakes
@@ -113,7 +111,6 @@ export const trailNames: Record<number, string> = {
   201: 'McIntyre',
   204: 'McIntyre Creek',
   207: 'McIntyre Lake',
-  210: 'Medicine Bow',
   216: 'Mirror Lake',
   225: 'Montgomery Pass',
   234: 'Mt. McConnel',
@@ -121,7 +118,6 @@ export const trailNames: Record<number, string> = {
   243: 'Neota Creek',
   249: 'North Fork',
   252: 'North Lone Pine',
-  261: 'Rawah',
   264: 'Roaring Creek',
   267: 'Round Mountain',
   270: 'Sandbar Lakes',
