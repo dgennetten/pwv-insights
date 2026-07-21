@@ -908,6 +908,8 @@ export function DataLoggerPage() {
 
       {showTips && <UsageTipsModal onClose={() => setShowTips(false)} />}
 
+      <QueuedReportsBanner queue={sendQueue} isOnline={isOnline} onRetry={() => void processQueue()} />
+
       {/* Session recovery */}
       {recoveryCandidate && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl px-4 py-3 space-y-2">
@@ -1624,6 +1626,63 @@ function TrailSwitchModal({
   )
 }
 
+// ── Queued-reports guard banner ────────────────────────────────
+// A sticky, always-in-view nag while reports are held on the device but not
+// yet sent — so unsent data can't be wiped by clearing site data or deleting
+// the app. Sent items are pruned from the queue, so anything here is unsent.
+
+function QueuedReportsBanner({
+  queue, isOnline, onRetry,
+}: {
+  queue: QueuedSend[]
+  isOnline: boolean
+  onRetry: () => void
+}) {
+  const total = queue.length
+  if (total === 0) return null
+
+  const pending = queue.filter(q => q.status === 'queued' || q.status === 'sending').length
+  const failed  = queue.filter(q => q.status === 'failed').length
+  const n = (k: number) => `${k} report${k === 1 ? '' : 's'}`
+
+  let tone: 'amber' | 'sky' | 'red'
+  let msg: React.ReactNode
+  let showRetry = false
+
+  if (!isOnline) {
+    tone = 'amber'
+    msg = <><strong>{n(total)} saved on this phone.</strong> Held here until you reconnect, then sent automatically. Don't clear browser data or delete the app until this banner clears.</>
+  } else if (pending > 0) {
+    tone = 'sky'
+    msg = <><strong>Sending {n(pending)}…</strong> Keep the app open until the queue clears.</>
+  } else {
+    tone = 'red'
+    msg = <><strong>{n(failed)} failed to send</strong> — still saved on this phone. Retry when you have a stronger connection.</>
+    showRetry = true
+  }
+
+  const tones = {
+    amber: 'bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200',
+    sky:   'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-800 dark:text-sky-200',
+    red:   'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200',
+  }
+
+  return (
+    <div className={`sticky top-2 z-30 flex items-center gap-3 rounded-xl border px-3 py-2 shadow-lg ${tones[tone]}`}>
+      <p className="text-xs leading-snug flex-1">{msg}</p>
+      {showRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors"
+        >
+          Retry
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Usage Tips Modal ───────────────────────────────────────────
 
 function TipSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -1667,6 +1726,24 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
 
         {/* Scrollable content */}
         <div className="overflow-y-auto px-4 py-4 space-y-5">
+
+          <TipSection title="Working offline / multiple trails">
+            <Tip>
+              <strong>Open the app once while online first</strong> — that lets it cache itself so it still opens with no signal. Confirm before a trip by switching to airplane mode and reopening it. The trail list works offline; only the background map tiles need a connection.
+            </Tip>
+            <Tip>
+              <strong>GPS works with no cell service</strong> — location comes from satellites, so waypoints, coordinates and trailhead distances all record normally out of range. The report map just fills in later when you're back online.
+            </Tip>
+            <Tip>
+              <strong>Each trail becomes its own report</strong> — when you change the trail, the one you're leaving is finalized. Offline, it's saved to a queue and sends automatically once you reconnect. Switch trails five times and you'll get five reports.
+            </Tip>
+            <Tip>
+              <strong>Save your last trail before you finish</strong> — switching trails only saves the trail you're <em>leaving</em>. The final trail you're on isn't captured until you tap <strong>STOP Logger</strong> (offline it reads "Save report to send later"). Do this before closing the app or you'll leave that trail's data unsent.
+            </Tip>
+            <Tip>
+              <strong>Watch the "reports saved on this phone" banner</strong> — while it's showing, unsent reports are held only on your device. <strong>Don't clear browser data or delete the app until it's gone</strong> and the emails have arrived. When you get back in range, open the app and keep it in front so the queue finishes sending.
+            </Tip>
+          </TipSection>
 
           <TipSection title="iPhone / iPad (iOS)">
             <Tip>
