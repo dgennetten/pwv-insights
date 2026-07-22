@@ -45,6 +45,7 @@ export const trailGeoData: Record<number, { lat: number; lng: number }> = {
   264: { lat: 40.71417,        lng: -105.735   },  // Roaring Creek
   267: { lat: 40.42017,        lng: -105.28533 },  // Round Mountain
   270: { lat: 40.69867,        lng: -105.94    },  // Sandbar Lakes
+  273: { lat: 40.79783,        lng: -105.92883 },  // Shipman Park (accessed via Link/McIntyre TH)
   276: { lat: 40.5665,         lng: -105.55533 },  // Signal Mountain
   285: { lat: 40.5705,         lng: -105.588   },  // Stormy Peaks
   294: { lat: 40.557,          lng: -105.8215  },  // Trap Park
