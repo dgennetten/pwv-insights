@@ -37,7 +37,18 @@ function FlyToTrail({ trail, active }: { trail: Trail | null; active: boolean })
     const fly = () => {
       const { x, y } = map.getSize()
       if (x === 0 || y === 0) return
-      map.flyTo([trail.latitude!, trail.longitude!], 14, { duration: 1.2, easeLinearity: 0.3 })
+      // If the trail has path geometry, fit the whole trail + trailhead into view.
+      // Some trails (e.g. Shipman Park) sit miles from their access trailhead, so a
+      // fixed zoom on the marker alone would leave the drawn path off-screen.
+      const paths = trail.wksiteId != null ? (trailPaths[trail.wksiteId] ?? []) : []
+      const pts   = paths.flat()
+      if (pts.length > 0) {
+        const latlngs: [number, number][] = pts.map(([lng, lat]) => [lat, lng])
+        latlngs.push([trail.latitude!, trail.longitude!])
+        map.flyToBounds(latLngBounds(latlngs), { padding: [40, 40], maxZoom: 14, duration: 1.2 })
+      } else {
+        map.flyTo([trail.latitude!, trail.longitude!], 14, { duration: 1.2, easeLinearity: 0.3 })
+      }
     }
 
     map.on('resize', fly)
