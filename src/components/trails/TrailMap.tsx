@@ -6,6 +6,7 @@ import type { Trail } from '../../types/trails'
 import { isValidLatLng } from '../../lib/geo'
 import { trailMetadata } from '../../data/trailMetadata'
 import { trailPaths } from '../../data/trailPaths'
+import { trailheadAccess } from '../../data/trailheadAccess'
 
 // ── Marker icons ─────────────────────────────────────────────────────────────
 
@@ -165,6 +166,11 @@ export function TrailMap({
 
         {mappable.map(trail => {
           const meta = trail.wksiteId != null ? trailMetadata[trail.wksiteId] : undefined
+          // Directions route to the drive-to trailhead when it differs from the
+          // map pin (e.g. hike-in trails), else to the pin itself.
+          const access = trail.wksiteId != null ? trailheadAccess[trail.wksiteId] : undefined
+          const dirLat = access?.lat ?? trail.latitude
+          const dirLng = access?.lng ?? trail.longitude
           return (
           <Marker
             key={trail.id}
@@ -218,7 +224,7 @@ export function TrailMap({
                   </div>
                 )}
                 <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${trail.latitude},${trail.longitude}`}
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${dirLat},${dirLng}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-emerald-600 hover:underline block"
