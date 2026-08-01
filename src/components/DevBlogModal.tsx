@@ -96,7 +96,7 @@ export function DevBlogModal({ onClose }: DevBlogModalProps) {
               />
               <span className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
                 Never — don't show again
-                <span className="block text-stone-400 dark:text-stone-500 text-[10px]">Restore anytime in Settings</span>
+                <span className="block text-stone-400 dark:text-stone-500 text-[10px]">Restore anytime on the About &amp; Feedback page</span>
               </span>
             </label>
           </div>
