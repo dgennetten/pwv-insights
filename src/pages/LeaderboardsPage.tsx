@@ -40,7 +40,7 @@ export function LeaderboardsPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/leaderboards/data.php?timeRange=${range}`)
+      const res = await fetch(`/api/leaderboards/data.php?timeRange=${range}`, { cache: 'no-store' }) // live analytics — bypass stale HTTP cache
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = (await res.json()) as Record<string, unknown>
       if (json.ok === false) {

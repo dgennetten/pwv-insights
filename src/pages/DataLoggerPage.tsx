@@ -1,4 +1,4 @@
-import { Undo2, ArrowLeft, Camera } from 'lucide-react'
+import { Undo2, ArrowLeft, Camera, FileDown, Map as MapIcon } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -24,12 +24,14 @@ import {
 } from '../services/dataLoggerService'
 import { getStoredAuthToken } from '../services/authService'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
+import { trailPaths } from '../data/trailPaths'
 import { updateSessionWksite } from '../services/dataLoggerService'
 import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker, QueuedSend, QueuedSendSummary } from '../types/dataLogger'
-import { trackerDistanceM } from '../lib/gpsDistance'
-import { distFromTrailheadM } from '../lib/trailheadDistance'
+import { trackerDistanceM, haversineMeters } from '../lib/gpsDistance'
+import { distFromTrailheadM, nearestTrailInfo } from '../lib/trailheadDistance'
 import { getLoggerSettings } from '../lib/loggerSettings'
 import { fileToCompressedDataUrl } from '../lib/photo'
+import { buildTextPdf, downloadBlob } from '../lib/textPdf'
 
 // Matches lu_viol_type in the database, sorted alphabetically, "Other" last
 const VIOLATION_TYPES: string[] = [
@@ -166,6 +168,12 @@ function fmtTime(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+function fmtMiles(meters: number): string {
+  return (meters / 1609.344).toFixed(2) + ' mi'
+}
+
+type OnTrailLight = 'green' | 'red' | 'gray'
+
 export function DataLoggerPage() {
   const { user } = useAuth()
   const isAuthenticated = !!user?.personId
@@ -207,6 +215,13 @@ export function DataLoggerPage() {
   const [showGuestEmailForm,  setShowGuestEmailForm]  = useState(false)
   const [guestEmail,          setGuestEmail]          = useState('')
 
+  // ── On Trail status (live GPS: tracker stream while tracking, else a page watch) ──
+  const [onTrailLight,   setOnTrailLight]   = useState<OnTrailLight>('gray')
+  const [trailheadDistM, setTrailheadDistM] = useState<number | null>(null)
+  const [trailheadCrow,  setTrailheadCrow]  = useState(false)  // true = straight-line (off-trail) → show "*"
+  const [onTrailExtentM, setOnTrailExtentM] = useState<number | null>(null)
+  const trailStatsRef = useRef({ alongMin: Infinity, alongMax: -Infinity })
+
   // Blink the "Usage tips" hint arrow a few times on launch, then remove it
   useEffect(() => {
     const timer = setTimeout(() => setShowTipsHint(false), 3200)
@@ -230,6 +245,62 @@ export function DataLoggerPage() {
   const trailheadCoords = session?.wksiteId != null
     ? (trailGeoData[session.wksiteId] ?? null)
     : null
+
+  // Reset on-trail stats whenever the session or selected trail changes.
+  const resetTrailStats = useCallback(() => {
+    trailStatsRef.current = { alongMin: Infinity, alongMax: -Infinity }
+    setOnTrailLight('gray')
+    setTrailheadDistM(null)
+    setTrailheadCrow(false)
+    setOnTrailExtentM(null)
+  }, [])
+
+  useEffect(() => { resetTrailStats() }, [session?.id, session?.wksiteId, resetTrailStats])
+
+  // Each live GPS fix updates the On Trail light + readouts. On-trail → distance is
+  // measured along the trail; off-trail → straight-line (crow-flies) from the trailhead,
+  // flagged with "*". `null` means the tracker's GPS watch stopped → light goes gray.
+  const handleLoggerPosition = useCallback((p: { lat: number; lng: number; ts: number; accuracy?: number } | null) => {
+    if (p === null) { setOnTrailLight('gray'); return }
+    const wks  = session?.wksiteId
+    const th   = wks != null ? trailGeoData[wks] : null
+    const segs = wks != null ? (trailPaths[wks] ?? []) : []
+    if (wks == null || !th || segs.length === 0) { setOnTrailLight('gray'); return }
+
+    const { alongM, offsetM } = nearestTrailInfo(segs, th.lat, th.lng, p.lat, p.lng)
+    if (!Number.isFinite(offsetM)) { setOnTrailLight('gray'); return }
+    const thresholdM = getLoggerSettings().onTrailThresholdFt * 0.3048
+    const onTrail = offsetM <= thresholdM
+    setOnTrailLight(onTrail ? 'green' : 'red')
+
+    if (onTrail) {
+      // On the trail: actual distance along the trail path, no asterisk.
+      setTrailheadCrow(false)
+      setTrailheadDistM(alongM)
+      const s = trailStatsRef.current
+      s.alongMin = Math.min(s.alongMin, alongM)
+      s.alongMax = Math.max(s.alongMax, alongM)
+      setOnTrailExtentM(s.alongMax - s.alongMin)
+    } else {
+      // Off the trail: straight-line (crow-flies) from the trailhead, flagged with "*".
+      setTrailheadCrow(true)
+      setTrailheadDistM(haversineMeters(th.lat, th.lng, p.lat, p.lng))
+    }
+  }, [session?.wksiteId])
+
+  // When a trail is selected but no tracker is tracking, run a page-level GPS watch so
+  // the On Trail light + distance readouts stay live (matching the map). While tracking,
+  // the DistanceTracker's stream feeds handleLoggerPosition instead, so only one watch runs.
+  const isTracking = trackers.some(t => t.state === 'tracking')
+  useEffect(() => {
+    if (session?.wksiteId == null || isTracking || !navigator.geolocation) return
+    const id = navigator.geolocation.watchPosition(
+      pos => handleLoggerPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude, ts: pos.timestamp, accuracy: pos.coords.accuracy ?? undefined }),
+      () => { /* keep last reading */ },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+    )
+    return () => navigator.geolocation.clearWatch(id)
+  }, [session?.wksiteId, isTracking, handleLoggerPosition])
 
   const refreshEntries = useCallback(async (sessionId: string) => {
     setEntries(await getSessionEntries(sessionId))
@@ -887,6 +958,16 @@ export function DataLoggerPage() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {session?.wksiteId != null && (
+            <div className="flex items-center gap-1.5" title={
+              onTrailLight === 'green' ? 'On the selected trail'
+              : onTrailLight === 'red' ? 'Off the selected trail'
+              : 'On-trail status unknown — waiting for GPS'
+            }>
+              <div className={`w-2 h-2 rounded-full transition-colors ${onTrailLight === 'green' ? 'bg-emerald-500' : onTrailLight === 'red' ? 'bg-red-500' : 'bg-stone-400'}`} />
+              <span className="text-xs text-stone-500 dark:text-stone-400">On Trail</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5" title={
             gpsStatus === 'ok' ? 'GPS available'
             : gpsStatus === 'denied' ? 'Location permission denied'
@@ -989,8 +1070,54 @@ export function DataLoggerPage() {
               ))
             }
           </select>
+          {session?.wksiteId != null && (
+            <button
+              type="button"
+              onClick={() => setShowMap(true)}
+              title="Show the trail path and your current location"
+              className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+            >
+              <MapIcon className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
+              Map
+            </button>
+          )}
         </div>
       </div>
+
+      {/* ── ON-TRAIL DISTANCES ──────────────────────────── */}
+      {session?.wksiteId != null && (
+        <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                Distance from trail head
+              </div>
+              <div className="text-lg font-bold tabular-nums text-stone-800 dark:text-stone-100">
+                {trailheadDistM != null ? fmtMiles(trailheadDistM) : '—'}
+                {trailheadDistM != null && trailheadCrow && <span className="text-amber-500">*</span>}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                Distance on trail
+              </div>
+              <div className="text-lg font-bold tabular-nums text-stone-800 dark:text-stone-100">
+                {onTrailExtentM != null ? fmtMiles(onTrailExtentM) : '—'}
+              </div>
+            </div>
+          </div>
+          {trailheadCrow && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+              * Off the trail — straight-line (crow-flies) distance from the trailhead.
+            </p>
+          )}
+          {trailheadDistM == null && (
+            <p className="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              Waiting for GPS…
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── HIKER COUNTER ───────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
@@ -1161,6 +1288,7 @@ export function DataLoggerPage() {
         trailheadCoords={trailheadCoords ?? undefined}
         wksiteId={session?.wksiteId}
         onTrackersChange={setTrackers}
+        onPosition={handleLoggerPosition}
       />
 
       {/* ── NOTES ───────────────────────────────────────── */}
@@ -1706,6 +1834,21 @@ function Tip({ children }: { children: React.ReactNode }) {
 }
 
 export function UsageTipsModal({ onClose }: { onClose: () => void }) {
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // Save the live tips content as a real downloadable PDF (no print dialog).
+  const handleSaveTipsPdf = () => {
+    const root = contentRef.current
+    if (!root) return
+    const sections = Array.from(root.querySelectorAll(':scope > div')).map(div => ({
+      heading: div.querySelector('h3')?.textContent?.trim() ?? '',
+      items: Array.from(div.querySelectorAll('li'))
+        .map(li => (li.textContent ?? '').replace(/\s+/g, ' ').trim())
+        .filter(Boolean),
+    })).filter(s => s.heading || s.items.length)
+    downloadBlob(buildTextPdf('PWV Data Logger — Usage Tips', sections), 'PWV-Data-Logger-Usage-Tips.pdf')
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -1715,17 +1858,27 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-stone-100 dark:border-stone-800 shrink-0">
           <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Usage Tips</h2>
-          <button
-            onClick={onClose}
-            className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors text-lg leading-none px-1"
-            aria-label="Close"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSaveTipsPdf}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+              title="Save these tips as a PDF"
+            >
+              <FileDown className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
+              Save PDF
+            </button>
+            <button
+              onClick={onClose}
+              className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors text-lg leading-none px-1"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto px-4 py-4 space-y-5">
+        <div ref={contentRef} className="overflow-y-auto px-4 py-4 space-y-5">
 
           <TipSection title="Working offline / multiple trails">
             <Tip>
@@ -1806,6 +1959,27 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
               <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0" />
               <span><strong>No GPS</strong> — this device or browser can't provide location. Entries are saved without coordinates.</span>
             </li>
+          </TipSection>
+
+          <TipSection title="On Trail Indicator">
+            <li className="flex items-center gap-2 text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span><strong>On Trail</strong> — you're within the on-trail distance of the selected trail's mapped centerline.</span>
+            </li>
+            <li className="flex items-center gap-2 text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
+              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+              <span><strong>Off Trail</strong> — you're farther than that from the trail.</span>
+            </li>
+            <li className="flex items-center gap-2 text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
+              <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0" />
+              <span><strong>Unknown</strong> — can't tell yet: no live GPS fix, location denied, or this trail has no mapped centerline.</span>
+            </li>
+            <Tip>
+              The light appears once you've selected a trail and updates live from your GPS (green/red need a fix; it's gray while none is available). Set how far off-trail still counts as "on trail" under <em>Settings → Data Logger → On-trail distance</em> (default 200 ft).
+            </Tip>
+            <Tip>
+              <strong>Distance from trail head</strong> and <strong>Distance on trail</strong> appear below the trail dropdown. "From trail head" is measured along the trail path when you're on it; when you're off the trail it shows the straight-line (crow-flies) distance with a <strong>*</strong>. "On trail" is how much of the trail you've covered end-to-end.
+            </Tip>
           </TipSection>
 
         </div>

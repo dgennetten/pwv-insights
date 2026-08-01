@@ -45,6 +45,7 @@ const EMPTY_SUMMARY: ActivitySummary = {
   patrols: 0, patrolsDelta: 0,
   trailsCovered: 0, trailsCoveredDelta: 0,
   treesCleared: 0, treesClearedDelta: 0,
+  sawyerSlice: 0, sawyerSliceDelta: 0,
   hikersSeen: 0, hikersSeenDelta: 0,
   volunteerHours: 0, totalActiveMembers: 0,
   periodLabel: '—',
@@ -172,7 +173,8 @@ export function ActivityDashboardPage() {
     try {
       const mc = memberContextQueryParam(s.memberContext)
       const res = await fetch(
-        `/api/dashboard/data.php?timeRange=${s.timeRange}&memberContext=${encodeURIComponent(mc)}`
+        `/api/dashboard/data.php?timeRange=${s.timeRange}&memberContext=${encodeURIComponent(mc)}`,
+        { cache: 'no-store' } // live analytics — never read a stale HTTP-cached payload
       )
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = (await res.json()) as Record<string, unknown>

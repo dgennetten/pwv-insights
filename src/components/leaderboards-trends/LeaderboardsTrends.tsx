@@ -39,9 +39,10 @@ const METRICS_BY_CATEGORY: Record<
     { value: 'wildernessDays', label: 'Wilderness', unit: 'days' },
   ],
   work: [
-    { value: 'contacts',     label: 'Contacts',   unit: 'contacts' },
-    { value: 'treesCleared', label: 'Trees',      unit: 'trees' },
-    { value: 'brushing',     label: 'Brushing',   unit: 'ft' },
+    { value: 'contacts',     label: 'Contacts',     unit: 'contacts' },
+    { value: 'treesCleared', label: 'Trees',        unit: 'trees' },
+    { value: 'sawyerSlice',  label: 'Sawyer Slice', unit: 'm²' },
+    { value: 'brushing',     label: 'Brushing',     unit: 'ft' },
     { value: 'fireRings',    label: 'Fire rings', unit: 'rings' },
     { value: 'trash',        label: 'Trash',      unit: 'lbs' },
   ],

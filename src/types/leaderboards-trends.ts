@@ -16,6 +16,7 @@ export type LeaderboardMetric =
   // Work
   | 'contacts'
   | 'treesCleared'
+  | 'sawyerSlice'
   | 'brushing'
   | 'fireRings'
   | 'trash'
@@ -39,6 +40,8 @@ export interface Member {
   wildernessDays: number;
   contacts: number;
   treesCleared: number;
+  /** Experimental Sawyer Slice effort metric: estimated m² of sawn cross-section (party-weighted). */
+  sawyerSlice: number;
   brushing: number;
   fireRings: number;
   trash: number;

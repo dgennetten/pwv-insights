@@ -13,8 +13,6 @@ import {
 import { getStoredTheme, setStoredTheme, applyTheme, type Theme } from '../lib/theme'
 import { getLoggerSettings, saveLoggerSettings, type LoggerSettings } from '../lib/loggerSettings'
 import { UsageTipsModal } from './DataLoggerPage'
-import { clearBlogPref } from '../lib/devBlog'
-import { DevBlogModal } from '../components/DevBlogModal'
 
 // ─── Checkbox row ─────────────────────────────────────────────────────────────
 
@@ -95,9 +93,9 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
+  const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showLoggerTips, setShowLoggerTips] = useState(false)
-  const [showBlog, setShowBlog] = useState(false)
 
   const loadPrefs = useCallback(async () => {
     const token = getStoredAuthToken()
@@ -106,6 +104,8 @@ export function SettingsPage() {
     try {
       const loaded = await fetchUserPreferences(token)
       setPrefs(loaded)
+      setDirty(false)
+      setSavedAt(null)
     } finally {
       setLoading(false)
     }
@@ -117,6 +117,7 @@ export function SettingsPage() {
 
   const updateKpi = (key: keyof DashboardKpiPrefs, value: boolean) => {
     setSavedAt(null)
+    setDirty(true)
     setPrefs(prev => ({
       ...prev,
       dashboardKpi: { ...prev.dashboardKpi, [key]: value },
@@ -125,6 +126,7 @@ export function SettingsPage() {
 
   const updateTrailDetail = (key: keyof TrailDetailPrefs, value: boolean) => {
     setSavedAt(null)
+    setDirty(true)
     setPrefs(prev => ({
       ...prev,
       trailDetail: { ...prev.trailDetail, [key]: value },
@@ -133,6 +135,7 @@ export function SettingsPage() {
 
   const updateScheduleColumns = (key: keyof ScheduleColumnsPrefs, value: boolean) => {
     setSavedAt(null)
+    setDirty(true)
     setPrefs(prev => ({
       ...prev,
       scheduleColumns: { ...prev.scheduleColumns, [key]: value },
@@ -164,6 +167,7 @@ export function SettingsPage() {
     try {
       await saveUserPreferences(token, prefs)
       setSavedAt(Date.now())
+      setDirty(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save')
     } finally {
@@ -244,6 +248,26 @@ export function SettingsPage() {
                   </span>
                 }
               />
+              <div className="py-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-stone-700 dark:text-stone-300 flex-1">On-trail distance</span>
+                  <input
+                    type="number"
+                    min={10}
+                    step={10}
+                    value={loggerSettings.onTrailThresholdFt}
+                    onChange={e => {
+                      const v = parseFloat(e.target.value)
+                      if (!isNaN(v) && v > 0) updateLoggerSettings({ onTrailThresholdFt: v })
+                    }}
+                    className="w-16 px-2 py-1 text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
+                  />
+                  <span className="text-xs text-stone-400 dark:text-stone-500">ft</span>
+                </div>
+                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1.5">
+                  How far off the trail you can get and still count as on-trail (the On Trail light).
+                </p>
+              </div>
               <div>
                 <PrefRow
                   label="Record Auto-Waypoints"
@@ -384,6 +408,7 @@ export function SettingsPage() {
                 <PrefRow label="Patrols"            checked={prefs.dashboardKpi.patrols}          onChange={v => updateKpi('patrols', v)} />
                 <PrefRow label="Trails Covered"     checked={prefs.dashboardKpi.trailsCovered}    onChange={v => updateKpi('trailsCovered', v)} />
                 <PrefRow label="Trees Cleared"      checked={prefs.dashboardKpi.treesCleared}     onChange={v => updateKpi('treesCleared', v)} />
+                <PrefRow label="Sawyer Slice (m², experimental)" checked={prefs.dashboardKpi.sawyerSlice} onChange={v => updateKpi('sawyerSlice', v)} />
                 <PrefRow label="Hikers Seen"        checked={prefs.dashboardKpi.hikersSeen}       onChange={v => updateKpi('hikersSeen', v)} />
                 <PrefRow label="Hikers Contacted"   checked={prefs.dashboardKpi.hikersContacted}  onChange={v => updateKpi('hikersContacted', v)} />
                 <PrefRow label="Days Patrolling"    checked={prefs.dashboardKpi.daysPatrolling}   onChange={v => updateKpi('daysPatrolling', v)} />
@@ -416,45 +441,22 @@ export function SettingsPage() {
                 <PrefRow label="Author"        checked={prefs.scheduleColumns.author}          onChange={v => updateScheduleColumns('author', v)} />
               </SectionCard>
 
-              {/* ── Developer's Log ─────────────────────────────────── */}
-              <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
-                <div className="mb-1">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Developer's Log</h3>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
-                    Occasional notes on new features and changes.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 pt-2">
-                  <button
-                    onClick={() => {
-                      clearBlogPref()
-                      setShowBlog(true)
-                    }}
-                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
-                  >
-                    Show latest post
-                  </button>
-                </div>
-              </div>
-              {showBlog && <DevBlogModal onClose={() => setShowBlog(false)} />}
-
-              {/* ── Save bar ────────────────────────────────────────── */}
-              <div className="flex items-center justify-between gap-3 pt-1">
+              {/* ── Save bar (sticky so it's always reachable) ──────── */}
+              <div className="sticky bottom-0 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 py-3 mt-2 flex items-center justify-between gap-3 bg-stone-50/90 dark:bg-stone-950/90 backdrop-blur border-t border-stone-200 dark:border-stone-800">
                 <div className="min-h-[1.25rem]">
-                  {error && (
+                  {error ? (
                     <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-                  )}
-                  {savedAt && !error && (
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                      Saved
-                    </p>
-                  )}
+                  ) : dirty ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">Unsaved changes</p>
+                  ) : savedAt ? (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400">Saved</p>
+                  ) : null}
                 </div>
                 <button
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={saving}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white transition-colors disabled:opacity-50"
+                  disabled={saving || !dirty}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? 'Saving…' : 'Save changes'}
                 </button>

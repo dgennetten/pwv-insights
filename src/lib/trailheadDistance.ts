@@ -3,15 +3,16 @@ import { trailGeoData } from '../data/trailGeoData'
 import { trailPaths } from '../data/trailPaths'
 
 /**
- * Along-path distance from trailhead to the point on the trail closest
- * to the user. pathSegs is [lng, lat][][] (Overpass convention);
- * TH/user coords are plain lat/lng.
+ * Snap the user to the trail centerline: the along-path distance from the
+ * trailhead to the closest point on the trail (`alongM`) and the perpendicular
+ * distance from the user to that point (`offsetM` — how far off-trail they are).
+ * pathSegs is [lng, lat][][] (Overpass convention); TH/user coords are plain lat/lng.
  */
-export function distAlongPath(
+export function nearestTrailInfo(
   pathSegs: [number, number][][],
   thLat: number, thLng: number,
   userLat: number, userLng: number,
-): number {
+): { alongM: number; offsetM: number } {
   let bestPerpM = Infinity
   let bestAlongM = 0
 
@@ -42,7 +43,19 @@ export function distAlongPath(
       cum += segM
     }
   }
-  return bestAlongM
+  return { alongM: bestAlongM, offsetM: bestPerpM === Infinity ? Infinity : bestPerpM }
+}
+
+/**
+ * Along-path distance from trailhead to the point on the trail closest to the user.
+ * Thin wrapper over {@link nearestTrailInfo}.
+ */
+export function distAlongPath(
+  pathSegs: [number, number][][],
+  thLat: number, thLng: number,
+  userLat: number, userLng: number,
+): number {
+  return nearestTrailInfo(pathSegs, thLat, thLng, userLat, userLng).alongM
 }
 
 /**

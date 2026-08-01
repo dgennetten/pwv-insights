@@ -12,7 +12,9 @@ import type {
 const LIST_VISIBLE_N = 7
 
 function fmtVal(value: number): string {
-  return value.toLocaleString()
+  // Guard against missing/NaN metric fields (e.g. a stale cached API response
+  // predating a newly added metric) so a single undefined value can't crash the list.
+  return (Number.isFinite(value) ? value : 0).toLocaleString()
 }
 
 // ── Metric + filter config types ─────────────────────────────────────────────

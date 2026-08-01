@@ -184,6 +184,17 @@ function MemberCard({ result }: { result: MemberLookupResult }) {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Last Patrol</p>
           <p className="text-sm text-stone-700 dark:text-stone-200">{result.lastPatrolDate ?? '—'}</p>
         </div>
+        {(result.dateOfBirth || result.age !== null) && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-0.5">Date of Birth</p>
+            <p className="text-sm text-stone-700 dark:text-stone-200">
+              {result.dateOfBirth ?? '—'}
+              {result.age !== null && (
+                <span className="ml-1.5 text-stone-400 dark:text-stone-500">({result.age} yrs)</span>
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       <MemberSeasonActivity memberId={result.memberId} />

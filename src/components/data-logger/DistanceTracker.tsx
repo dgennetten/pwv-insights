@@ -66,11 +66,16 @@ interface DistanceTrackerProps {
   trailheadCoords?: { lat: number; lng: number }
   wksiteId?: number
   onTrackersChange?: (trackers: Tracker[]) => void
+  /**
+   * Live GPS stream for the page-level On Trail indicator / distance readouts.
+   * Fires for each accepted fix while tracking, and `null` when the watch stops.
+   */
+  onPosition?: (p: { lat: number; lng: number; ts: number; accuracy?: number } | null) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTrackersChange }: DistanceTrackerProps) {
+export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTrackersChange, onPosition }: DistanceTrackerProps) {
   const [trackers,         setTrackers]         = useState<TrackerUi[]>([])
   const [showAllTrackers,  setShowAllTrackers]  = useState(false)
   const [, setTick]                             = useState(0)
@@ -82,6 +87,8 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
   const trackersRef     = useRef<TrackerUi[]>([])
   const wakeLockRef     = useRef<WakeLockSentinel | null>(null)
   const currentPosRef   = useRef<{ lat: number; lng: number } | null>(null)
+  const onPositionRef   = useRef(onPosition)
+  useEffect(() => { onPositionRef.current = onPosition }, [onPosition])
 
   // Maps tracker ID → { segDistM, ts } at the last waypoint for that tracker
   const lastWaypointRef = useRef<Map<string, { segDistM: number; ts: number }>>(new Map())
@@ -134,6 +141,7 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
       accuracy: pos.coords.accuracy ?? undefined,
     }
     currentPosRef.current = { lat: point.lat, lng: point.lng }
+    onPositionRef.current?.({ lat: point.lat, lng: point.lng, ts: point.ts, accuracy: point.accuracy })
 
     const settings = getLoggerSettings()
     let waypointFired = false
@@ -223,6 +231,8 @@ export function DistanceTracker({ sessionId, trailheadCoords, wksiteId, onTracke
     if (watchIdRef.current === null) return
     navigator.geolocation.clearWatch(watchIdRef.current)
     watchIdRef.current = null
+    // No more live fixes — let the page revert the On Trail light to gray.
+    onPositionRef.current?.(null)
   }, [])
 
   // ── Ticker (1 s re-render while tracking) ───────────────────────────────────

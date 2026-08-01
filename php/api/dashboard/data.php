@@ -20,6 +20,9 @@ function treesClearedTableRef(): string {
 }
 
 header('Content-Type: application/json');
+// Live analytics — never let the browser/CDN serve stale JSON (the server default is a 2-day
+// max-age, which strands clients on old payloads when a new field/metric ships).
+header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
@@ -138,6 +141,8 @@ try {
       'trailsCoveredDelta'        => $prev ? $cur['trailsCovered']      - $prev['trailsCovered']      : 0,
       'treesCleared'              => $cur['treesCleared'],
       'treesClearedDelta'         => $prev ? $cur['treesCleared']       - $prev['treesCleared']       : 0,
+      'sawyerSlice'               => $cur['sawyerSlice'],
+      'sawyerSliceDelta'          => $prev ? round($cur['sawyerSlice']  - $prev['sawyerSlice'], 2)    : 0,
       'hikersSeen'                => $hikersSeenCur,
       'hikersSeenDelta'           => $prevStart ? ($hikersSeenCur      - $hikersSeenPrev)              : 0,
       'hikersContacted'           => $hikersContactedCur,
@@ -201,12 +206,15 @@ function dateRange(string $r): array {
       return [date('Y-m-d', strtotime('-30 days')), $today,
               date('Y-m-d', strtotime('-60 days')), date('Y-m-d', strtotime('-31 days'))];
     case '3m':
-      // "Season to Date" = Oct 1 of current season through today
+      // "Season to Date" = Oct 1 of current season through today.
+      // Prior period = the same Oct 1 → same-day window shifted back exactly one year
+      // (must shift both ends by a year; using today's month-day with the season-start year
+      // produced an inverted, empty range → prior period read as 0, so deltas equalled values).
       $mo = (int)date('n');
       $yr = (int)date('Y');
       $sy = ($mo >= 10 ? $yr : $yr - 1) . '-10-01';
-      $py = ($mo >= 10 ? $yr - 1 : $yr - 2) . '-10-01';
-      $pe = ($mo >= 10 ? $yr - 1 : $yr - 2) . substr($today, 4);
+      $py = date('Y-m-d', strtotime($sy . ' -1 year'));
+      $pe = date('Y-m-d', strtotime($today . ' -1 year'));
       return [$sy, $today, $py, $pe];
     case '1y':
       // "Last Season" = Oct 1 – Sep 30 prior to the current season
@@ -491,6 +499,19 @@ function trailClearingQtyExpr(PDO $db): string {
 }
 
 /**
+ * Sawyer Slice: SQL expression for estimated m² of sawn cross-section per trail-clearing row.
+ * qty × per-size-class area, where area = π·(rep. diameter / 2)² for the TrailClearingID bucket
+ * (1=<8"→4", 2=8–15"→11.5", 3=16–23"→19.5", 4=24–36"→30", 5=>36"→42" assumed).
+ * KEEP THESE 5 COEFFICIENTS IN SYNC with lbSawyerAreaExpr() in php/api/leaderboards/data.php.
+ */
+function sawyerSliceAreaExpr(PDO $db): string {
+  $qty = trailClearingQtyExpr($db);
+  return "$qty * CASE tc.TrailClearingID"
+       . " WHEN 1 THEN 0.0081 WHEN 2 THEN 0.0670 WHEN 3 THEN 0.1927"
+       . " WHEN 4 THEN 0.4560 WHEN 5 THEN 0.8938 ELSE 0 END";
+}
+
+/**
  * Chart buckets: TrailClearingID 1–5 ↔ inch-class labels (lu order: small → XXL).
  * Clearing rows outside 1–5 are omitted from this chart (not brushing IDs).
  *
@@ -726,13 +747,24 @@ function treesClearedMemberTotal(PDO $db, ?string $s, ?string $e, int $personId)
   }
 }
 
-function treesClearedMemberTotalQuery(PDO $db, ?string $s, ?string $e, int $personId): float {
+/** Member-scoped Sawyer Slice: same roster-split weighting as trees, but measured in m² of sawn cross-section. */
+function sawyerSliceMemberTotal(PDO $db, ?string $s, ?string $e, int $personId): float {
+  try {
+    return treesClearedMemberTotalQuery($db, $s, $e, $personId, sawyerSliceAreaExpr($db));
+  } catch (Throwable $e) {
+    error_log('sawyerSliceMemberTotal: ' . $e->getMessage() . ' @' . $e->getFile() . ':' . $e->getLine());
+    return 0.0;
+  }
+}
+
+/** @param ?string $measureExpr Per-row measure summed per report (defaults to tree qty; pass an area expr for Sawyer Slice). */
+function treesClearedMemberTotalQuery(PDO $db, ?string $s, ?string $e, int $personId, ?string $measureExpr = null): float {
   [$w, $pBase] = scopeWhereBase($s, $e);
   $wExpr = implode(' AND ', $w);
   [$writerSql, $nw] = treesClearedWriterMatchSql($db);
   $tcf = treesClearedTableRef();
   $treeIds = trailClearingTreeCountIdsFilterSql();
-  $qty = trailClearingQtyExpr($db);
+  $qty = $measureExpr ?? trailClearingQtyExpr($db);
   $onRoster = reportMemberOnRosterExistsSql($db, 'rm_e');
   $partySql = reportMemberPartySubquerySql($db);
 
@@ -917,8 +949,20 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
     ");
     $trees->execute($p2);
     $tc = round((float)$trees->fetchColumn(), 2);
+
+    // sawyer slice: same rows, weighted by estimated m² of sawn cross-section
+    $sawArea = sawyerSliceAreaExpr($db);
+    $saw = $db->prepare("
+      SELECT COALESCE(SUM($sawArea), 0) AS n
+      FROM $tcf tc
+      JOIN t_report r ON r.ReportID = tc.ReportID
+      WHERE $w2 AND ($treeIds)
+    ");
+    $saw->execute($p2);
+    $sawyerSlice = round((float)$saw->fetchColumn(), 2);
   } else {
     $tc = round(treesClearedMemberTotal($db, $s, $e, (int)$ctx), 2);
+    $sawyerSlice = round(sawyerSliceMemberTotal($db, $s, $e, (int)$ctx), 2);
   }
 
   // days weeding: distinct activity dates where trail clearing work was recorded
@@ -941,6 +985,7 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
     'totalActiveMembers' => (int)$d['totalActiveMembers'],
     'volunteerHours'     => (float)($d['volunteerHours'] ?? 0),
     'treesCleared'       => $tc,
+    'sawyerSlice'        => $sawyerSlice,
   ];
 }
 

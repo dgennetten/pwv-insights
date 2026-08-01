@@ -6,6 +6,9 @@ define('LB_TREE_ID_MIN', 1);
 define('LB_TREE_ID_MAX', 5);
 
 header('Content-Type: application/json');
+// Live analytics — never let the browser/CDN serve stale JSON (the server default is a 2-day
+// max-age, which strands clients on old payloads when a new field/metric ships).
+header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
@@ -121,6 +124,18 @@ function lbQtyCol(PDO $db): string {
     return $col;
 }
 
+/**
+ * Sawyer Slice: SQL expression for estimated m² of sawn cross-section per trail-clearing row.
+ * qty × per-size-class area, where area = π·(rep. diameter / 2)² for the TrailClearingID bucket
+ * (1=<8"→4", 2=8–15"→11.5", 3=16–23"→19.5", 4=24–36"→30", 5=>36"→42" assumed).
+ * KEEP THESE 5 COEFFICIENTS IN SYNC with sawyerSliceAreaExpr() in php/api/dashboard/data.php.
+ */
+function lbSawyerAreaExpr(string $qtyCol): string {
+    return "COALESCE(tc.`$qtyCol`, 0) * CASE tc.TrailClearingID"
+         . " WHEN 1 THEN 0.0081 WHEN 2 THEN 0.0670 WHEN 3 THEN 0.1927"
+         . " WHEN 4 THEN 0.4560 WHEN 5 THEN 0.8938 ELSE 0 END";
+}
+
 // ── Members query ─────────────────────────────────────────────────────────────
 
 function lbMembers(PDO $db, ?string $start, ?string $end): array {
@@ -205,12 +220,14 @@ function lbMembers(PDO $db, ?string $start, ?string $end): array {
     // ── 3. Weighted work: contacts, treesCleared, brushing ────────────────────
     $qtyCol   = lbQtyCol($db);
     $brushIds = lbBrushIds();
+    $sawArea  = lbSawyerAreaExpr($qtyCol);
 
     $workStmt = $db->prepare("
         SELECT
             rm.PersonID,
             ROUND(SUM(COALESCE(obs.contacts, 0)   / GREATEST(COALESCE(party.party_n, 1), 1)), 0) AS contacts,
             ROUND(SUM(COALESCE(trees.treeQty, 0)  / GREATEST(COALESCE(party.party_n, 1), 1)), 1) AS treesCleared,
+            ROUND(SUM(COALESCE(saw.sawyerArea, 0) / GREATEST(COALESCE(party.party_n, 1), 1)), 1) AS sawyerSlice,
             ROUND(SUM(COALESCE(brush.brushQty, 0) / GREATEST(COALESCE(party.party_n, 1), 1)), 0) AS brushing
         FROM t_report_member rm
         JOIN t_report r ON r.ReportID = rm.ReportID
@@ -226,6 +243,12 @@ function lbMembers(PDO $db, ?string $start, ?string $end): array {
             WHERE tc.TrailClearingID BETWEEN " . LB_TREE_ID_MIN . " AND " . LB_TREE_ID_MAX . "
             GROUP BY tc.ReportID
         ) trees ON trees.ReportID = r.ReportID
+        LEFT JOIN (
+            SELECT tc.ReportID, SUM($sawArea) AS sawyerArea
+            FROM t_rpt_trail_clearing tc
+            WHERE tc.TrailClearingID BETWEEN " . LB_TREE_ID_MIN . " AND " . LB_TREE_ID_MAX . "
+            GROUP BY tc.ReportID
+        ) saw ON saw.ReportID = r.ReportID
         LEFT JOIN (
             SELECT tc.ReportID, SUM(COALESCE(tc.`$qtyCol`, 0)) AS brushQty
             FROM t_rpt_trail_clearing tc
@@ -324,6 +347,7 @@ function lbMembers(PDO $db, ?string $start, ?string $end): array {
             'wildernessDays' => (int)($b['wildernessDays'] ?? 0),
             'contacts'       => (int)($wk['contacts']      ?? 0),
             'treesCleared'   => round((float)($wk['treesCleared'] ?? 0), 1),
+            'sawyerSlice'    => round((float)($wk['sawyerSlice']  ?? 0), 1),
             'brushing'       => (int)($wk['brushing']      ?? 0),
             'fireRings'      => (int)($ex['fireRings']     ?? 0),
             'trash'          => round((float)($ex['trash'] ?? 0), 1),

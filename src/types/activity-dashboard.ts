@@ -21,6 +21,9 @@ export interface ActivitySummary {
   trailsCoveredDelta: number
   treesCleared: number
   treesClearedDelta: number
+  /** Experimental Sawyer Slice: estimated m² of sawn cross-section (tree-cutting effort). */
+  sawyerSlice: number
+  sawyerSliceDelta: number
   hikersSeen: number
   hikersSeenDelta: number
   volunteerHours: number

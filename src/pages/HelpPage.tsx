@@ -3,6 +3,8 @@ import { Loader2, Send } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredAuthToken } from '../services/authService'
 import { sendFeedback } from '../services/feedbackService'
+import { clearBlogPref } from '../lib/devBlog'
+import { DevBlogModal } from '../components/DevBlogModal'
 
 export function HelpPage() {
   const { user } = useAuth()
@@ -13,6 +15,7 @@ export function HelpPage() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sentOk, setSentOk] = useState(false)
+  const [showBlog, setShowBlog] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -191,20 +194,51 @@ export function HelpPage() {
             <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
           )}
 
-          <button
-            type="submit"
-            disabled={sending || !message.trim()}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors disabled:opacity-60"
-          >
-            {sending ? (
-              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
-            ) : (
-              <Send className="w-4 h-4" strokeWidth={2} />
-            )}
-            {sending ? 'Sending…' : sentOk ? 'Send more feedback' : 'Send feedback'}
-          </button>
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="submit"
+              disabled={sending || !message.trim()}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
+              ) : (
+                <Send className="w-4 h-4" strokeWidth={2} />
+              )}
+              {sending ? 'Sending…' : sentOk ? 'Send more feedback' : 'Send feedback'}
+            </button>
+            <a
+              href="https://github.com/dgennetten/pwv-insights"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View source on GitHub"
+              aria-label="View source on GitHub"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                <path d="M9 18c-4.51 2-5-2-7-2"/>
+              </svg>
+            </a>
+          </div>
         </form>
       </div>
+
+      {/* ── Developer's Log ──────────────────────────────────── */}
+      <div className="mt-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-6 max-w-2xl">
+        <h3 className="text-base font-semibold text-stone-900 dark:text-stone-100 mb-2">Developer&apos;s Log</h3>
+        <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+          Occasional notes on new features and changes.
+        </p>
+        <button
+          type="button"
+          onClick={() => { clearBlogPref(); setShowBlog(true) }}
+          className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
+        >
+          Show latest post
+        </button>
+      </div>
+      {showBlog && <DevBlogModal onClose={() => setShowBlog(false)} />}
 
       <p className="mt-6 text-xs text-stone-400 dark:text-stone-500 max-w-2xl">
         PWV Insights is in early beta. App is designed to be mobile friendly; additional details

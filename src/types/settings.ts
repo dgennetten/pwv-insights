@@ -4,6 +4,8 @@ export interface DashboardKpiPrefs {
   patrols: boolean
   trailsCovered: boolean
   treesCleared: boolean
+  /** Experimental: estimated m² of tree-cutting effort (sawn cross-section area). */
+  sawyerSlice: boolean
   hikersSeen: boolean
   daysPatrolling: boolean
   daysWeeding: boolean
@@ -42,6 +44,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     patrols: true,
     trailsCovered: true,
     treesCleared: true,
+    sawyerSlice: false,
     hikersSeen: true,
     daysPatrolling: false,
     daysWeeding: false,

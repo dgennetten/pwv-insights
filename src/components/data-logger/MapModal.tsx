@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css'
 import type { LogEntry, Tracker } from '../../types/dataLogger'
 import { isValidLatLng } from '../../lib/geo'
 import { getLoggerSettings } from '../../lib/loggerSettings'
+import { nearestTrailInfo } from '../../lib/trailheadDistance'
 import { PaceChart } from './PaceChart'
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -94,13 +95,23 @@ function buildPopupHtml(item: TimelineItem, paceFormat: 'min-per-mi' | 'mph' = '
 
 // ── Leaflet controllers ───────────────────────────────────────────
 
-function MapBoundsController({ points }: { points: [number, number][] }) {
+// Fit the whole trail (path + trailhead) + entries on open, then re-fit once the live
+// position arrives so the "you are here" dot is always in view — even from home.
+function FitAllController({ points, livePos }: { points: [number, number][]; livePos: { lat: number; lng: number } | null }) {
   const map = useMap()
+  const didInitial = useRef(false)
+  const didLive = useRef(false)
   useEffect(() => {
-    if (points.length === 0) return
+    if (didInitial.current || points.length === 0) return
+    didInitial.current = true
     if (points.length === 1) map.setView(points[0], 15)
     else map.fitBounds(points, { padding: [40, 40] })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, points])
+  useEffect(() => {
+    if (didLive.current || !livePos || !isValidLatLng(livePos.lat, livePos.lng)) return
+    didLive.current = true
+    map.fitBounds([...points, [livePos.lat, livePos.lng]], { padding: [40, 40] })
+  }, [map, livePos, points])
   return null
 }
 
@@ -176,9 +187,23 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     }
   }, [])
 
-  const thDistLabel = trailheadCoords && livePos
-    ? fmtMiles(haversineMeters(trailheadCoords.lat, trailheadCoords.lng, livePos.lat, livePos.lng))
-    : null
+  // Distance from trailhead: along the trail when on it, else straight-line (crow-flies).
+  // "*" when ≥20% of the distance is crow-flies — identical rule to the Data Logger readout.
+  const thDist = useMemo(() => {
+    if (!trailheadCoords || !livePos) return null
+    const crowM = haversineMeters(trailheadCoords.lat, trailheadCoords.lng, livePos.lat, livePos.lng)
+    const segs = wksiteId != null ? (trailPaths[wksiteId] ?? []) : []
+    if (segs.length) {
+      const { alongM, offsetM } = nearestTrailInfo(segs, trailheadCoords.lat, trailheadCoords.lng, livePos.lat, livePos.lng)
+      if (Number.isFinite(offsetM)) {
+        const thr = getLoggerSettings().onTrailThresholdFt * 0.3048
+        const onTrail = offsetM <= thr
+        // On trail → along the path, no "*". Off trail → crow-flies, with "*".
+        return { m: onTrail ? alongM : crowM, crow: !onTrail }
+      }
+    }
+    return { m: crowM, crow: true }
+  }, [trailheadCoords, livePos, wksiteId])
 
   const timelineItems = useMemo((): TimelineItem[] => {
     const contactedTs = new Set(
@@ -229,6 +254,18 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     }
     return pts
   }, [timelineItems])
+
+  // Trail centerline + trailhead coordinates for auto-fitting the map to the whole trail.
+  const trailBoundsPoints = useMemo((): [number, number][] => {
+    const pts: [number, number][] = []
+    for (const id of loggedTrailIds) {
+      for (const seg of (trailPaths[id] ?? [])) for (const [lng, lat] of seg) pts.push([lat, lng])
+      const th = trailGeoData[id]
+      if (th && isValidLatLng(th.lat, th.lng)) pts.push([th.lat, th.lng])
+    }
+    return pts
+  }, [loggedTrailIds])
+  const initialFitPoints = useMemo(() => [...trailBoundsPoints, ...mapPoints], [trailBoundsPoints, mapPoints])
 
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
@@ -332,9 +369,12 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
 
         {/* Map */}
         <div className="relative shrink-0 h-[45vh] lg:h-auto lg:flex-1 lg:shrink">
-          {thDistLabel && (
-            <div className="absolute top-2 left-2 z-[500] bg-emerald-700/90 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow pointer-events-none">
-              {thDistLabel} from trailhead
+          {thDist && (
+            <div
+              className="absolute top-2 left-14 z-[500] bg-emerald-700/90 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow pointer-events-none"
+              title={thDist.crow ? 'Straight-line (crow-flies) — you are off the trail' : 'Measured along the trail'}
+            >
+              {fmtMiles(thDist.m)}{thDist.crow ? '*' : ''} from trailhead
             </div>
           )}
           <div className="absolute top-2 right-2 z-[1000] flex bg-white/90 dark:bg-stone-900/90 backdrop-blur rounded-lg shadow p-0.5 gap-0.5">
@@ -368,7 +408,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                 : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
               maxZoom={19}
             />
-            {mapPoints.length > 0 && <MapBoundsController points={mapPoints} />}
+            <FitAllController points={initialFitPoints} livePos={livePos} />
             <MapFocusController center={focusCenter} />
             <MapPopupController item={selectedItem} />
 

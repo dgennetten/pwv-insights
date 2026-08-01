@@ -11,6 +11,9 @@ export interface LoggerSettings {
   waypointPace: boolean
   waypointPaceFormat: 'min-per-mi' | 'mph'
   waypointPaceLogScale: boolean
+  // How far (feet) the user can be from the trail centerline and still count
+  // as "on trail" for the On Trail indicator.
+  onTrailThresholdFt: number
 }
 
 const STORAGE_KEY = 'pwv_logger_settings'
@@ -26,6 +29,7 @@ const DEFAULTS: LoggerSettings = {
   waypointPace: false,
   waypointPaceFormat: 'min-per-mi',
   waypointPaceLogScale: true,
+  onTrailThresholdFt: 200,
 }
 
 export function getLoggerSettings(): LoggerSettings {

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { memberLinkUrl } from '../../lib/memberLink'
 import {
+  Axe,
   CalendarDays,
   ChevronDown,
   Clock,
@@ -421,6 +422,15 @@ export function ActivityDashboard({
             delta={summary.treesClearedDelta}
             deltaFormatter={formatTreesClearedWhole}
             icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
+          />
+        )}
+        {kpi.sawyerSlice && (
+          <KpiCard
+            label="Sawyer Slice"
+            value={`${formatInteger(Number(summary.sawyerSlice))} m²`}
+            delta={summary.sawyerSliceDelta}
+            deltaFormatter={(n) => `${formatInteger(n)} m²`}
+            icon={<Axe className="w-4 h-4" strokeWidth={1.5} />}
           />
         )}
         {kpi.hikersSeen && (

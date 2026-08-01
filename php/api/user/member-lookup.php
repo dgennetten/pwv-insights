@@ -77,7 +77,10 @@ if ($memberId < 1) {
 $db = getDb();
 
 $stmt = $db->prepare(
-  'SELECT s.expires_at FROM auth_sessions s WHERE s.token = ? LIMIT 1'
+  'SELECT s.expires_at, m.EmailAddress
+   FROM auth_sessions s
+   JOIN t_member m ON m.PersonID = s.person_id
+   WHERE s.token = ? LIMIT 1'
 );
 $stmt->execute([$token]);
 $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -86,9 +89,12 @@ if (!$row) jsonOut(['success' => false, 'error' => 'Unknown session'], 401);
 $exp = strtotime($row['expires_at']);
 if ($exp === false || $exp < time()) jsonOut(['success' => false, 'error' => 'Session expired'], 401);
 
+// Only the super admin sees birth date / age (same PII gate as the Admin member lookup).
+$isAdmin = strtolower(trim($row['EmailAddress'] ?? '')) === strtolower(ADMIN_EMAIL);
+
 // ── Member core info ──────────────────────────────────────────────────────────
 $stmt = $db->prepare(
-  'SELECT m.PersonID, m.FirstName, m.LastName, m.EmailAddress, m.Photo,
+  'SELECT m.PersonID, m.FirstName, m.LastName, m.BirthDate, m.EmailAddress, m.Photo,
           mg.OrgStatusID, os.OrgStatusName, mg.MemberSince, mg.AgreementDate, mg.MemTypeIDs,
           lo.IsInactive AS LockedInactive
    FROM t_member m
@@ -110,6 +116,17 @@ $statusLabel = memberStatusLabel(
   $m['LockedInactive'] ?? null
 );
 $memberType = resolveMemberTypes($db, $m['MemTypeIDs'] ?? null);
+
+// ── Age / DOB (super admin only) ──────────────────────────────────────────────
+$age = null;
+$dob = null;
+if ($isAdmin && !empty($m['BirthDate']) && $m['BirthDate'] !== '0000-00-00') {
+  try {
+    $bd  = new DateTime($m['BirthDate']);
+    $age = (int) $bd->diff(new DateTime())->y;
+    $dob = $bd->format('F j, Y');
+  } catch (Throwable $_) {}
+}
 
 // ── Address ───────────────────────────────────────────────────────────────────
 $stmt = $db->prepare(
@@ -186,8 +203,8 @@ jsonOut([
     'memberId'       => (int)   $m['PersonID'],
     'fullName'       => trim(($m['FirstName'] ?? '') . ' ' . ($m['LastName'] ?? '')),
     'email'          => trim($m['EmailAddress'] ?? ''),
-    'dateOfBirth'    => null,
-    'age'            => null,
+    'dateOfBirth'    => $dob,
+    'age'            => $age,
     'address'        => ($addr['StreetAddress'] ?? '') !== '' ? trim($addr['StreetAddress']) : null,
     'city'           => ($addr['City']          ?? '') !== '' ? trim($addr['City'])          : null,
     'state'          => ($addr['State']         ?? '') !== '' ? trim($addr['State'])         : null,
