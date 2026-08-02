@@ -19,6 +19,44 @@ export interface AdminLoginRow {
   loginType: 'OTC' | 'ACCESS' | 'AUTO'
 }
 
+export interface AiProvider {
+  id: string
+  label: string
+  model: string
+}
+
+export interface LlmSettings {
+  providers: AiProvider[]
+  /** id of the current global primary provider (others are automatic fallbacks) */
+  primary: string | null
+}
+
+/** Read the configured AI providers + current primary (admin only). */
+export async function fetchAdminLlmSettings(token: string): Promise<LlmSettings> {
+  const res = await fetch('/api/admin/llm-settings.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({ token }),
+  })
+  const data = (await res.json()) as { success?: boolean; providers?: AiProvider[]; primary?: string | null; error?: string }
+  if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
+  return { providers: Array.isArray(data.providers) ? data.providers : [], primary: data.primary ?? null }
+}
+
+/** Set the global primary AI provider (admin only). Returns the updated state. */
+export async function setAdminLlmProvider(token: string, primary: string): Promise<LlmSettings> {
+  const res = await fetch('/api/admin/llm-settings.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({ token, primary }),
+  })
+  const data = (await res.json()) as { success?: boolean; providers?: AiProvider[]; primary?: string | null; error?: string }
+  if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
+  return { providers: Array.isArray(data.providers) ? data.providers : [], primary: data.primary ?? null }
+}
+
 /** Recent sign-ins (admin only). */
 export async function fetchAdminRecentLogins(token: string): Promise<AdminLoginRow[]> {
   const res = await fetch('/api/admin/recent-logins.php', {

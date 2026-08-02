@@ -352,3 +352,174 @@ function jsonOut(array $data, int $status = 200): never {
   echo json_encode($data);
   exit;
 }
+
+// ── App settings (global key/value; admin-writable) ──────────────────────────
+
+function appSettingsEnsureTable(PDO $db): void {
+  try {
+    $db->exec(
+      'CREATE TABLE IF NOT EXISTS app_settings (
+        name       VARCHAR(64)  NOT NULL PRIMARY KEY,
+        value      VARCHAR(255) NOT NULL,
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+  } catch (Throwable $e) {
+    error_log('app_settings ensure: ' . $e->getMessage());
+  }
+}
+
+function appSettingGet(PDO $db, string $name, ?string $default = null): ?string {
+  try {
+    appSettingsEnsureTable($db);
+    $stmt = $db->prepare('SELECT value FROM app_settings WHERE name = ? LIMIT 1');
+    $stmt->execute([$name]);
+    $v = $stmt->fetchColumn();
+    return $v === false ? $default : (string) $v;
+  } catch (Throwable $e) {
+    error_log('appSettingGet: ' . $e->getMessage());
+    return $default;
+  }
+}
+
+function appSettingSet(PDO $db, string $name, string $value): void {
+  appSettingsEnsureTable($db);
+  $db->prepare(
+    'INSERT INTO app_settings (name, value, updated_at) VALUES (?, ?, NOW())
+     ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = NOW()'
+  )->execute([$name, $value]);
+}
+
+// ── AI providers (Anthropic + Kimi, both via the Anthropic Messages API) ─────
+
+/**
+ * Configured LLM providers keyed by id — only those with a non-empty API key.
+ * Kimi/Moonshot is reached through its Anthropic-compatible endpoint, so both
+ * providers share the same request/response shape (see callLLM).
+ */
+function llmProvidersAll(): array {
+  $s = getSecrets();
+  $out = [];
+  $claude = trim($s['claude_api_key'] ?? '');
+  if ($claude !== '') {
+    $out['anthropic'] = [
+      'id'      => 'anthropic',
+      'label'   => 'Claude (Anthropic)',
+      'baseUrl' => 'https://api.anthropic.com',
+      'apiKey'  => $claude,
+      'model'   => 'claude-haiku-4-5-20251001',
+    ];
+  }
+  $kimi = trim($s['kimi_api_key'] ?? '');
+  if ($kimi !== '') {
+    $out['kimi'] = [
+      'id'      => 'kimi',
+      'label'   => 'Kimi (Moonshot)',
+      'baseUrl' => rtrim(trim($s['kimi_base_url'] ?? 'https://api.moonshot.ai/anthropic'), '/'),
+      'apiKey'  => $kimi,
+      'model'   => trim($s['kimi_model'] ?? 'kimi-k2-0711-preview'),
+    ];
+  }
+  return $out;
+}
+
+/** Ordered provider list: the admin-selected primary first, then the rest as fallbacks. */
+function llmProviders(PDO $db): array {
+  $all = llmProvidersAll();
+  if (empty($all)) return [];
+  $primary = appSettingGet($db, 'llm_primary', null);
+  $ordered = [];
+  if ($primary !== null && isset($all[$primary])) {
+    $ordered[] = $all[$primary];
+    unset($all[$primary]);
+  }
+  foreach ($all as $p) $ordered[] = $p;
+  return $ordered;
+}
+
+/** One Messages-API call to a provider. Returns the text on HTTP 200, else null. */
+function callLLM(array $provider, string $prompt, int $maxTokens): ?string {
+  $payload = json_encode([
+    'model'      => $provider['model'],
+    'max_tokens' => $maxTokens,
+    'messages'   => [['role' => 'user', 'content' => $prompt]],
+  ], JSON_INVALID_UTF8_SUBSTITUTE);
+
+  $ch = curl_init($provider['baseUrl'] . '/v1/messages');
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_HTTPHEADER     => [
+      'Content-Type: application/json',
+      'x-api-key: ' . $provider['apiKey'],
+      'anthropic-version: 2023-06-01',
+    ],
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_TIMEOUT    => 30,
+  ]);
+  $response = curl_exec($ch);
+  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  curl_close($ch);
+
+  if ($httpCode !== 200 || !$response) {
+    error_log('callLLM ' . ($provider['id'] ?? '?') . ': HTTP ' . $httpCode . ' ' . substr((string)($response ?: ''), 0, 200));
+    return null;
+  }
+  $data = json_decode($response, true);
+  return $data['content'][0]['text'] ?? null;
+}
+
+/**
+ * Email the super admin when the primary provider fails. Throttled to at most
+ * one alert per hour (via app_settings) so a burst of failing requests can't spam.
+ */
+function llmNotifyPrimaryFailure(PDO $db, ?array $primary, ?string $fallbackUsedId): void {
+  if ($primary === null) return;
+  $last = (int) (appSettingGet($db, 'llm_alert_at', '0') ?? '0');
+  if (time() - $last < 3600) return;
+  appSettingSet($db, 'llm_alert_at', (string) time());
+
+  $primaryLabel = $primary['label'] ?? ($primary['id'] ?? 'primary');
+  $subject = 'PWV Insights: primary AI provider failed';
+  if ($fallbackUsedId !== null) {
+    $all     = llmProvidersAll();
+    $fbLabel = $all[$fallbackUsedId]['label'] ?? $fallbackUsedId;
+    $body = "The primary AI provider ($primaryLabel) failed a request, so PWV Insights automatically "
+          . "fell back to $fbLabel, which succeeded.\n\n"
+          . "AI summaries are still working via the fallback. You may want to check the $primaryLabel "
+          . "account (API key / credit balance), then re-select it as primary on the Admin page once resolved.\n";
+  } else {
+    $body = "The primary AI provider ($primaryLabel) failed a request and no fallback provider succeeded — "
+          . "AI summaries are currently unavailable.\n\n"
+          . "Please check the provider account (API key / credit balance), or configure another provider "
+          . "(e.g. Kimi) and select it on the Admin page.\n";
+  }
+  $body .= "\n(To avoid repeats, no further alert will be sent for at least an hour.)\n";
+
+  try {
+    sendOtpMail(ADMIN_EMAIL, $subject, $body, null, false);
+  } catch (Throwable $e) {
+    error_log('llmNotifyPrimaryFailure mail: ' . $e->getMessage());
+  }
+}
+
+/**
+ * Complete a prompt using the selected primary provider, falling back to the
+ * others in order. Returns ['text' => ?string, 'provider' => ?string]; text is
+ * null when no provider is configured or all configured providers fail.
+ * Emails the super admin (throttled) when the primary provider fails.
+ */
+function llmComplete(PDO $db, string $prompt, int $maxTokens = 1000): array {
+  $providers = llmProviders($db);
+  $primaryFailed = false;
+  foreach ($providers as $i => $p) {
+    $text = callLLM($p, $prompt, $maxTokens);
+    if ($text !== null) {
+      if ($primaryFailed) llmNotifyPrimaryFailure($db, $providers[0] ?? null, $p['id']);
+      return ['text' => $text, 'provider' => $p['id']];
+    }
+    if ($i === 0) $primaryFailed = true;
+  }
+  if ($primaryFailed) llmNotifyPrimaryFailure($db, $providers[0] ?? null, null);
+  return ['text' => null, 'provider' => null];
+}

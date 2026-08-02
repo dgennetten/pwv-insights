@@ -15,6 +15,19 @@ return [
   // 'claude_api_key' => 'sk-ant-...',
 
   /**
+   * Optional second AI provider: Kimi (Moonshot), used for the same summaries.
+   * Kimi is reached through its Anthropic-compatible Messages API, so only the
+   * key/base-URL/model differ. Admins pick the primary provider on the Admin page
+   * (php/api/admin/llm-settings.php); the other configured provider is an automatic
+   * fallback. Get a key at https://platform.moonshot.ai.
+   *   kimi_base_url default: https://api.moonshot.ai/anthropic  (use api.moonshot.cn for China)
+   *   kimi_model    default: kimi-k2-0711-preview
+   */
+  // 'kimi_api_key'  => 'sk-...',
+  // 'kimi_base_url' => 'https://api.moonshot.ai/anthropic',
+  // 'kimi_model'    => 'kimi-k2-0711-preview',
+
+  /**
    * Optional: single column on t_report for filing PersonID when not in t_report_member.
    * If unset, every known column that exists on t_report is OR’d (ReporterID, ReportWriterID, SubmittedByPersonID, …).
    * Set to false for roster-only. PWV tree rows usually have no person column — attribution is the report.

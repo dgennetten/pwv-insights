@@ -5,12 +5,15 @@ import { useAuth } from '../contexts/AuthContext'
 import { canAccessAdminPage } from '../lib/adminAccess'
 import { version } from '../../package.json'
 import {
+  fetchAdminLlmSettings,
   fetchAdminMemberLookup,
   fetchAdminMemberSearch,
   fetchAdminRecentLogins,
   fetchAdminTrailLogs,
   getStoredAuthToken,
+  setAdminLlmProvider,
   type AdminLoginRow,
+  type LlmSettings,
   type MemberLookupResult,
   type MemberSearchResult,
   type TrailLogRow,
@@ -194,7 +197,37 @@ export function AdminPage() {
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupError, setLookupError] = useState<string | null>(null)
 
+  const [llm, setLlm] = useState<LlmSettings | null>(null)
+  const [llmError, setLlmError] = useState<string | null>(null)
+  const [llmSaving, setLlmSaving] = useState(false)
+
   const lookupSectionRef = useRef<HTMLDivElement>(null)
+
+  const loadLlm = useCallback(async () => {
+    if (!canAccessAdminPage(user?.email)) return
+    const token = getStoredAuthToken()
+    if (!token) return
+    setLlmError(null)
+    try {
+      setLlm(await fetchAdminLlmSettings(token))
+    } catch (e) {
+      setLlmError(e instanceof Error ? e.message : 'Failed to load AI provider settings')
+    }
+  }, [user?.email])
+
+  const changePrimaryProvider = useCallback(async (id: string) => {
+    const token = getStoredAuthToken()
+    if (!token) return
+    setLlmSaving(true)
+    setLlmError(null)
+    try {
+      setLlm(await setAdminLlmProvider(token, id))
+    } catch (e) {
+      setLlmError(e instanceof Error ? e.message : 'Failed to update AI provider')
+    } finally {
+      setLlmSaving(false)
+    }
+  }, [])
 
   const runMemberLookup = useCallback((memberId: number) => {
     const token = getStoredAuthToken()
@@ -251,6 +284,10 @@ export function AdminPage() {
     void loadLogins()
   }, [loadLogins])
 
+  useEffect(() => {
+    void loadLlm()
+  }, [loadLlm])
+
   const loadTrailLogs = useCallback(async () => {
     if (!canAccessAdminPage(user?.email)) return
     const token = getStoredAuthToken()
@@ -298,6 +335,59 @@ export function AdminPage() {
 
         {allowed ? (
           <>
+          {/* ── AI Provider ─────────────────────────────────────── */}
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
+              AI Provider
+            </h3>
+            <p className="text-xs text-stone-400 dark:text-stone-500 mb-3">
+              Applies to all AI summaries for every user and session. The selected provider is primary; any other configured provider is an automatic fallback.
+            </p>
+            {llmError && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{llmError}</p>}
+            {llm === null ? (
+              <p className="text-xs text-stone-400 dark:text-stone-500">Loading…</p>
+            ) : llm.providers.length === 0 ? (
+              <p className="text-sm text-stone-500 dark:text-stone-400">
+                No AI providers configured. Add <code className="text-xs">claude_api_key</code> and/or{' '}
+                <code className="text-xs">kimi_api_key</code> in <code className="text-xs">config.secret.php</code>.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {llm.providers.map(p => {
+                  const isPrimary = p.id === llm.primary
+                  return (
+                    <label
+                      key={p.id}
+                      className={`flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                        isPrimary
+                          ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20'
+                          : 'border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800/50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="ai-provider"
+                        checked={isPrimary}
+                        disabled={llmSaving}
+                        onChange={() => void changePrimaryProvider(p.id)}
+                        className="w-4 h-4 accent-emerald-600"
+                      />
+                      <span className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-stone-800 dark:text-stone-200">{p.label}</span>
+                        <span className="ml-2 text-xs text-stone-400 dark:text-stone-500">{p.model}</span>
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider shrink-0">
+                        {isPrimary
+                          ? <span className="text-emerald-600 dark:text-emerald-400">Primary</span>
+                          : <span className="text-stone-400 dark:text-stone-500">Fallback</span>}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           <div
             ref={lookupSectionRef}
             className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4"

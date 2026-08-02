@@ -84,46 +84,12 @@ function buildPrompt(array $reports, string $trailName): string {
          . "Be specific and factual. Do not mention dates, volunteer names, or how many reports you reviewed.";
 }
 
-function callClaude(string $apiKey, string $prompt): ?string {
-    $payload = json_encode([
-        'model'      => 'claude-haiku-4-5-20251001',
-        'max_tokens' => 400,
-        'messages'   => [['role' => 'user', 'content' => $prompt]],
-    ]);
-
-    $ch = curl_init('https://api.anthropic.com/v1/messages');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_HTTPHEADER     => [
-            'Content-Type: application/json',
-            'x-api-key: ' . $apiKey,
-            'anthropic-version: 2023-06-01',
-        ],
-        CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_TIMEOUT    => 20,
-    ]);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode !== 200 || !$response) {
-        error_log('Claude API error: HTTP ' . $httpCode . ' ' . substr((string)($response ?: ''), 0, 200));
-        return null;
-    }
-
-    $data = json_decode($response, true);
-    return $data['content'][0]['text'] ?? null;
-}
-
 try {
     $wksiteId = (int)($_GET['wksiteId'] ?? 0);
     if ($wksiteId <= 0) jsonOut(['error' => 'Missing wksiteId'], 400);
 
-    $secrets = getSecrets();
-    $apiKey  = trim($secrets['claude_api_key'] ?? '');
-    if (empty($apiKey)) jsonOut(['error' => 'AI summaries not configured'], 503);
+    // AI summaries require at least one configured provider (Anthropic and/or Kimi).
+    if (empty(llmProvidersAll())) jsonOut(['error' => 'AI summaries not configured'], 503);
 
     $db = getDb();
     ensureAiSummaryTable($db);
@@ -157,8 +123,8 @@ try {
     $prompt = buildPrompt($reports, $trailName);
     if (empty($prompt)) jsonOut(['summary' => null, 'reason' => 'no_narrative']);
 
-    // Call Claude
-    $summary = callClaude($apiKey, $prompt);
+    // Call the selected AI provider (with automatic fallback to the others)
+    $summary = llmComplete($db, $prompt, 400)['text'];
     if ($summary === null) jsonOut(['error' => 'AI service unavailable'], 503);
 
     // Cache the result
