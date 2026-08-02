@@ -46,15 +46,25 @@ foreach (glob($dataLoggerDir . '/trailLog.*.json') as $filePath) {
   if (!preg_match('/^trailLog\.(\d+)$/', $filename, $m)) continue;
   $inner = $m[1]; // e.g. 4811202605271251
 
-  if (strlen($inner) < 13) continue; // need at least 1 personId digit + 12 date/time digits
+  if (strlen($inner) < 13) continue; // need at least 1 personId digit + date/time digits
 
-  $dateTime = substr($inner, -12); // YmdHi = 202605271251
-
-  $dateStr = substr($dateTime, 0, 8); // 20260527
-  $timeStr = substr($dateTime, 8, 4); // 1251
-
-  $dt = DateTime::createFromFormat('Ymd', $dateStr);
-  $tm = DateTime::createFromFormat('Hi',  $timeStr);
+  // The trailing stamp is {Ymd}{His} (14 digits) on current logs, or {Ymd}{Hi}
+  // (12) on older ones (see send-report.php: date('YmdHis')). Try the 14-digit
+  // form first (strict date check), then fall back to 12. Fixed-slicing 12 from
+  // a 14-digit stamp dropped the leading "20", producing years like "2608".
+  $dt = null; $tm = null; $sortKey = null;
+  foreach ([[14, 'His', 6], [12, 'Hi', 4]] as [$len, $timeFmt, $timeLen]) {
+    if (strlen($inner) < $len) continue;
+    $stamp   = substr($inner, -$len);
+    $dateStr = substr($stamp, 0, 8);
+    $timeStr = substr($stamp, 8, $timeLen);
+    if (!preg_match('/^20\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/', $dateStr)) continue;
+    $dt      = DateTime::createFromFormat('Ymd', $dateStr);
+    $tm      = DateTime::createFromFormat($timeFmt, $timeStr);
+    $sortKey = $dateStr . str_pad($timeStr, 6, '0'); // normalize to 14 digits for stable sort
+    break;
+  }
+  if (!$dt) continue;
 
   $json = null;
   $memberName = '';
@@ -76,9 +86,9 @@ foreach (glob($dataLoggerDir . '/trailLog.*.json') as $filePath) {
     'logId'      => $logId,
     'memberId'   => $memberId,
     'memberName' => $memberName,
-    'date'       => $dt ? $dt->format('M j, Y') : $dateStr,
-    'time'       => $tm ? $tm->format('g:i A')  : $timeStr,
-    'sortKey'    => $dateTime,
+    'date'       => $dt->format('M j, Y'),
+    'time'       => $tm ? $tm->format('g:i A') : '',
+    'sortKey'    => $sortKey,
   ];
 }
 
