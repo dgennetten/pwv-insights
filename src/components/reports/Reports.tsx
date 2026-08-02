@@ -66,12 +66,19 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
     return sortDir === 'asc' ? cmp : -cmp
   })
 
+  const allIds = sorted.map(r => r.reportId)
+  const allSelected = allIds.length > 0 && allIds.every(id => selected.has(id))
+  const someSelected = allIds.some(id => selected.has(id))
+
   function toggleOne(id: number) {
     setSelected(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
+  }
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(allIds))
   }
 
   function SortIndicator({ col }: { col: SortCol }) {
@@ -139,7 +146,16 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-stone-200 dark:border-stone-800">
-                <th className="px-4 py-3 w-10" aria-hidden />
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={el => { if (el) el.indeterminate = someSelected && !allSelected }}
+                    onChange={toggleAll}
+                    aria-label="Select all reports"
+                    className="w-4 h-4 accent-emerald-600 cursor-pointer align-middle"
+                  />
+                </th>
                 <th
                   className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap hover:text-stone-800 dark:hover:text-stone-200 transition-colors text-stone-500 dark:text-stone-400"
                   onClick={() => handleSortClick('reportId')}
