@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowDown, ArrowUp } from 'lucide-react'
+import { ArrowDown, ArrowUp, Sparkles } from 'lucide-react'
 import type { Report } from '../../types/reports'
 import { formatInteger } from '../../lib/formatNumber'
 import { memberLinkUrl } from '../../lib/memberLink'
+import { TripSummaryModal } from './TripSummaryModal'
 
 export interface ReportsProps {
   reports: Report[]
@@ -30,6 +31,11 @@ function reportUrl(reportId: number): string {
 export function Reports({ reports, totalCount, memberContext, currentUserId, season, refreshing = false, onMemberContextChange, onSeasonChange }: ReportsProps) {
   const [sortCol, setSortCol] = useState<SortCol>('reportId')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [showSummary, setShowSummary] = useState(false)
+
+  // Clear the selection whenever the visible report set changes (Season / Me-All toggle).
+  useEffect(() => { setSelected(new Set()) }, [season, memberContext])
 
   const isLoggedIn = currentUserId != null && currentUserId >= 1
   const isAll = memberContext === 'all'
@@ -60,6 +66,14 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
     return sortDir === 'asc' ? cmp : -cmp
   })
 
+  function toggleOne(id: number) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
   function SortIndicator({ col }: { col: SortCol }) {
     if (sortCol !== col) return <ArrowDown className="w-3 h-3 opacity-0" strokeWidth={2} />
     const Icon = sortDir === 'asc' ? ArrowUp : ArrowDown
@@ -67,7 +81,7 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
   }
 
   return (
-    <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
+    <div className={`min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8${selected.size > 0 ? ' pb-24' : ''}`}>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
@@ -125,6 +139,7 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-stone-200 dark:border-stone-800">
+                <th className="px-4 py-3 w-10" aria-hidden />
                 <th
                   className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap hover:text-stone-800 dark:hover:text-stone-200 transition-colors text-stone-500 dark:text-stone-400"
                   onClick={() => handleSortClick('reportId')}
@@ -181,13 +196,22 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
             <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-stone-400 dark:text-stone-500 text-sm">
+                  <td colSpan={8} className="px-4 py-8 text-center text-stone-400 dark:text-stone-500 text-sm">
                     No reports found.
                   </td>
                 </tr>
               ) : (
                 sorted.map(r => (
-                  <tr key={r.reportId} className="hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors">
+                  <tr key={r.reportId} className={`transition-colors ${selected.has(r.reportId) ? 'bg-emerald-50/60 dark:bg-emerald-950/20' : 'hover:bg-stone-50 dark:hover:bg-stone-800/50'}`}>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(r.reportId)}
+                        onChange={() => toggleOne(r.reportId)}
+                        aria-label={`Select report ${r.reportId}`}
+                        className="w-4 h-4 accent-emerald-600 cursor-pointer align-middle"
+                      />
+                    </td>
                     <td className="px-4 py-3 tabular-nums font-medium">
                       <a
                         href={reportUrl(r.reportId)}
@@ -233,6 +257,36 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
           </table>
         </div>
       </div>
+
+      {/* Sticky action bar — appears when one or more reports are selected */}
+      {selected.size > 0 && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur px-4 py-3"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        >
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="text-xs font-medium text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
+            >
+              Clear ({selected.size})
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSummary(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors"
+            >
+              <Sparkles className="w-4 h-4" strokeWidth={2} />
+              Generate Summary Report ({selected.size})
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSummary && (
+        <TripSummaryModal reportIds={[...selected]} onClose={() => setShowSummary(false)} />
+      )}
     </div>
   )
 }
