@@ -523,3 +523,31 @@ function llmComplete(PDO $db, string $prompt, int $maxTokens = 1000): array {
   if ($primaryFailed) llmNotifyPrimaryFailure($db, $providers[0] ?? null, null);
   return ['text' => null, 'provider' => null];
 }
+
+/**
+ * Sawyer Slice weight — single source of truth for both the Dashboard KPI
+ * (sawyerSliceAreaExpr in dashboard/data.php) and the Leaderboards tab
+ * (lbSawyerAreaExpr in leaderboards/data.php). Returns an SQL expression for one
+ * trail-clearing row's estimated m² of sawn cross-section:
+ *
+ *     qty × per-size-class area × 2-cut factor
+ *
+ * Area = π·(rep. diameter / 2)² for the TrailClearingID size bucket
+ * (1=<8"→4", 2=8–15"→11.5", 3=16–23"→19.5", 4=24–36"→30", 5=>36"→42" assumed).
+ *
+ * 2-cut factor = 1 + P(tree needs a second cut to clear it off the trail); larger
+ * logs are more likely to need two cuts. Initial estimates: small 0%, medium 10%,
+ * large 20%, XL 30%, XXL 40% → factors 1.00 / 1.10 / 1.20 / 1.30 / 1.40.
+ *
+ * @param string $qtyExpr SQL expression for the row quantity (already NULL-safe).
+ * @param string $idExpr  SQL expression for the TrailClearingID size bucket (1–5).
+ */
+function sawyerSliceWeightExpr(string $qtyExpr, string $idExpr = 'tc.TrailClearingID'): string {
+  return "$qtyExpr"
+       . " * CASE $idExpr"
+       . " WHEN 1 THEN 0.0081 WHEN 2 THEN 0.0670 WHEN 3 THEN 0.1927"
+       . " WHEN 4 THEN 0.4560 WHEN 5 THEN 0.8938 ELSE 0 END"
+       . " * CASE $idExpr"
+       . " WHEN 1 THEN 1.00 WHEN 2 THEN 1.10 WHEN 3 THEN 1.20"
+       . " WHEN 4 THEN 1.30 WHEN 5 THEN 1.40 ELSE 1 END";
+}

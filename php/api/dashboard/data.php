@@ -500,15 +500,11 @@ function trailClearingQtyExpr(PDO $db): string {
 
 /**
  * Sawyer Slice: SQL expression for estimated m² of sawn cross-section per trail-clearing row.
- * qty × per-size-class area, where area = π·(rep. diameter / 2)² for the TrailClearingID bucket
- * (1=<8"→4", 2=8–15"→11.5", 3=16–23"→19.5", 4=24–36"→30", 5=>36"→42" assumed).
- * KEEP THESE 5 COEFFICIENTS IN SYNC with lbSawyerAreaExpr() in php/api/leaderboards/data.php.
+ * The area/2-cut math lives in sawyerSliceWeightExpr() in config.php (single source of truth,
+ * shared with the Leaderboards tab); this wrapper just supplies the dashboard qty expression.
  */
 function sawyerSliceAreaExpr(PDO $db): string {
-  $qty = trailClearingQtyExpr($db);
-  return "$qty * CASE tc.TrailClearingID"
-       . " WHEN 1 THEN 0.0081 WHEN 2 THEN 0.0670 WHEN 3 THEN 0.1927"
-       . " WHEN 4 THEN 0.4560 WHEN 5 THEN 0.8938 ELSE 0 END";
+  return sawyerSliceWeightExpr(trailClearingQtyExpr($db));
 }
 
 /**
