@@ -24,7 +24,7 @@ const DEFAULTS: LoggerSettings = {
   waypointMode: 'distance',
   waypointDistanceMi: 0.1,
   waypointTimeMin: 10,
-  wakeLockEnabled: true,
+  wakeLockEnabled: false,
   waypointVibrate: false,
   waypointPace: false,
   waypointPaceFormat: 'min-per-mi',

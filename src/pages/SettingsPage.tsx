@@ -238,16 +238,6 @@ export function SettingsPage() {
             </div>
 
             <div className="divide-y divide-stone-100 dark:divide-stone-800">
-              <PrefRow
-                label="Keep screen awake while tracking"
-                checked={loggerSettings.wakeLockEnabled}
-                onChange={v => updateLoggerSettings({ wakeLockEnabled: v })}
-                afterLabel={
-                  <span className="text-xs text-stone-400 dark:text-stone-500">
-                    Prevents auto-lock; uses more battery
-                  </span>
-                }
-              />
               <div className="py-3">
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-stone-700 dark:text-stone-300 flex-1">On-trail distance</span>
@@ -371,6 +361,16 @@ export function SettingsPage() {
                   </div>
                 )}
               </div>
+              <PrefRow
+                label="Keep screen awake while tracking"
+                checked={loggerSettings.wakeLockEnabled}
+                onChange={v => updateLoggerSettings({ wakeLockEnabled: v })}
+                afterLabel={
+                  <span className="text-xs text-stone-400 dark:text-stone-500">
+                    Prevents auto-lock; uses more battery
+                  </span>
+                }
+              />
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, Tooltip, ScaleControl, useMap } from 'react-leaflet'
 import { popup as createLPopup, divIcon } from 'leaflet'
 import { trailPaths } from '../../data/trailPaths'
 import { trailGeoData, trailNames } from '../../data/trailGeoData'
@@ -371,7 +371,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
         <div className="relative shrink-0 h-[45vh] lg:h-auto lg:flex-1 lg:shrink">
           {thDist && (
             <div
-              className="absolute top-2 left-14 z-[500] bg-emerald-700/90 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow pointer-events-none"
+              className="absolute bottom-2 left-2 z-[500] bg-emerald-700/90 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow pointer-events-none"
               title={thDist.crow ? 'Straight-line (crow-flies) — you are off the trail' : 'Measured along the trail'}
             >
               {fmtMiles(thDist.m)}{thDist.crow ? '*' : ''} from trailhead
@@ -408,6 +408,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                 : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
               maxZoom={19}
             />
+            <ScaleControl position="bottomright" imperial metric={false} />
             <FitAllController points={initialFitPoints} livePos={livePos} />
             <MapFocusController center={focusCenter} />
             <MapPopupController item={selectedItem} />
