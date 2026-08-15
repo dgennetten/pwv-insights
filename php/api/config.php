@@ -18,6 +18,9 @@ define('MAIL_FROM',       'noreply@pwv-insights.gennetten.org');
 define('MAIL_FROM_NAME',  'PWV Insights');
 define('OTP_TTL_MINUTES', 30);
 
+/** Free-access trial length, in days. The clock starts on first open. */
+define('TRIAL_DAYS', 7);
+
 /** Public base URL for t_member.Photo filenames (CLRD patrol site). */
 define('PWV_MEMBER_PHOTO_BASE', 'https://clrdvol.org/fs_pics/');
 
@@ -351,6 +354,61 @@ function jsonOut(array $data, int $status = 200): never {
   header('Content-Type: application/json');
   echo json_encode($data);
   exit;
+}
+
+// ── Trial access links (admin-generated, password/OTC-free) ──────────────────
+
+/** Ensures trial_links exists (matches sql/09-trial-links.sql). Idempotent. */
+function trialLinksEnsureTable(PDO $db): void {
+  try {
+    $db->exec(
+      'CREATE TABLE IF NOT EXISTS trial_links (
+        id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        token         CHAR(64)        NOT NULL,
+        label         VARCHAR(120)    NULL,
+        created_by    INT UNSIGNED    NOT NULL,
+        created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        activated_at  DATETIME        NULL,
+        expires_at    DATETIME        NULL,
+        revoked       TINYINT(1)      NOT NULL DEFAULT 0,
+        use_count     INT UNSIGNED    NOT NULL DEFAULT 0,
+        last_used_at  DATETIME        NULL,
+        UNIQUE KEY uq_trial_token (token),
+        INDEX idx_trial_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+  } catch (Throwable $e) {
+    error_log('trial_links ensure table: ' . $e->getMessage());
+  }
+}
+
+/**
+ * Resolve an admin session token to the admin PersonID, or emit a JSON error and exit.
+ * Mirrors the inline check used by the other php/api/admin endpoints.
+ */
+function authResolveAdminPersonId(PDO $db, string $token): int {
+  if ($token === '' || strlen($token) !== 64 || !ctype_xdigit($token)) {
+    jsonOut(['success' => false, 'error' => 'Invalid token'], 401);
+  }
+  $stmt = $db->prepare(
+    'SELECT s.person_id, s.expires_at, m.EmailAddress
+     FROM auth_sessions s
+     JOIN t_member m ON m.PersonID = s.person_id
+     WHERE s.token = ? LIMIT 1'
+  );
+  $stmt->execute([$token]);
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  if (!$row) {
+    jsonOut(['success' => false, 'error' => 'Unknown session'], 401);
+  }
+  $expiresTs = strtotime($row['expires_at']);
+  if ($expiresTs === false || $expiresTs < time()) {
+    jsonOut(['success' => false, 'error' => 'Session expired'], 401);
+  }
+  if (strtolower(trim($row['EmailAddress'])) !== strtolower(ADMIN_EMAIL)) {
+    jsonOut(['success' => false, 'error' => 'Forbidden'], 403);
+  }
+  return (int) $row['person_id'];
 }
 
 // ── App settings (global key/value; admin-writable) ──────────────────────────

@@ -10,6 +10,7 @@ export interface AppShellProps {
     name: string
     email?: string
     avatarUrl?: string
+    role?: string
   }
   onNavigate?: (href: string) => void
   onLogout?: () => void
@@ -42,7 +43,7 @@ export function AppShell({
         `}
       >
         <div className="flex flex-col h-full overflow-y-auto">
-          <MainNav activeHref={activeHref} onNavigate={onNavigate} collapsed={false} userEmail={user?.email} />
+          <MainNav activeHref={activeHref} onNavigate={onNavigate} collapsed={false} userEmail={user?.email} userRole={user?.role} />
           <UserMenu user={user} onLogout={onLogout} onSignIn={onSignIn} collapsed={false} />
         </div>
       </aside>
@@ -71,6 +72,7 @@ export function AppShell({
                 onNavigate={(href) => { onNavigate?.(href); setMobileOpen(false) }}
                 collapsed={false}
                 userEmail={user?.email}
+                userRole={user?.role}
               />
             </div>
             <UserMenu user={user} onLogout={onLogout} onSignIn={onSignIn} collapsed={false} />

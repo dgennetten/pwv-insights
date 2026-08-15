@@ -16,7 +16,7 @@ export interface AdminLoginRow {
   lastName: string
   firstName: string
   loggedInAtMs: number
-  loginType: 'OTC' | 'ACCESS' | 'AUTO'
+  loginType: 'OTC' | 'ACCESS' | 'AUTO' | 'TRIAL'
 }
 
 export interface AiProvider {
@@ -201,6 +201,91 @@ export async function fetchMemberLookup(token: string, memberId: number): Promis
     throw new Error(data.error ?? `HTTP ${res.status}`)
   }
   return data.member
+}
+
+// ── Trial access ─────────────────────────────────────────────────────────────
+
+export interface TrialLoginResult {
+  token: string
+  name: string
+  email: string
+  role: 'trial'
+  personId: number
+  expiresAt: number
+  trialDays: number
+}
+
+/**
+ * Validate an admin-generated trial link token. Starts the 7-day clock on first
+ * open (idempotent afterward). Rejects revoked/expired links.
+ */
+export async function trialLogin(token: string): Promise<TrialLoginResult> {
+  const res = await fetch(`${AUTH_BASE}/trial-login.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({ token }),
+  })
+  const data = (await res.json()) as { success?: boolean; error?: string } & Partial<TrialLoginResult>
+  if (!res.ok || !data.success || data.token == null) {
+    throw new Error(data.error ?? `HTTP ${res.status}`)
+  }
+  return {
+    token: data.token,
+    name: data.name ?? 'Trial Guest',
+    email: data.email ?? '',
+    role: 'trial',
+    personId: data.personId ?? 0,
+    expiresAt: data.expiresAt ?? Date.now(),
+    trialDays: data.trialDays ?? 7,
+  }
+}
+
+export type TrialLinkStatus = 'pending' | 'active' | 'expired' | 'revoked'
+
+export interface TrialLink {
+  id: number
+  token: string
+  label: string
+  createdAtMs: number
+  expiresAtMs: number
+  useCount: number
+  status: TrialLinkStatus
+}
+
+export async function fetchAdminTrialLinks(token: string): Promise<TrialLink[]> {
+  const res = await fetch('/api/admin/trial-links.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({ token, action: 'list' }),
+  })
+  const data = (await res.json()) as { success?: boolean; links?: TrialLink[]; error?: string }
+  if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
+  return Array.isArray(data.links) ? data.links : []
+}
+
+export async function createAdminTrialLink(token: string, label: string): Promise<TrialLink> {
+  const res = await fetch('/api/admin/trial-links.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({ token, action: 'create', label }),
+  })
+  const data = (await res.json()) as { success?: boolean; link?: TrialLink; error?: string }
+  if (!res.ok || !data.success || !data.link) throw new Error(data.error ?? `HTTP ${res.status}`)
+  return data.link
+}
+
+export async function revokeAdminTrialLink(token: string, id: number): Promise<void> {
+  const res = await fetch('/api/admin/trial-links.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({ token, action: 'revoke', id }),
+  })
+  const data = (await res.json()) as { success?: boolean; error?: string }
+  if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
 }
 
 export async function requestOtp(email: string): Promise<void> {

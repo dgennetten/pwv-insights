@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useLayoutEffect, type ReactNode } from 'react'
-import { AUTH_TOKEN_STORAGE_KEY, autoLogin, devAutoLogin, validateStoredSession } from '../services/authService'
+import { AUTH_TOKEN_STORAGE_KEY, autoLogin, devAutoLogin, trialLogin, validateStoredSession } from '../services/authService'
 
 function isLocalhostHostname(): boolean {
   const h = window.location.hostname
@@ -11,6 +11,8 @@ interface AuthUser {
   name: string
   email: string
   role: string
+  /** Set only for role === 'trial': when the free-access trial expires (ms since epoch). */
+  trialExpiresAt?: number
 }
 
 interface AuthContextValue {
@@ -41,13 +43,18 @@ function parseStoredUser(): AuthUser | undefined {
   const raw = localStorage.getItem(SESSION_KEY)
   if (!raw) return undefined
   const u = JSON.parse(raw) as Record<string, unknown>
+  const role = String(u.role ?? 'member')
   const pid = Math.trunc(Number(u.personId))
-  if (!Number.isFinite(pid) || pid < 1) return undefined
+  // Trial guests have no member record, so personId 0 is valid for them only.
+  const minPid = role === 'trial' ? 0 : 1
+  if (!Number.isFinite(pid) || pid < minPid) return undefined
+  const trialExpiresAt = Number(u.trialExpiresAt)
   return {
     personId: pid,
     name: String(u.name ?? ''),
     email: String(u.email ?? ''),
-    role: String(u.role ?? 'member'),
+    role,
+    trialExpiresAt: Number.isFinite(trialExpiresAt) && trialExpiresAt > 0 ? trialExpiresAt : undefined,
   }
 }
 
@@ -94,13 +101,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       expiresAtMs?: number,
     ) => {
       const pid = Math.trunc(Number(personId))
-      if (!Number.isFinite(pid) || pid < 1) return
-      const authUser: AuthUser = { personId: pid, name, email, role }
+      const minPid = role === 'trial' ? 0 : 1
+      if (!Number.isFinite(pid) || pid < minPid) return
       const days = remember ? 365 : 1
       const expiresAt =
         expiresAtMs != null && Number.isFinite(expiresAtMs)
           ? expiresAtMs
           : Date.now() + days * 24 * 60 * 60 * 1000
+      const authUser: AuthUser = {
+        personId: pid,
+        name,
+        email,
+        role,
+        trialExpiresAt: role === 'trial' ? expiresAt : undefined,
+      }
       localStorage.setItem(SESSION_KEY, JSON.stringify(authUser))
       localStorage.setItem(TOKEN_KEY, token)
       localStorage.setItem(EXPIRES_KEY, String(expiresAt))
@@ -125,11 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Strip ?id= and ?sso_token= from the URL immediately so they never linger in history,
     // but save the values for use below if there is no valid stored session.
     const params = new URLSearchParams(window.location.search)
-    const autoId   = params.get('id')        ?? null
-    const ssoToken = params.get('sso_token') ?? null
-    if (autoId !== null || ssoToken !== null) {
+    const autoId     = params.get('id')        ?? null
+    const ssoToken   = params.get('sso_token') ?? null
+    const trialToken = params.get('trial')     ?? null
+    if (autoId !== null || ssoToken !== null || trialToken !== null) {
       params.delete('id')
       params.delete('sso_token')
+      params.delete('trial')
       const newSearch = params.toString()
       window.history.replaceState(null, '', window.location.pathname + (newSearch ? '?' + newSearch : ''))
     }
@@ -142,8 +158,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (raw) {
         try {
           const u = JSON.parse(raw) as Record<string, unknown>
+          const role = String(u.role ?? 'member')
           const pid = Math.trunc(Number(u.personId))
-          if (Number.isFinite(pid) && pid >= 1) {
+          const minPid = role === 'trial' ? 0 : 1
+          if (Number.isFinite(pid) && pid >= minPid) {
+            if (role === 'trial') {
+              // Revalidate the trial token so revocation / server-side expiry take
+              // effect on reload. Local EXPIRES_KEY already covers the time-based case.
+              if (token) {
+                const r = await trialLogin(token).catch(() => null)
+                if (cancelled) return
+                if (r) login(r.token, r.email, r.name, r.role, r.personId, true, r.expiresAt)
+                else if (navigator.onLine) logout()
+              }
+              return
+            }
             // Valid local session — ping session.php to log the ACCESS event, ignore result
             if (token && remember) void validateStoredSession(token)
             return
@@ -191,6 +220,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // No valid stored session — try a free-access trial link (admin-generated)
+      if (trialToken !== null && /^[0-9a-f]{64}$/i.test(trialToken)) {
+        try {
+          const t = await trialLogin(trialToken)
+          if (cancelled) return
+          login(t.token, t.email, t.name, t.role, t.personId, true, t.expiresAt)
+          return
+        } catch {
+          /* revoked / expired / bad trial link — fall through to OTP */
+        }
+      }
+
       if (import.meta.env.DEV && isLocalhostHostname()) {
         const d = await devAutoLogin()
         if (cancelled || !d) return
@@ -201,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [login])
+  }, [login, logout])
 
   const openLogin = useCallback(() => {
     void (async () => {

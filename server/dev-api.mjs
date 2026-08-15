@@ -84,6 +84,70 @@ async function ensureAuthLoginLogTable() {
   }
 }
 
+const TRIAL_DAYS = 7
+const TRIAL_LINKS_DDL = `CREATE TABLE IF NOT EXISTS trial_links (
+  id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  token         CHAR(64)        NOT NULL,
+  label         VARCHAR(120)    NULL,
+  created_by    INT UNSIGNED    NOT NULL,
+  created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  activated_at  DATETIME        NULL,
+  expires_at    DATETIME        NULL,
+  revoked       TINYINT(1)      NOT NULL DEFAULT 0,
+  use_count     INT UNSIGNED    NOT NULL DEFAULT 0,
+  last_used_at  DATETIME        NULL,
+  UNIQUE KEY uq_trial_token (token),
+  INDEX idx_trial_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+
+async function ensureTrialLinksTable() {
+  try {
+    await pool.query(TRIAL_LINKS_DDL)
+  } catch (e) {
+    console.warn('[trial] trial_links ensure table:', e.message)
+  }
+}
+
+/** Resolve an admin session token to its PersonID, or send a JSON error and return null. */
+async function resolveAdminPersonId(res, token) {
+  if (!token || token.length !== 64 || !/^[a-f0-9]+$/i.test(token)) {
+    send(res, { success: false, error: 'Invalid token' }, 401)
+    return null
+  }
+  const [sess] = await pool.query(
+    `SELECT s.person_id, s.expires_at, m.EmailAddress
+     FROM auth_sessions s JOIN t_member m ON m.PersonID = s.person_id
+     WHERE s.token = ? LIMIT 1`,
+    [token]
+  )
+  if (!sess.length) { send(res, { success: false, error: 'Unknown session' }, 401); return null }
+  const exp = new Date(sess[0].expires_at).getTime()
+  if (!Number.isFinite(exp) || exp < Date.now()) {
+    send(res, { success: false, error: 'Session expired' }, 401); return null
+  }
+  if (String(sess[0].EmailAddress ?? '').trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    send(res, { success: false, error: 'Forbidden' }, 403); return null
+  }
+  return Number(sess[0].person_id)
+}
+
+function trialLinkRow(r) {
+  const expiresTs = r.expires_at !== null ? new Date(r.expires_at).getTime() : null
+  const activated = r.activated_at !== null
+  const revoked   = Number(r.revoked) === 1
+  const expired   = expiresTs !== null && expiresTs < Date.now()
+  const status = revoked ? 'revoked' : !activated ? 'pending' : expired ? 'expired' : 'active'
+  return {
+    id: Number(r.id),
+    token: String(r.token),
+    label: r.label !== null ? String(r.label) : '',
+    createdAtMs: r.created_at !== null ? new Date(r.created_at).getTime() : 0,
+    expiresAtMs: expiresTs ?? 0,
+    useCount: Number(r.use_count) || 0,
+    status,
+  }
+}
+
 async function authLoginLogInsert(personId) {
   const pid = Number(personId)
   if (!Number.isFinite(pid) || pid < 1) return
@@ -515,7 +579,8 @@ const routes = {
     try {
       const [rows] = await pool.query(
         `SELECT l.person_id AS memberId, m.LastName AS lastName, m.FirstName AS firstName,
-                UNIX_TIMESTAMP(l.logged_in_at) * 1000 AS loggedInAtMs
+                UNIX_TIMESTAMP(l.logged_in_at) * 1000 AS loggedInAtMs,
+                COALESCE(l.login_type, 'OTC') AS loginType
          FROM auth_login_log l
          INNER JOIN t_member m ON m.PersonID = l.person_id
          ORDER BY l.logged_in_at DESC, l.id DESC
@@ -526,8 +591,34 @@ const routes = {
         lastName: String(r.lastName ?? ''),
         firstName: String(r.firstName ?? ''),
         loggedInAtMs: Number(r.loggedInAtMs) || 0,
+        loginType: ['ACCESS', 'AUTO'].includes(r.loginType) ? r.loginType : 'OTC',
       }))
-      return send(res, { success: true, logins })
+
+      // Trial guests aren't members — surface each activated trial link as a TRIAL row.
+      try {
+        await ensureTrialLinksTable()
+        const [trialRows] = await pool.query(
+          `SELECT label, use_count,
+                  UNIX_TIMESTAMP(COALESCE(last_used_at, activated_at)) * 1000 AS loggedInAtMs
+           FROM trial_links WHERE activated_at IS NOT NULL
+           ORDER BY COALESCE(last_used_at, activated_at) DESC LIMIT 500`
+        )
+        for (const r of trialRows) {
+          const label = String(r.label ?? '').trim()
+          logins.push({
+            memberId: 0,
+            lastName: '',
+            firstName: label !== '' ? `Trial · ${label}` : 'Trial Guest',
+            loggedInAtMs: Number(r.loggedInAtMs) || 0,
+            loginType: 'TRIAL',
+          })
+        }
+      } catch (e) {
+        console.warn('[admin/recent-logins] trial merge:', e.message)
+      }
+
+      logins.sort((a, b) => b.loggedInAtMs - a.loggedInAtMs)
+      return send(res, { success: true, logins: logins.slice(0, 500) })
     } catch (e) {
       console.error('[admin/recent-logins]', e)
       return send(res, {
@@ -536,6 +627,83 @@ const routes = {
         hint: 'Run sql/03-auth-login-log.sql on the database.',
       }, 500)
     }
+  },
+
+  async 'POST /api/auth/trial-login.php'(req, res) {
+    const body = await readJson(req)
+    const token = String(body.token ?? '').trim().toLowerCase()
+    if (!token || token.length !== 64 || !/^[a-f0-9]+$/i.test(token)) {
+      return send(res, { success: false, error: 'Invalid trial link' }, 401)
+    }
+    await ensureTrialLinksTable()
+
+    const [rows] = await pool.query(
+      'SELECT id, activated_at, expires_at, revoked FROM trial_links WHERE token = ? LIMIT 1',
+      [token]
+    )
+    if (!rows.length) return send(res, { success: false, error: 'Trial link not found' }, 401)
+    const link = rows[0]
+    if (Number(link.revoked) === 1) {
+      return send(res, { success: false, error: 'This trial link has been revoked' }, 403)
+    }
+
+    let expiresMs
+    if (link.activated_at === null) {
+      expiresMs = Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000
+      const expiry = new Date(expiresMs).toISOString().slice(0, 19).replace('T', ' ')
+      await pool.query(
+        `UPDATE trial_links
+         SET activated_at = NOW(), expires_at = ?, use_count = use_count + 1, last_used_at = NOW()
+         WHERE id = ?`,
+        [expiry, link.id]
+      )
+    } else {
+      expiresMs = new Date(link.expires_at).getTime()
+      if (!Number.isFinite(expiresMs) || expiresMs < Date.now()) {
+        return send(res, { success: false, error: 'This trial has expired', expired: true }, 403)
+      }
+      await pool.query('UPDATE trial_links SET use_count = use_count + 1, last_used_at = NOW() WHERE id = ?', [link.id])
+    }
+
+    send(res, {
+      success: true,
+      token,
+      email: '',
+      name: 'Trial Guest',
+      role: 'trial',
+      personId: 0,
+      expiresAt: expiresMs,
+      trialDays: TRIAL_DAYS,
+    })
+  },
+
+  async 'POST /api/admin/trial-links.php'(req, res) {
+    const body = await readJson(req)
+    const token = String(body.token ?? '').trim()
+    const action = String(body.action ?? 'list').trim()
+
+    const adminId = await resolveAdminPersonId(res, token)
+    if (adminId === null) return
+    await ensureTrialLinksTable()
+
+    if (action === 'create') {
+      let label = String(body.label ?? '').trim().slice(0, 120)
+      const newToken = crypto.randomBytes(32).toString('hex')
+      await pool.query('INSERT INTO trial_links (token, label, created_by) VALUES (?, ?, ?)',
+        [newToken, label !== '' ? label : null, adminId])
+      const [rows] = await pool.query('SELECT * FROM trial_links WHERE token = ? LIMIT 1', [newToken])
+      return send(res, { success: true, link: trialLinkRow(rows[0]) })
+    }
+
+    if (action === 'revoke') {
+      const id = Number(body.id ?? 0)
+      if (!Number.isFinite(id) || id < 1) return send(res, { success: false, error: 'Invalid id' }, 400)
+      await pool.query('UPDATE trial_links SET revoked = 1 WHERE id = ?', [id])
+      return send(res, { success: true })
+    }
+
+    const [rows] = await pool.query('SELECT * FROM trial_links ORDER BY created_at DESC LIMIT 100')
+    return send(res, { success: true, links: rows.map(trialLinkRow) })
   },
 
   async 'GET /api/trails/ai-summary.php'(req, res) {

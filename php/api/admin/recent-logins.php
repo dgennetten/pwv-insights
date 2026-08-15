@@ -73,13 +73,44 @@ try {
 
 $logins = [];
 foreach ($rows as $r) {
+  $type = in_array($r['loginType'], ['ACCESS', 'AUTO'], true) ? $r['loginType'] : 'OTC';
   $logins[] = [
     'memberId'     => (int) $r['memberId'],
     'lastName'     => (string) $r['lastName'],
     'firstName'    => (string) $r['firstName'],
     'loggedInAtMs' => (int) $r['loggedInAtMs'],
-    'loginType'    => $r['loginType'] === 'ACCESS' ? 'ACCESS' : 'OTC',
+    'loginType'    => $type,
   ];
 }
+
+// Trial guests have no t_member row, so they never hit auth_login_log — surface each
+// activated trial link (with its most recent open time) as a TRIAL row instead.
+try {
+  trialLinksEnsureTable($db);
+  $trialRows = $db->query(
+    "SELECT label, use_count,
+            UNIX_TIMESTAMP(COALESCE(last_used_at, activated_at)) * 1000 AS loggedInAtMs
+     FROM trial_links
+     WHERE activated_at IS NOT NULL
+     ORDER BY COALESCE(last_used_at, activated_at) DESC
+     LIMIT 500"
+  )->fetchAll(PDO::FETCH_ASSOC);
+  foreach ($trialRows as $r) {
+    $label = trim((string) ($r['label'] ?? ''));
+    $logins[] = [
+      'memberId'     => 0,
+      'lastName'     => '',
+      'firstName'    => $label !== '' ? ('Trial · ' . $label) : 'Trial Guest',
+      'loggedInAtMs' => (int) $r['loggedInAtMs'],
+      'loginType'    => 'TRIAL',
+    ];
+  }
+} catch (Throwable $e) {
+  error_log('admin/recent-logins trial merge: ' . $e->getMessage());
+}
+
+// Merge member + trial events, newest first, capped.
+usort($logins, static fn($a, $b) => $b['loggedInAtMs'] <=> $a['loggedInAtMs']);
+$logins = array_slice($logins, 0, 500);
 
 jsonOut(['success' => true, 'logins' => $logins]);

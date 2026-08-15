@@ -6,10 +6,19 @@ interface UserMenuProps {
     name: string
     email?: string
     avatarUrl?: string
+    role?: string
   }
   onLogout?: () => void
   onSignIn?: () => void
   collapsed?: boolean
+}
+
+function TrialBadge() {
+  return (
+    <span className="inline-block text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400">
+      Trial
+    </span>
+  )
 }
 
 function Initials({ name }: { name: string }) {
@@ -71,12 +80,19 @@ export function UserMenu({ user, onLogout, onSignIn, collapsed = false }: UserMe
         {!collapsed && (
           <>
             <div className="flex-1 min-w-0 text-left">
-              <div className="text-xs font-medium text-stone-900 dark:text-stone-100 truncate leading-tight">
-                {user.name}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-stone-900 dark:text-stone-100 truncate leading-tight">
+                  {user.name}
+                </span>
+                {user.role === 'trial' && <TrialBadge />}
               </div>
-              {user.email && (
+              {user.email ? (
                 <div className="text-xs text-stone-500 dark:text-stone-500 truncate leading-tight">
                   {user.email}
+                </div>
+              ) : user.role === 'trial' && (
+                <div className="text-xs text-stone-500 dark:text-stone-500 truncate leading-tight">
+                  Free-access trial
                 </div>
               )}
             </div>
@@ -96,9 +112,14 @@ export function UserMenu({ user, onLogout, onSignIn, collapsed = false }: UserMe
           ${collapsed ? 'left-0' : 'left-2 right-2'}
         `}>
           <div className="px-3 py-2 border-b border-stone-100 dark:border-stone-800">
-            <div className="text-xs font-medium text-stone-900 dark:text-stone-100">{user.name}</div>
-            {user.email && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-stone-900 dark:text-stone-100">{user.name}</span>
+              {user.role === 'trial' && <TrialBadge />}
+            </div>
+            {user.email ? (
               <div className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{user.email}</div>
+            ) : user.role === 'trial' && (
+              <div className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Free-access trial</div>
             )}
           </div>
           <button

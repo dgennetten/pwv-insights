@@ -18,6 +18,7 @@ import {
   type MemberSearchResult,
   type TrailLogRow,
 } from '../services/authService'
+import { TrialLinksCard } from '../components/admin/TrialLinksCard'
 import { trailLogPersonId } from '../lib/trailLogId'
 
 function formatLoginDate(ms: number): string {
@@ -76,6 +77,21 @@ function MemberLookupNameButton({
     >
       {name}
     </button>
+  )
+}
+
+function LoginTypeBadge({ type }: { type: AdminLoginRow['loginType'] }) {
+  const meta: Record<AdminLoginRow['loginType'], { label: string; className: string }> = {
+    ACCESS: { label: 'Access', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' },
+    OTC:    { label: 'OTC',    className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
+    AUTO:   { label: 'Auto',   className: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400' },
+    TRIAL:  { label: 'Trial',  className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400' },
+  }
+  const m = meta[type] ?? meta.OTC
+  return (
+    <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded ${m.className}`}>
+      {m.label}
+    </span>
   )
 }
 
@@ -388,6 +404,9 @@ export function AdminPage() {
             )}
           </div>
 
+          {/* ── Trial Access Links ──────────────────────────────── */}
+          <TrialLinksCard />
+
           <div
             ref={lookupSectionRef}
             className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4"
@@ -524,7 +543,7 @@ export function AdminPage() {
                               <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{formatLoginDate(row.loggedInAtMs)}</td>
                               <td className="px-3 py-2.5 text-xs text-stone-600 dark:text-stone-400 whitespace-nowrap tabular-nums">{formatLoginTime(row.loggedInAtMs)}</td>
                               <td className="px-3 py-2.5 text-right text-xs tabular-nums text-stone-600 dark:text-stone-400 whitespace-nowrap">
-                                {Number.isFinite(row.memberId) ? String(Math.trunc(row.memberId)) : '—'}
+                                {Number.isFinite(row.memberId) && row.memberId > 0 ? String(Math.trunc(row.memberId)) : '—'}
                               </td>
                               <td className="px-3 py-2.5 text-xs text-stone-800 dark:text-stone-200">
                                 {(() => {
@@ -540,11 +559,7 @@ export function AdminPage() {
                                 })()}
                               </td>
                               <td className="px-3 py-2.5 whitespace-nowrap">
-                                {row.loginType === 'ACCESS' ? (
-                                  <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Access</span>
-                                ) : (
-                                  <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">OTC</span>
-                                )}
+                                <LoginTypeBadge type={row.loginType} />
                               </td>
                             </tr>
                           ))}

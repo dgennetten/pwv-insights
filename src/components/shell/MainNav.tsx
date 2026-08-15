@@ -15,7 +15,12 @@ interface MainNavProps {
   collapsed?: boolean
   /** Signed-in email; Admin nav item only when this matches `canAccessAdminPage`. */
   userEmail?: string
+  /** Auth role; trial guests get a read-only subset of the nav. */
+  userRole?: string
 }
+
+/** Trial guests can't submit patrol data or own member preferences — hide those tabs. */
+const TRIAL_HIDDEN_HREFS = new Set(['/data-logger', '/settings'])
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Activity Dashboard', href: '/dashboard', icon: LayoutDashboard, group: 'main' },
@@ -61,10 +66,12 @@ function NavLink({
   )
 }
 
-export function MainNav({ activeHref = '/dashboard', onNavigate, collapsed = false, userEmail }: MainNavProps) {
-  const mainItems = NAV_ITEMS.filter(i => i.group === 'main')
+export function MainNav({ activeHref = '/dashboard', onNavigate, collapsed = false, userEmail, userRole }: MainNavProps) {
+  const isTrial = userRole === 'trial'
+  const visible = (i: NavItem) => !(isTrial && TRIAL_HIDDEN_HREFS.has(i.href))
+  const mainItems = NAV_ITEMS.filter(i => i.group === 'main').filter(visible)
   const adminItems = NAV_ITEMS.filter(i => i.group === 'admin').filter(() => canAccessAdminPage(userEmail))
-  const utilityItems = NAV_ITEMS.filter(i => i.group === 'utility')
+  const utilityItems = NAV_ITEMS.filter(i => i.group === 'utility').filter(visible)
 
   return (
     <div className="flex flex-col h-full">
