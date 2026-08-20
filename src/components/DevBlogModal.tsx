@@ -8,6 +8,25 @@ interface DevBlogModalProps {
 
 type DismissChoice = 'until-new' | 'never' | null
 
+/** Render entry text with any http(s) URLs turned into tappable links. */
+function renderContent(text: string) {
+  return text.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-emerald-600 dark:text-emerald-400 underline underline-offset-2 hover:text-emerald-700 dark:hover:text-emerald-300 break-all"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  )
+}
+
 export function DevBlogModal({ onClose }: DevBlogModalProps) {
   const [choice, setChoice] = useState<DismissChoice>('until-new')
 
@@ -58,14 +77,14 @@ export function DevBlogModal({ onClose }: DevBlogModalProps) {
               <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Latest</span>
               <span className="text-[10px] text-stone-400 dark:text-stone-500">{formatDate(latest.date)}</span>
             </div>
-            <p className="text-sm text-stone-800 dark:text-stone-200 leading-relaxed whitespace-pre-line">{latest.content}</p>
+            <p className="text-sm text-stone-800 dark:text-stone-200 leading-relaxed whitespace-pre-line">{renderContent(latest.content)}</p>
           </div>
 
           {/* Older entries */}
           {older.map(entry => (
             <div key={entry.id} className="space-y-1.5 pt-3 border-t border-stone-100 dark:border-stone-800">
               <span className="text-[10px] text-stone-400 dark:text-stone-500">{formatDate(entry.date)}</span>
-              <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed whitespace-pre-line">{entry.content}</p>
+              <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed whitespace-pre-line">{renderContent(entry.content)}</p>
             </div>
           ))}
         </div>
