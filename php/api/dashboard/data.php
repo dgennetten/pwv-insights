@@ -46,6 +46,7 @@ try {
     'totalActiveMembers' => 0,
     'volunteerHours'     => 0.0,
     'treesCleared'       => 0.0,
+    'treesTotal'         => 0.0,
   ];
 
   // ─── Build & return (each block isolated so one bad query does not 500 the whole dashboard) ──
@@ -141,6 +142,8 @@ try {
       'trailsCoveredDelta'        => $prev ? $cur['trailsCovered']      - $prev['trailsCovered']      : 0,
       'treesCleared'              => $cur['treesCleared'],
       'treesClearedDelta'         => $prev ? $cur['treesCleared']       - $prev['treesCleared']       : 0,
+      'treesTotal'                => $cur['treesTotal'],
+      'treesTotalDelta'           => $prev ? $cur['treesTotal']         - $prev['treesTotal']         : 0,
       'sawyerSlice'               => $cur['sawyerSlice'],
       'sawyerSliceDelta'          => $prev ? round($cur['sawyerSlice']  - $prev['sawyerSlice'], 2)    : 0,
       'hikersSeen'                => $hikersSeenCur,
@@ -973,6 +976,20 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
   $weedStmt->execute($pt);
   $daysWeeding = (int)$weedStmt->fetchColumn();
 
+  // trees total: undivided tree count across all reports in scope. Unlike treesCleared, this is
+  // NOT split among the party — member scope credits each participant the full report total.
+  [$wtt, $ptt] = scopeWhereTrees($db, $s, $e, $ctx);
+  $treeIdsTot = trailClearingTreeCountIdsFilterSql();
+  $qtyTot = trailClearingQtyExpr($db);
+  $totStmt = $db->prepare("
+    SELECT COALESCE(SUM($qtyTot), 0) AS n
+    FROM $tcf tc
+    JOIN t_report r ON r.ReportID = tc.ReportID
+    WHERE $wtt AND ($treeIdsTot)
+  ");
+  $totStmt->execute($ptt);
+  $treesTotal = round((float)$totStmt->fetchColumn(), 2);
+
   return [
     'patrols'            => (int)$d['patrols'],
     'daysPatrolling'     => (int)($d['daysPatrolling'] ?? 0),
@@ -981,6 +998,7 @@ function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
     'totalActiveMembers' => (int)$d['totalActiveMembers'],
     'volunteerHours'     => (float)($d['volunteerHours'] ?? 0),
     'treesCleared'       => $tc,
+    'treesTotal'         => $treesTotal,
     'sawyerSlice'        => $sawyerSlice,
   ];
 }

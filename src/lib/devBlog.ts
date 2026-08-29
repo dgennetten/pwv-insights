@@ -56,6 +56,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-08-20',
     content: `NEW — MUST-INSTALL — NATIONAL FOREST & GRASSLANDS APP — The US Forest Service's NEW mobile app is a must-install for anyone getting out in the Canyon Lakes district. Grab it here: https://www.fs.usda.gov/visit/maps/mobile-app — KDG`,
   },
+  {
+    id: 11,
+    date: '2026-08-21',
+    content: `NEW DASHBOARD KPI — TREES TOTAL — There's a new card on the Activity Dashboard: Trees Total. It's the straight, undivided count of trees cleared — the whole pile, not split among the crew. That's the difference from the existing Trees Cleared card: when you filter the dashboard down to a single member, Trees Cleared shows that person's fair share of each group effort, while Trees Total credits everyone on the report the full count. Org-wide, the two read the same. It's on by default — if you'd rather not see it, switch it off any time in Settings → Activity Dashboard.\n\nP.S. — If you haven't already, you might want to try out Sawyer Slice too — the effort metric that weights each tree by its size. Turn it on in Settings → Activity Dashboard. — KDG (v1.46.0)`,
+  },
 ]
 
 export type BlogPref =

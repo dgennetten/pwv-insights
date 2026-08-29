@@ -13,6 +13,7 @@ import {
   Minus,
   Scissors,
   TreePine,
+  Trees,
   TrendingDown,
   TrendingUp,
   Users,
@@ -422,6 +423,15 @@ export function ActivityDashboard({
             delta={summary.treesClearedDelta}
             deltaFormatter={formatTreesClearedWhole}
             icon={<TreePine className="w-4 h-4" strokeWidth={1.5} />}
+          />
+        )}
+        {kpi.treesTotal && (
+          <KpiCard
+            label="Trees Total"
+            value={formatTreesClearedWhole(Number(summary.treesTotal))}
+            delta={summary.treesTotalDelta}
+            deltaFormatter={formatTreesClearedWhole}
+            icon={<Trees className="w-4 h-4" strokeWidth={1.5} />}
           />
         )}
         {kpi.sawyerSlice && (

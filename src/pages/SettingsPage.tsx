@@ -408,6 +408,7 @@ export function SettingsPage() {
                 <PrefRow label="Patrols"            checked={prefs.dashboardKpi.patrols}          onChange={v => updateKpi('patrols', v)} />
                 <PrefRow label="Trails Covered"     checked={prefs.dashboardKpi.trailsCovered}    onChange={v => updateKpi('trailsCovered', v)} />
                 <PrefRow label="Trees Cleared"      checked={prefs.dashboardKpi.treesCleared}     onChange={v => updateKpi('treesCleared', v)} />
+                <PrefRow label="Trees Total"        checked={prefs.dashboardKpi.treesTotal}       onChange={v => updateKpi('treesTotal', v)} />
                 <PrefRow label="Sawyer Slice (m², experimental)" checked={prefs.dashboardKpi.sawyerSlice} onChange={v => updateKpi('sawyerSlice', v)} />
                 <PrefRow label="Hikers Seen"        checked={prefs.dashboardKpi.hikersSeen}       onChange={v => updateKpi('hikersSeen', v)} />
                 <PrefRow label="Hikers Contacted"   checked={prefs.dashboardKpi.hikersContacted}  onChange={v => updateKpi('hikersContacted', v)} />

@@ -21,6 +21,9 @@ export interface ActivitySummary {
   trailsCoveredDelta: number
   treesCleared: number
   treesClearedDelta: number
+  /** Undivided total trees cleared in scope — not split among party members (unlike treesCleared). */
+  treesTotal: number
+  treesTotalDelta: number
   /** Experimental Sawyer Slice: estimated m² of sawn cross-section (tree-cutting effort). */
   sawyerSlice: number
   sawyerSliceDelta: number

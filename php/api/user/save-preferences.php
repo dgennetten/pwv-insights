@@ -63,6 +63,7 @@ $prefs = [
     'patrols'          => $bool($dashKpiRaw['patrols']          ?? true),
     'trailsCovered'    => $bool($dashKpiRaw['trailsCovered']    ?? true),
     'treesCleared'     => $bool($dashKpiRaw['treesCleared']     ?? true),
+    'treesTotal'       => $bool($dashKpiRaw['treesTotal']       ?? true),
     'sawyerSlice'      => $bool($dashKpiRaw['sawyerSlice']      ?? false),
     'hikersSeen'       => $bool($dashKpiRaw['hikersSeen']       ?? true),
     'daysPatrolling'   => $bool($dashKpiRaw['daysPatrolling']   ?? false),

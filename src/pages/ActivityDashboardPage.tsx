@@ -45,6 +45,7 @@ const EMPTY_SUMMARY: ActivitySummary = {
   patrols: 0, patrolsDelta: 0,
   trailsCovered: 0, trailsCoveredDelta: 0,
   treesCleared: 0, treesClearedDelta: 0,
+  treesTotal: 0, treesTotalDelta: 0,
   sawyerSlice: 0, sawyerSliceDelta: 0,
   hikersSeen: 0, hikersSeenDelta: 0,
   volunteerHours: 0, totalActiveMembers: 0,
