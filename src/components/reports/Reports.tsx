@@ -17,7 +17,7 @@ export interface ReportsProps {
   onSeasonChange: (s: 'current' | 'last') => void
 }
 
-type SortCol = 'reportId' | 'writerName' | 'hikersSeen' | 'hikersContacted' | 'treesCleared'
+type SortCol = 'reportId' | 'activityDate' | 'writerName' | 'hikersSeen' | 'hikersContacted' | 'treesCleared'
 type SortDir = 'asc' | 'desc'
 
 const segmentBase = 'px-3 py-1.5 text-xs font-medium transition-colors rounded-md'
@@ -46,7 +46,7 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
       setSortDir(d => d === 'desc' ? 'asc' : 'desc')
     } else {
       setSortCol(col)
-      setSortDir(col === 'reportId' ? 'desc' : 'asc')
+      setSortDir(col === 'reportId' || col === 'activityDate' ? 'desc' : 'asc')
     }
   }
 
@@ -54,6 +54,9 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
     let cmp = 0
     if (sortCol === 'reportId') {
       cmp = a.reportId - b.reportId
+    } else if (sortCol === 'activityDate') {
+      // ISO YYYY-MM-DD sorts lexicographically; break same-day ties by reportId.
+      cmp = (a.activityDate ?? '').localeCompare(b.activityDate ?? '') || (a.reportId - b.reportId)
     } else if (sortCol === 'writerName') {
       cmp = (a.writerName ?? '').localeCompare(b.writerName ?? '')
     } else if (sortCol === 'hikersSeen') {
@@ -165,8 +168,14 @@ export function Reports({ reports, totalCount, memberContext, currentUserId, sea
                     <SortIndicator col="reportId" />
                   </span>
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 whitespace-nowrap">
-                  Report Date
+                <th
+                  className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap hover:text-stone-800 dark:hover:text-stone-200 transition-colors text-stone-500 dark:text-stone-400"
+                  onClick={() => handleSortClick('activityDate')}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    Report Date
+                    <SortIndicator col="activityDate" />
+                  </span>
                 </th>
                 <th
                   className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap hover:text-stone-800 dark:hover:text-stone-200 transition-colors text-stone-500 dark:text-stone-400"
