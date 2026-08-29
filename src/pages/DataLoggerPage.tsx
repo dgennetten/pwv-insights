@@ -172,6 +172,46 @@ function fmtMiles(meters: number): string {
   return (meters / 1609.344).toFixed(2) + ' mi'
 }
 
+// ── On-trail extent persistence ─────────────────────────────────────────────
+// "Distance on trail" is the span between the furthest-in and furthest-out
+// along-trail positions seen this session. It otherwise lives only in component
+// state, so a page refresh (e.g. an accidental pull-to-refresh) would reset it
+// to zero. Persist the min/max per session+trail so it survives a remount.
+interface ExtentStats { alongMin: number; alongMax: number }
+
+const extentKey = (sessionId: string, wksiteId: number) =>
+  `pwv:ontrail-extent:${sessionId}:${wksiteId}`
+
+function loadExtentStats(sessionId: string, wksiteId: number): ExtentStats | null {
+  try {
+    const raw = localStorage.getItem(extentKey(sessionId, wksiteId))
+    if (!raw) return null
+    const p = JSON.parse(raw) as Partial<ExtentStats>
+    if (typeof p.alongMin === 'number' && typeof p.alongMax === 'number'
+        && Number.isFinite(p.alongMin) && Number.isFinite(p.alongMax)) {
+      return { alongMin: p.alongMin, alongMax: p.alongMax }
+    }
+  } catch { /* corrupt or unavailable — ignore */ }
+  return null
+}
+
+function saveExtentStats(sessionId: string, wksiteId: number, s: ExtentStats): void {
+  try {
+    localStorage.setItem(extentKey(sessionId, wksiteId),
+      JSON.stringify({ alongMin: s.alongMin, alongMax: s.alongMax }))
+  } catch { /* storage full or unavailable — ignore */ }
+}
+
+function clearExtentStats(sessionId: string): void {
+  try {
+    const prefix = `pwv:ontrail-extent:${sessionId}:`
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(prefix)) localStorage.removeItem(key)
+    }
+  } catch { /* ignore */ }
+}
+
 type OnTrailLight = 'green' | 'red' | 'gray'
 
 export function DataLoggerPage() {
@@ -255,7 +295,20 @@ export function DataLoggerPage() {
     setOnTrailExtentM(null)
   }, [])
 
-  useEffect(() => { resetTrailStats() }, [session?.id, session?.wksiteId, resetTrailStats])
+  // Reset transient readouts (light, trailhead distance) on session/trail change —
+  // they recover on the next GPS fix. But restore the accumulated on-trail extent
+  // from storage so a pull-to-refresh (page remount) doesn't reset it to zero.
+  useEffect(() => {
+    resetTrailStats()
+    const sid = session?.id
+    const wks = session?.wksiteId
+    if (sid == null || wks == null) return
+    const saved = loadExtentStats(sid, wks)
+    if (saved) {
+      trailStatsRef.current = saved
+      setOnTrailExtentM(saved.alongMax - saved.alongMin)
+    }
+  }, [session?.id, session?.wksiteId, resetTrailStats])
 
   // Each live GPS fix updates the On Trail light + readouts. On-trail → distance is
   // measured along the trail; off-trail → straight-line (crow-flies) from the trailhead,
@@ -281,12 +334,13 @@ export function DataLoggerPage() {
       s.alongMin = Math.min(s.alongMin, alongM)
       s.alongMax = Math.max(s.alongMax, alongM)
       setOnTrailExtentM(s.alongMax - s.alongMin)
+      if (session?.id != null) saveExtentStats(session.id, wks, s)
     } else {
       // Off the trail: straight-line (crow-flies) from the trailhead, flagged with "*".
       setTrailheadCrow(true)
       setTrailheadDistM(haversineMeters(th.lat, th.lng, p.lat, p.lng))
     }
-  }, [session?.wksiteId])
+  }, [session?.id, session?.wksiteId])
 
   // When a trail is selected but no tracker is tracking, run a page-level GPS watch so
   // the On Trail light + distance readouts stay live (matching the map). While tracking,
@@ -858,6 +912,7 @@ export function DataLoggerPage() {
     if (!session) return
     await clearSessionEntries(session.id)
     await clearSessionTrackers(session.id)
+    clearExtentStats(session.id)
     const fresh = await resetSession(session.id)
     setSession(fresh)
     setEntries([])
