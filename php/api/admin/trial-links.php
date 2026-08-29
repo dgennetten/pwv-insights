@@ -5,6 +5,7 @@
  *   { token, action: 'list' }                    → recent links with computed status
  *   { token, action: 'create', label? }          → generate a new link, returns token
  *   { token, action: 'revoke', id }              → revoke a link (blocks future use)
+ *   { token, action: 'delete', id }              → permanently remove a link from the log
  */
 require_once __DIR__ . '/../config.php';
 
@@ -74,6 +75,13 @@ try {
     $id = (int) ($body['id'] ?? 0);
     if ($id < 1) jsonOut(['success' => false, 'error' => 'Invalid id'], 400);
     $db->prepare('UPDATE trial_links SET revoked = 1 WHERE id = ?')->execute([$id]);
+    jsonOut(['success' => true]);
+  }
+
+  if ($action === 'delete') {
+    $id = (int) ($body['id'] ?? 0);
+    if ($id < 1) jsonOut(['success' => false, 'error' => 'Invalid id'], 400);
+    $db->prepare('DELETE FROM trial_links WHERE id = ?')->execute([$id]);
     jsonOut(['success' => true]);
   }
 

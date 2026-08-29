@@ -288,6 +288,17 @@ export async function revokeAdminTrialLink(token: string, id: number): Promise<v
   if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
 }
 
+export async function deleteAdminTrialLink(token: string, id: number): Promise<void> {
+  const res = await fetch('/api/admin/trial-links.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({ token, action: 'delete', id }),
+  })
+  const data = (await res.json()) as { success?: boolean; error?: string }
+  if (!res.ok || !data.success) throw new Error(data.error ?? `HTTP ${res.status}`)
+}
+
 export async function requestOtp(email: string): Promise<void> {
   const res = await fetch(`${AUTH_BASE}/request-otp.php`, {
     method: 'POST',

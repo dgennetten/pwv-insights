@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Copy, Plus } from 'lucide-react'
+import { Check, Copy, Plus, Trash2 } from 'lucide-react'
 import {
   createAdminTrialLink,
+  deleteAdminTrialLink,
   fetchAdminTrialLinks,
   getStoredAuthToken,
   revokeAdminTrialLink,
@@ -108,6 +109,25 @@ export function TrialLinksCard() {
     }
   }, [])
 
+  const remove = useCallback(async (link: TrialLink) => {
+    const token = getStoredAuthToken()
+    if (!token) return
+    const stillActive = link.status === 'pending' || link.status === 'active'
+    const warning = stillActive
+      ? ' This link is still active — removing it also ends the recipient’s access.'
+      : ''
+    if (!window.confirm(`Remove this trial link${link.label ? ` for “${link.label}”` : ''} from the log?${warning}`)) {
+      return
+    }
+    setError(null)
+    try {
+      await deleteAdminTrialLink(token, link.id)
+      setLinks(prev => prev.filter(l => l.id !== link.id))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to remove trial link')
+    }
+  }, [])
+
   return (
     <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1">
@@ -190,6 +210,16 @@ export function TrialLinksCard() {
                     Revoke
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => void remove(link)}
+                  title="Remove from log"
+                  aria-label="Remove trial link from log"
+                  className="inline-flex items-center p-1 rounded-lg text-stone-400 dark:text-stone-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </li>
             )
           })}

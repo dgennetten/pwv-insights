@@ -702,6 +702,13 @@ const routes = {
       return send(res, { success: true })
     }
 
+    if (action === 'delete') {
+      const id = Number(body.id ?? 0)
+      if (!Number.isFinite(id) || id < 1) return send(res, { success: false, error: 'Invalid id' }, 400)
+      await pool.query('DELETE FROM trial_links WHERE id = ?', [id])
+      return send(res, { success: true })
+    }
+
     const [rows] = await pool.query('SELECT * FROM trial_links ORDER BY created_at DESC LIMIT 100')
     return send(res, { success: true, links: rows.map(trialLinkRow) })
   },
