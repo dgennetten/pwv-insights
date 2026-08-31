@@ -1490,15 +1490,20 @@ export function DataLoggerPage() {
 
       {/* ── TREE COUNTER ────────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
             Trees
           </span>
-          <ModeToggle
-            options={['cleared', 'noted']}
-            value={treeMode}
-            onChange={v => setTreeMode(v as TreeSubtype)}
-          />
+          <div className="flex items-center gap-3 shrink-0">
+            <ModeToggle
+              options={['cleared', 'noted']}
+              value={treeMode}
+              onChange={v => setTreeMode(v as TreeSubtype)}
+            />
+            <span className="text-xs text-stone-400 dark:text-stone-500">
+              Total: <strong className="text-stone-700 dark:text-stone-300">{treeTotal}</strong>
+            </span>
+          </div>
         </div>
 
         {/* Size tap buttons */}

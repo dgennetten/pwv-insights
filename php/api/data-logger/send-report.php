@@ -316,6 +316,7 @@ if (!$isOther) {
     'TREES LOGGED',
     '  Cleared:  ' . $fmtRow($trees['cleared']),
     '  Noted:    ' . $fmtRow($trees['noted']),
+    '  Total:    ' . (array_sum($trees['cleared']) + array_sum($trees['noted'])),
   );
 }
 
