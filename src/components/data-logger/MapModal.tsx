@@ -46,6 +46,16 @@ const SIZE_LABELS: Record<string, string> = {
   xl:     'XL (24–36")',
 }
 
+// Person-noun for each activity category; used to label hiker markers.
+const ACTIVITY_NOUNS: Record<string, string> = {
+  hike:  'Hiker',
+  bpack: 'Backpacker',
+  bike:  'Biker',
+  hunt:  'Hunter',
+  fish:  'Angler',
+  stock: 'Stock',
+}
+
 const CAMERA_ICON = divIcon({
   html: '<div style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;background:#fff;border:2px solid #db2777;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);font-size:14px;line-height:1">📷</div>',
   className: 'pwv-photo-marker',
@@ -76,7 +86,8 @@ function buildPopupHtml(item: TimelineItem, paceFormat: 'min-per-mi' | 'mph' = '
     const sub = (e.hikerSubtype ?? e.treeSubtype ?? '')
     const subCap = sub ? sub[0].toUpperCase() + sub.slice(1) : ''
     let heading = ''
-    if (e.type === 'hiker')     heading = `Hiker — ${subCap}`
+    if (e.type === 'hiker')     heading = `${ACTIVITY_NOUNS[e.hikerActivity ?? 'hike'] ?? 'Hiker'} — ${subCap}`
+    else if (e.type === 'dog')  heading = `Dog — ${e.dogSubtype === 'offLeash' ? 'Off Leash' : 'On Leash'}`
     else if (e.type === 'tree') heading = `Tree — ${subCap}${e.treeSize ? ', ' + (SIZE_LABELS[e.treeSize] ?? e.treeSize) : ''}`
     else if (e.type === 'violation') heading = 'Violation'
     else if (e.type === 'trail') heading = `Trail: ${e.trailName ?? 'none (off PWV trail)'}`
@@ -153,7 +164,7 @@ function MapPopupController({ item }: { item: TimelineItem | null }) {
 function paceDotColor(item: TimelineItem): string {
   if (item.kind === 'waypoint') return item.name ? '#7c3aed' : '#a78bfa'
   const e = item.entry
-  return e.type === 'hiker' ? '#0ea5e9' : e.type === 'tree' ? '#f59e0b' : e.type === 'violation' ? '#ef4444' : '#78716c'
+  return e.type === 'hiker' ? '#0ea5e9' : e.type === 'dog' ? '#14b8a6' : e.type === 'tree' ? '#f59e0b' : e.type === 'violation' ? '#ef4444' : '#78716c'
 }
 
 // ── MapModal ──────────────────────────────────────────────────────
@@ -474,8 +485,9 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                 if (e.lat === null || e.lng === null) return null
                 const isTree      = e.type === 'tree'
                 const isHiker     = e.type === 'hiker'
+                const isDog       = e.type === 'dog'
                 const isViolation = e.type === 'violation'
-                const color       = isTree ? '#f59e0b' : isHiker ? '#0ea5e9' : isViolation ? '#ef4444' : '#78716c'
+                const color       = isTree ? '#f59e0b' : isHiker ? '#0ea5e9' : isDog ? '#14b8a6' : isViolation ? '#ef4444' : '#78716c'
                 const sel         = selectedItem?.ts === item.ts
                 return (
                   <CircleMarker
@@ -603,14 +615,17 @@ function MapTimelineRow({ item, selected, onClick, paceFormat }: {
     const e           = item.entry
     const isTree      = e.type === 'tree'
     const isHiker     = e.type === 'hiker'
+    const isDog       = e.type === 'dog'
     const isViolation = e.type === 'violation'
     const isTrail     = e.type === 'trail'
     const isPhoto     = e.type === 'photo'
-    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : isPhoto ? 'PHOTO' : 'NOTE'
+    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isDog ? 'DOG' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : isPhoto ? 'PHOTO' : 'NOTE'
     badgeClass = isTree
       ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
       : isHiker
       ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
+      : isDog
+      ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300'
       : isViolation
       ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
       : isTrail
@@ -622,7 +637,9 @@ function MapTimelineRow({ item, selected, onClick, paceFormat }: {
     label = isTree
       ? `Tree — ${subCap(e.treeSubtype)}, ${SIZE_LABELS[e.treeSize ?? ''] ?? e.treeSize}`
       : isHiker
-      ? `Hiker — ${subCap(e.hikerSubtype)}`
+      ? `${ACTIVITY_NOUNS[e.hikerActivity ?? 'hike'] ?? 'Hiker'} — ${subCap(e.hikerSubtype)}`
+      : isDog
+      ? `Dog — ${e.dogSubtype === 'offLeash' ? 'Off Leash' : 'On Leash'}`
       : isViolation
       ? (e.violationType ?? 'Violation')
       : isTrail

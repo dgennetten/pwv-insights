@@ -1,7 +1,10 @@
 export type HikerSubtype = 'seen' | 'contacted'
+/** Activity category a person was engaged in; legacy entries (no value) are 'hike'. */
+export type HikerActivity = 'hike' | 'bpack' | 'bike' | 'hunt' | 'fish' | 'stock'
 export type TreeSubtype  = 'cleared' | 'noted'
 export type TreeSize     = 'small' | 'medium' | 'large' | 'xl'
-export type EntryType    = 'hiker' | 'tree' | 'note' | 'violation' | 'trail' | 'photo'
+export type DogSubtype   = 'onLeash' | 'offLeash'
+export type EntryType    = 'hiker' | 'dog' | 'tree' | 'note' | 'violation' | 'trail' | 'photo'
 
 export interface LogEntry {
   id?: number
@@ -11,6 +14,8 @@ export interface LogEntry {
   lng: number | null
   type: EntryType
   hikerSubtype?: HikerSubtype
+  hikerActivity?: HikerActivity
+  dogSubtype?: DogSubtype
   treeSubtype?: TreeSubtype
   treeSize?: TreeSize
   noteText?: string
@@ -48,6 +53,7 @@ export interface QueuedReportPayload {
 
 export interface QueuedSendSummary {
   hikers: number
+  dogs: number
   trees: number
   photos: number
   notes: number

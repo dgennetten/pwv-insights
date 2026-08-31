@@ -79,6 +79,15 @@ if ($isGuest) {
 // ── Tally entries ─────────────────────────────────────────────────
 $hikerSeen      = 0;
 $hikerContacted = 0;
+// People broken down by activity category. Legacy hiker entries with no
+// activity are counted under 'hike'.
+$activityKeys   = ['hike', 'bpack', 'bike', 'hunt', 'fish', 'stock'];
+$activityLabels = ['hike' => 'Hike', 'bpack' => 'Bpack', 'bike' => 'Bike', 'hunt' => 'Hunt', 'fish' => 'Fish', 'stock' => 'Stock'];
+$activityNouns  = ['hike' => 'Hiker', 'bpack' => 'Backpacker', 'bike' => 'Biker', 'hunt' => 'Hunter', 'fish' => 'Angler', 'stock' => 'Stock'];
+$people         = [];
+foreach ($activityKeys as $ak) { $people[$ak] = ['seen' => 0, 'contacted' => 0]; }
+$dogOnLeash     = 0;
+$dogOffLeash    = 0;
 $trees = [
   'cleared' => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
   'noted'   => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
@@ -100,14 +109,19 @@ foreach ($entries as $e) {
 }
 
 $noTrailKey  = '(no trail selected)';
-$emptyTally  = fn(): array => [
-  'seen' => 0, 'contacted' => 0,
-  'trees' => [
-    'cleared' => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
-    'noted'   => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
-  ],
-  'violations' => 0, 'notes' => 0, 'firstTs' => PHP_INT_MAX,
-];
+$emptyTally  = function () use ($activityKeys): array {
+  $people = [];
+  foreach ($activityKeys as $ak) { $people[$ak] = ['seen' => 0, 'contacted' => 0]; }
+  return [
+    'seen' => 0, 'contacted' => 0, 'people' => $people,
+    'dogs' => ['onLeash' => 0, 'offLeash' => 0],
+    'trees' => [
+      'cleared' => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
+      'noted'   => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
+    ],
+    'violations' => 0, 'notes' => 0, 'firstTs' => PHP_INT_MAX,
+  ];
+};
 $currentTrail = '';
 
 $fmtCoords = function (?float $lat, ?float $lng): string {
@@ -153,10 +167,27 @@ foreach ($entries as $e) {
 
   if ($type === 'hiker') {
     $sub = (string) ($e['hikerSubtype'] ?? '');
-    if ($sub === 'seen') { $hikerSeen++; $byTrail[$groupKey]['seen']++; }
-    elseif ($sub === 'contacted') { $hikerContacted++; $byTrail[$groupKey]['contacted']++; }
-    $label        = 'Hiker - ' . ucfirst($sub);
+    $act = (string) ($e['hikerActivity'] ?? 'hike');
+    if (!isset($people[$act])) $act = 'hike';
+    if ($sub === 'seen') {
+      $hikerSeen++; $byTrail[$groupKey]['seen']++;
+      $people[$act]['seen']++; $byTrail[$groupKey]['people'][$act]['seen']++;
+    } elseif ($sub === 'contacted') {
+      $hikerContacted++; $byTrail[$groupKey]['contacted']++;
+      $people[$act]['contacted']++; $byTrail[$groupKey]['people'][$act]['contacted']++;
+    }
+    $label        = ($activityNouns[$act] ?? 'Hiker') . ' - ' . ucfirst($sub);
     $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => $sub, 'line' => "  [{$meta}] {$label}"];
+
+  } elseif ($type === 'dog') {
+    $ds = (string) ($e['dogSubtype'] ?? '');
+    if ($ds === 'onLeash') {
+      $dogOnLeash++;  $byTrail[$groupKey]['dogs']['onLeash']++;
+    } elseif ($ds === 'offLeash') {
+      $dogOffLeash++; $byTrail[$groupKey]['dogs']['offLeash']++;
+    }
+    $dogLabel     = $ds === 'offLeash' ? 'Off Leash' : ($ds === 'onLeash' ? 'On Leash' : 'Unknown');
+    $detailRows[] = ['ts' => $ts ?? 0, 'subtype' => 'dog', 'line' => "  [{$meta}] Dog - {$dogLabel}"];
 
   } elseif ($type === 'tree') {
     $sub  = (string) ($e['treeSubtype'] ?? '');
@@ -231,6 +262,19 @@ $fmtRow = function (array $row) use ($sizeLabels): string {
 $hikerTotal = $hikerSeen;  // seen already includes auto-increments from contacted taps
 $sentTime   = date('g:i A');
 
+// Per-activity breakdown lines for a people tally, listing only categories that
+// have at least one person. Falls back to a "none" note when empty.
+$fmtPeopleLines = function (array $people, string $indent) use ($activityKeys, $activityLabels): array {
+  $out = [];
+  foreach ($activityKeys as $ak) {
+    $p = $people[$ak] ?? ['seen' => 0, 'contacted' => 0];
+    if ($p['seen'] === 0 && $p['contacted'] === 0) continue;
+    $lbl   = str_pad($activityLabels[$ak], 6);
+    $out[] = "{$indent}{$lbl} - Seen: {$p['seen']}  |  Contacted: {$p['contacted']}";
+  }
+  return $out;
+};
+
 // Header trail line: sequence of trail selections, or the session's final trail
 usort($trailSequence, fn($a, $b) => $a['ts'] <=> $b['ts']);
 $trailNamesSeq = [];
@@ -257,10 +301,17 @@ array_push($lines,
 if (!$isOther) {
   array_push($lines,
     '',
-    'HIKERS ENCOUNTERED',
-    "  Seen:       {$hikerSeen}",
-    "  Contacted:  {$hikerContacted}",
-    "  Total:      {$hikerTotal}",
+    'PEOPLE ENCOUNTERED',
+  );
+  foreach ($fmtPeopleLines($people, '  ') as $pl) { $lines[] = $pl; }
+  array_push($lines,
+    '  ' . str_repeat('-', 20),
+    '  Total  - Seen: ' . $hikerSeen . '  |  Contacted: ' . $hikerContacted,
+    '',
+    'DOGS',
+    "  On Leash:   {$dogOnLeash}",
+    "  Off Leash:  {$dogOffLeash}",
+    '  Total:      ' . ($dogOnLeash + $dogOffLeash),
     '',
     'TREES LOGGED',
     '  Cleared:  ' . $fmtRow($trees['cleared']),
@@ -298,7 +349,11 @@ if (!empty($knownTrailKeys) && !$isOther) {
   foreach ($byTrail as $tKey => $tt) {
     $lines[] = '';
     $lines[] = "TRAIL: {$tKey}";
-    $lines[] = "  Hikers - Seen: {$tt['seen']}  |  Contacted: {$tt['contacted']}  |  Total: {$tt['seen']}";
+    $lines[] = "  People - Seen: {$tt['seen']}  |  Contacted: {$tt['contacted']}  |  Total: {$tt['seen']}";
+    foreach ($fmtPeopleLines($tt['people'] ?? [], '    ') as $pl) { $lines[] = $pl; }
+    if (($tt['dogs']['onLeash'] ?? 0) > 0 || ($tt['dogs']['offLeash'] ?? 0) > 0) {
+      $lines[] = "  Dogs - On Leash: {$tt['dogs']['onLeash']}  |  Off Leash: {$tt['dogs']['offLeash']}";
+    }
     $lines[] = '  Trees Cleared:  ' . $fmtRow($tt['trees']['cleared']);
     $lines[] = '  Trees Noted:    ' . $fmtRow($tt['trees']['noted']);
     if ($tt['violations'] > 0) $lines[] = "  Violations: {$tt['violations']}";
@@ -550,10 +605,12 @@ $logPayload = [
   'trailName'  => $trailName !== '' ? $trailName : null,
   'summary'    => [
     'hikers' => [
-      'seen'      => $hikerSeen,
-      'contacted' => $hikerContacted,
-      'total'     => $hikerTotal,
+      'seen'       => $hikerSeen,
+      'contacted'  => $hikerContacted,
+      'total'      => $hikerTotal,
+      'byActivity' => $people,
     ],
+    'dogs'  => ['onLeash' => $dogOnLeash, 'offLeash' => $dogOffLeash, 'total' => $dogOnLeash + $dogOffLeash],
     'trees' => $trees,
   ],
   'trackers' => array_values(array_filter($trackers, 'is_array')),
@@ -594,10 +651,12 @@ if ($emailFormat === 'json') {
     'trailName'  => $trailName !== '' ? $trailName : null,
     'summary' => [
       'hikers' => [
-        'seen'      => $hikerSeen,
-        'contacted' => $hikerContacted,
-        'total'     => $hikerTotal,
+        'seen'       => $hikerSeen,
+        'contacted'  => $hikerContacted,
+        'total'      => $hikerTotal,
+        'byActivity' => $people,
       ],
+      'dogs'  => ['onLeash' => $dogOnLeash, 'offLeash' => $dogOffLeash, 'total' => $dogOnLeash + $dogOffLeash],
       'trees' => $trees,
     ],
     'trackers' => array_values(array_filter($trackers, 'is_array')),

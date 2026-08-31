@@ -21,8 +21,10 @@ interface LogEntry {
   timestamp: number
   lat: number | null
   lng: number | null
-  type: 'hiker' | 'tree' | 'note' | 'violation' | 'trail' | 'photo'
+  type: 'hiker' | 'dog' | 'tree' | 'note' | 'violation' | 'trail' | 'photo'
   hikerSubtype?: 'seen' | 'contacted'
+  hikerActivity?: 'hike' | 'bpack' | 'bike' | 'hunt' | 'fish' | 'stock'
+  dogSubtype?: 'onLeash' | 'offLeash'
   treeSubtype?: 'cleared' | 'noted'
   treeSize?: 'small' | 'medium' | 'large' | 'xl'
   noteText?: string
@@ -100,6 +102,16 @@ const SIZE_LABELS: Record<string, string> = {
   medium: 'Medium (8–15")',
   large:  'Large (16–23")',
   xl:     'XL (24–36")',
+}
+
+// Person-noun for each activity category; used to label hiker markers.
+const ACTIVITY_NOUNS: Record<string, string> = {
+  hike:  'Hiker',
+  bpack: 'Backpacker',
+  bike:  'Biker',
+  hunt:  'Hunter',
+  fish:  'Angler',
+  stock: 'Stock',
 }
 
 const CAMERA_ICON = divIcon({
@@ -214,16 +226,19 @@ function TimelineEntry({
     const entry       = item.entry
     const isTree      = entry.type === 'tree'
     const isHiker     = entry.type === 'hiker'
+    const isDog       = entry.type === 'dog'
     const isViolation = entry.type === 'violation'
     const isTrail     = entry.type === 'trail'
     const isPhoto     = entry.type === 'photo'
     thDistM    = entry.distFromTrailheadM
     photoUrl   = isPhoto && entry.photoUrl ? photoHref(entry.photoUrl) : undefined
-    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : isPhoto ? 'PHOTO' : 'NOTE'
+    badge      = isTree ? 'TREE' : isHiker ? 'HIKER' : isDog ? 'DOG' : isViolation ? 'VIOL' : isTrail ? 'TRAIL' : isPhoto ? 'PHOTO' : 'NOTE'
     badgeClass = isTree
       ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
       : isHiker
       ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
+      : isDog
+      ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300'
       : isViolation
       ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
       : isTrail
@@ -234,7 +249,9 @@ function TimelineEntry({
     label = isTree
       ? `Tree — ${entry.treeSubtype ? entry.treeSubtype[0].toUpperCase() + entry.treeSubtype.slice(1) : ''}, ${SIZE_LABELS[entry.treeSize ?? ''] ?? entry.treeSize}`
       : isHiker
-      ? `Hiker — ${entry.hikerSubtype ? entry.hikerSubtype[0].toUpperCase() + entry.hikerSubtype.slice(1) : ''}`
+      ? `${ACTIVITY_NOUNS[entry.hikerActivity ?? 'hike'] ?? 'Hiker'} — ${entry.hikerSubtype ? entry.hikerSubtype[0].toUpperCase() + entry.hikerSubtype.slice(1) : ''}`
+      : isDog
+      ? `Dog — ${entry.dogSubtype === 'offLeash' ? 'Off Leash' : 'On Leash'}`
       : isViolation
       ? (entry.violationType ?? 'Violation')
       : isTrail
@@ -487,6 +504,7 @@ export function TrailLogMapPage() {
       color: item.kind === 'waypoint'
         ? '#7c3aed'
         : item.entry.type === 'hiker'     ? '#0ea5e9'
+        : item.entry.type === 'dog'       ? '#14b8a6'
         : item.entry.type === 'tree'      ? '#f59e0b'
         : item.entry.type === 'violation' ? '#ef4444'
         : '#78716c',
@@ -601,7 +619,7 @@ export function TrailLogMapPage() {
           {!isOther && (
           <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 p-4">
             <div className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3">
-              Hikers Encountered
+              People Encountered
             </div>
             <div className="flex items-end gap-3">
               <span className="text-5xl font-bold leading-none text-stone-900 dark:text-stone-100">
@@ -721,7 +739,13 @@ export function TrailLogMapPage() {
                 {!isOther && (
                   <span className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full bg-sky-500 inline-block" />
-                    Hikers
+                    People
+                  </span>
+                )}
+                {!isOther && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-teal-500 inline-block" />
+                    Dogs
                   </span>
                 )}
                 <span className="flex items-center gap-1.5">
@@ -883,8 +907,9 @@ export function TrailLogMapPage() {
                   if (entry.lat === null || entry.lng === null) return null
                   const isTree      = entry.type === 'tree'
                   const isHiker     = entry.type === 'hiker'
+                  const isDog       = entry.type === 'dog'
                   const isViolation = entry.type === 'violation'
-                  const color       = isTree ? '#f59e0b' : isHiker ? '#0ea5e9' : isViolation ? '#ef4444' : '#78716c'
+                  const color       = isTree ? '#f59e0b' : isHiker ? '#0ea5e9' : isDog ? '#14b8a6' : isViolation ? '#ef4444' : '#78716c'
                   const selected    = entry.timestamp === selectedTs
                   return (
                     <CircleMarker
@@ -904,7 +929,9 @@ export function TrailLogMapPage() {
                             {isTree
                               ? `Tree — ${entry.treeSubtype}, ${SIZE_LABELS[entry.treeSize ?? ''] ?? entry.treeSize}`
                               : isHiker
-                              ? `Hiker — ${entry.hikerSubtype}`
+                              ? `${ACTIVITY_NOUNS[entry.hikerActivity ?? 'hike'] ?? 'Hiker'} — ${entry.hikerSubtype}`
+                              : isDog
+                              ? `Dog — ${entry.dogSubtype === 'offLeash' ? 'Off Leash' : 'On Leash'}`
                               : isViolation
                               ? `Violation — ${entry.violationType}`
                               : entry.noteText}

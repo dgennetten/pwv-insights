@@ -61,6 +61,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-08-21',
     content: `NEW DASHBOARD KPI — TREES TOTAL — There's a new card on the Activity Dashboard: Trees Total. It's the straight, undivided count of trees cleared — the whole pile, not split among the crew. That's the difference from the existing Trees Cleared card: when you filter the dashboard down to a single member, Trees Cleared shows that person's fair share of each group effort, while Trees Total credits everyone on the report the full count. Org-wide, the two read the same. It's on by default — if you'd rather not see it, switch it off any time in Settings → Activity Dashboard.\n\nP.S. — If you haven't already, you might want to try out Sawyer Slice too — the effort metric that weights each tree by its size. Turn it on in Settings → Activity Dashboard. — KDG (v1.46.0)`,
   },
+  {
+    id: 12,
+    date: '2026-08-31',
+    content: `MAJOR LOGGER UPDATE — A batch of Data Logger improvements landed today, several straight from your field feedback:\n\n👥 PEOPLE (was "Hikers") — The counter now tracks what folks were doing, not just that you saw them. Pick an activity — Hike, Bpack, Bike, Hunt, Fish, or Stock — and the Seen/Contacted taps apply to that category. Small tallies below keep a running breakdown, and the emailed report now splits People out by activity.\n\n🐕 DOGS — A new card with two quick taps: On Leash and Off Leash. Logged, mapped, and rolled into the report like everything else.\n\n⚡ FASTER TAPS — Several of you noticed the counters could lag a beat or two before ticking up. Fixed — taps register instantly now by reusing the live GPS fix instead of waiting on a fresh read.\n\n↩️ DEEPER UNDO — Undo now remembers your last three entries, not just one, and tucks itself away when there's nothing left to undo.\n\n🧭 LAYOUT — The Distance Tracker now sits right under the Trail selector, with Notes & Photos just beneath it — the tools you reach for most are up top.\n\nGive it all a spin and Send Feedback! — KDG (v1.48.0)`,
+  },
 ]
 
 export type BlogPref =

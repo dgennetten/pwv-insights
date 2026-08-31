@@ -26,7 +26,7 @@ import { getStoredAuthToken } from '../services/authService'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
 import { trailPaths } from '../data/trailPaths'
 import { updateSessionWksite } from '../services/dataLoggerService'
-import type { LogEntry, LogSession, HikerSubtype, TreeSubtype, TreeSize, EntryType, Tracker, QueuedSend, QueuedSendSummary } from '../types/dataLogger'
+import type { LogEntry, LogSession, HikerSubtype, HikerActivity, DogSubtype, TreeSubtype, TreeSize, EntryType, Tracker, QueuedSend, QueuedSendSummary } from '../types/dataLogger'
 import { trackerDistanceM, haversineMeters } from '../lib/gpsDistance'
 import { distFromTrailheadM, nearestTrailInfo } from '../lib/trailheadDistance'
 import { getLoggerSettings } from '../lib/loggerSettings'
@@ -66,6 +66,17 @@ const VIOLATION_TYPES: string[] = [
   'Vandalism',
   'Wheeled Conveyance',
   'Other',
+]
+
+// Activity categories for the People counter. Default is 'hike'; legacy hiker
+// entries with no activity are treated as 'hike' when tallying.
+const HIKER_ACTIVITIES: { key: HikerActivity; label: string }[] = [
+  { key: 'hike',  label: 'Hike'  },
+  { key: 'bpack', label: 'Bpack' },
+  { key: 'bike',  label: 'Bike'  },
+  { key: 'hunt',  label: 'Hunt'  },
+  { key: 'fish',  label: 'Fish'  },
+  { key: 'stock', label: 'Stock' },
 ]
 
 const TREE_SIZES: { key: TreeSize; label: string; range: string }[] = [
@@ -150,6 +161,7 @@ function queueSummaryText(s: QueuedSendSummary): string {
   const parts = [
     s.photos     ? plural(s.photos, 'photo') : null,
     s.hikers     ? plural(s.hikers, 'hiker') : null,
+    s.dogs       ? plural(s.dogs, 'dog') : null,
     s.trees      ? plural(s.trees, 'tree') : null,
     s.notes      ? plural(s.notes, 'note') : null,
     s.violations ? plural(s.violations, 'violation') : null,
@@ -226,11 +238,14 @@ export function DataLoggerPage() {
   const showMaintUI = loggerProfile === 'patrol'
   const [session,       setSession]       = useState<LogSession | null>(null)
   const [entries,       setEntries]       = useState<LogEntry[]>([])
+  const [hikerActivity,   setHikerActivity]   = useState<HikerActivity>('hike')
   const [treeMode,        setTreeMode]        = useState<TreeSubtype>('cleared')
   const [noteText,        setNoteText]        = useState('')
   const [violationType,   setViolationType]   = useState('')
   const [violationNote,   setViolationNote]   = useState('')
-  const [lastAction,      setLastAction]      = useState<number[] | null>(null)
+  // Undo buffer: each entry is one logged action's entry ids (a "contacted" tap
+  // logs two). Holds up to the last three actions; Undo pops the most recent.
+  const [undoStack,       setUndoStack]       = useState<number[][]>([])
   const [sending,          setSending]          = useState(false)
   const [sentOk,           setSentOk]           = useState(false)
   const [sendError,        setSendError]        = useState<string | null>(null)
@@ -247,6 +262,9 @@ export function DataLoggerPage() {
   const [pendingWksite,     setPendingWksite]     = useState<number | null | undefined>(undefined)
   const [switchingTrail,    setSwitchingTrail]    = useState(false)
   const processingQueueRef = useRef(false)
+  // Most recent GPS fix from the live watch, so logging a count can stamp
+  // coordinates instantly instead of blocking on a fresh getCurrentPosition.
+  const lastPosRef = useRef<{ lat: number; lng: number; ts: number } | null>(null)
   const [gpsStatus,     setGpsStatus]     = useState<'ok' | 'denied' | 'unavailable'>('ok')
   const [loading,           setLoading]           = useState(true)
   const [confirmClear,      setConfirmClear]      = useState(false)
@@ -315,6 +333,7 @@ export function DataLoggerPage() {
   // flagged with "*". `null` means the tracker's GPS watch stopped → light goes gray.
   const handleLoggerPosition = useCallback((p: { lat: number; lng: number; ts: number; accuracy?: number } | null) => {
     if (p === null) { setOnTrailLight('gray'); return }
+    lastPosRef.current = { lat: p.lat, lng: p.lng, ts: Date.now() }
     const wks  = session?.wksiteId
     const th   = wks != null ? trailGeoData[wks] : null
     const segs = wks != null ? (trailPaths[wks] ?? []) : []
@@ -355,6 +374,20 @@ export function DataLoggerPage() {
     )
     return () => navigator.geolocation.clearWatch(id)
   }, [session?.wksiteId, isTracking, handleLoggerPosition])
+
+  // With no trail selected and not tracking, neither watch above runs. Keep a
+  // lightweight watch going in that case too, so lastPosRef stays fresh and
+  // taps still register instantly (e.g. before a trail is picked, or 'other'
+  // profile). Only one GPS watch is ever active across these three effects.
+  useEffect(() => {
+    if (session?.wksiteId != null || isTracking || !navigator.geolocation) return
+    const id = navigator.geolocation.watchPosition(
+      pos => { lastPosRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() } },
+      () => { /* keep last reading */ },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+    )
+    return () => navigator.geolocation.clearWatch(id)
+  }, [session?.wksiteId, isTracking])
 
   const refreshEntries = useCallback(async (sessionId: string) => {
     setEntries(await getSessionEntries(sessionId))
@@ -438,14 +471,21 @@ export function DataLoggerPage() {
     setTrackerResetKey(k => k + 1)
     setSentOk(!!candidate.session.emailedAt)
     setSendError(null)
-    setLastAction(null)
+    setUndoStack([])
     setRecoveryCandidate(null)
   }, [])
 
   const capturePosition = useCallback(async (): Promise<{ lat: number; lng: number } | null> => {
+    // Prefer the live watch's most recent fix — this is what makes a tap register
+    // instantly. Fall back to a fresh read only when there's no recent cached fix.
+    const cached = lastPosRef.current
+    if (cached && Date.now() - cached.ts < 20000) {
+      return { lat: cached.lat, lng: cached.lng }
+    }
     const pos = await getPosition()
     if (!navigator.geolocation) { setGpsStatus('unavailable'); return null }
     if (!pos) setGpsStatus('denied')
+    else lastPosRef.current = { ...pos, ts: Date.now() }
     return pos
   }, [])
 
@@ -453,11 +493,12 @@ export function DataLoggerPage() {
     if (!session) return
     const pos = await capturePosition()
     const base = {
-      sessionId: session.id,
-      timestamp: Date.now(),
-      lat:       pos?.lat ?? null,
-      lng:       pos?.lng ?? null,
-      type:      'hiker' as const,
+      sessionId:     session.id,
+      timestamp:     Date.now(),
+      lat:           pos?.lat ?? null,
+      lng:           pos?.lng ?? null,
+      type:          'hiker' as const,
+      hikerActivity: hikerActivity,
     }
     const id1 = await addEntry({ ...base, hikerSubtype: subtype })
     const ids = [id1]
@@ -465,23 +506,39 @@ export function DataLoggerPage() {
       const id2 = await addEntry({ ...base, hikerSubtype: 'seen' })
       ids.push(id2)
     }
-    setLastAction(ids)
+    setUndoStack(s => [...s, ids].slice(-3))
     await refreshEntries(session.id)
-  }, [session, capturePosition, refreshEntries])
+  }, [session, hikerActivity, capturePosition, refreshEntries])
 
   // Logs contacted only — for a hiker already counted as seen
   const logHikerContactOnly = useCallback(async () => {
     if (!session) return
     const pos = await capturePosition()
     const id = await addEntry({
-      sessionId:    session.id,
-      timestamp:    Date.now(),
-      lat:          pos?.lat ?? null,
-      lng:          pos?.lng ?? null,
-      type:         'hiker' as const,
-      hikerSubtype: 'contacted',
+      sessionId:     session.id,
+      timestamp:     Date.now(),
+      lat:           pos?.lat ?? null,
+      lng:           pos?.lng ?? null,
+      type:          'hiker' as const,
+      hikerSubtype:  'contacted',
+      hikerActivity: hikerActivity,
     })
-    setLastAction([id])
+    setUndoStack(s => [...s, [id]].slice(-3))
+    await refreshEntries(session.id)
+  }, [session, hikerActivity, capturePosition, refreshEntries])
+
+  const logDog = useCallback(async (subtype: DogSubtype) => {
+    if (!session) return
+    const pos = await capturePosition()
+    const id = await addEntry({
+      sessionId:  session.id,
+      timestamp:  Date.now(),
+      lat:        pos?.lat ?? null,
+      lng:        pos?.lng ?? null,
+      type:       'dog',
+      dogSubtype: subtype,
+    })
+    setUndoStack(s => [...s, [id]].slice(-3))
     await refreshEntries(session.id)
   }, [session, capturePosition, refreshEntries])
 
@@ -497,7 +554,7 @@ export function DataLoggerPage() {
       treeSubtype: treeMode,
       treeSize:    size,
     })
-    setLastAction([id])
+    setUndoStack(s => [...s, [id]].slice(-3))
     await refreshEntries(session.id)
   }, [session, treeMode, capturePosition, refreshEntries])
 
@@ -513,7 +570,7 @@ export function DataLoggerPage() {
       noteText:  noteText.trim(),
     })
     setNoteText('')
-    setLastAction([id])
+    setUndoStack(s => [...s, [id]].slice(-3))
     await refreshEntries(session.id)
   }, [session, noteText, capturePosition, refreshEntries])
 
@@ -537,7 +594,7 @@ export function DataLoggerPage() {
         photoData,
       })
       setNoteText('')
-      setLastAction([id])
+      setUndoStack(s => [...s, [id]].slice(-3))
       await refreshEntries(session.id)
     } catch (e) {
       setSendError(e instanceof Error ? `Photo capture failed: ${e.message}` : 'Photo capture failed')
@@ -560,16 +617,17 @@ export function DataLoggerPage() {
     })
     setViolationType('')
     setViolationNote('')
-    setLastAction([id])
+    setUndoStack(s => [...s, [id]].slice(-3))
     await refreshEntries(session.id)
   }, [session, violationType, violationNote, capturePosition, refreshEntries])
 
   const handleUndo = useCallback(async () => {
-    if (!session || !lastAction) return
-    for (const id of lastAction) await deleteEntry(id)
-    setLastAction(null)
+    if (!session || undoStack.length === 0) return
+    const last = undoStack[undoStack.length - 1]
+    for (const id of last) await deleteEntry(id)
+    setUndoStack(s => s.slice(0, -1))
     await refreshEntries(session.id)
-  }, [session, lastAction, refreshEntries])
+  }, [session, undoStack, refreshEntries])
 
   // Upload any not-yet-uploaded photos individually so the report POST stays
   // small (14 base64 photos in one request overflow PHP's post_max_size).
@@ -654,7 +712,7 @@ export function DataLoggerPage() {
     setTrackers([])
     setSentOk(false)
     setSendError(null)
-    setLastAction(null)
+    setUndoStack([])
     setTrackerResetKey(k => k + 1)
     // Open the new log with a trail event so its report has trail context
     // from the first entry, matching what handleWksiteChange records.
@@ -784,6 +842,7 @@ export function DataLoggerPage() {
         payload:  buildReportPayload(fresh),
         summary: {
           hikers:     fresh.filter(e => e.type === 'hiker').length,
+          dogs:       fresh.filter(e => e.type === 'dog').length,
           trees:      fresh.filter(e => e.type === 'tree').length,
           photos:     fresh.filter(e => e.type === 'photo').length,
           notes:      fresh.filter(e => e.type === 'note').length,
@@ -920,16 +979,30 @@ export function DataLoggerPage() {
     setSentOk(false)
     setSendError(null)
     setConfirmClear(false)
-    setLastAction(null)
+    setUndoStack([])
     setTrackerResetKey(k => k + 1)
   }, [session])
 
-  // Computed aggregates
+  // Computed aggregates — per-activity seen/contacted tallies. Legacy hiker
+  // entries with no activity are counted under 'hike'.
   const hikerCounts = useMemo(() => {
-    const counts = { seen: 0, contacted: 0 }
+    const init = () => ({ seen: 0, contacted: 0 })
+    const counts: Record<HikerActivity, { seen: number; contacted: number }> = {
+      hike: init(), bpack: init(), bike: init(), hunt: init(), fish: init(), stock: init(),
+    }
     entries.filter(e => e.type === 'hiker').forEach(e => {
-      if (e.hikerSubtype === 'seen') counts.seen++
-      else if (e.hikerSubtype === 'contacted') counts.contacted++
+      const act = e.hikerActivity ?? 'hike'
+      if (e.hikerSubtype === 'seen') counts[act].seen++
+      else if (e.hikerSubtype === 'contacted') counts[act].contacted++
+    })
+    return counts
+  }, [entries])
+
+  const dogCounts = useMemo(() => {
+    const counts = { onLeash: 0, offLeash: 0 }
+    entries.filter(e => e.type === 'dog').forEach(e => {
+      if (e.dogSubtype === 'onLeash') counts.onLeash++
+      else if (e.dogSubtype === 'offLeash') counts.offLeash++
     })
     return counts
   }, [entries])
@@ -972,11 +1045,25 @@ export function DataLoggerPage() {
     )
   }
 
-  const hikerTotal = hikerCounts.seen
+  // Grand total = every person seen across all activities (a "contacted" tap
+  // also logs a "seen", so seen already includes those).
+  const hikerTotal = HIKER_ACTIVITIES.reduce((sum, a) => sum + hikerCounts[a.key].seen, 0)
+  // Breakdown counters stay compact: show four until more than four
+  // categories have counts, then reveal all six. The categories actually used
+  // are always shown; empty slots are filled biased toward hike → bpack → hunt → fish.
+  const hikerBreakdown = (() => {
+    const used = HIKER_ACTIVITIES.filter(a => hikerCounts[a.key].seen > 0 || hikerCounts[a.key].contacted > 0)
+    if (used.length > 4) return HIKER_ACTIVITIES
+    const padPriority: HikerActivity[] = ['hike', 'bpack', 'hunt', 'fish', 'bike', 'stock']
+    const chosen = new Set(used.map(a => a.key))
+    for (const k of padPriority) { if (chosen.size >= 4) break; chosen.add(k) }
+    return HIKER_ACTIVITIES.filter(a => chosen.has(a.key))
+  })()
   const treeTotal  = TREE_SIZES.reduce(
     (sum, s) => sum + treeCounts.cleared[s.key] + treeCounts.noted[s.key], 0
   )
-  const hasData = hikerTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0 || photoEntries.length > 0
+  const dogTotal   = dogCounts.onLeash + dogCounts.offLeash
+  const hasData = hikerTotal > 0 || dogTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0 || photoEntries.length > 0
   const reportEmail = user?.email?.trim() ?? ''
   const currentSessionQueued = sendQueue.some(q => q.sessionId === session?.id && q.status !== 'sent')
 
@@ -1001,14 +1088,15 @@ export function DataLoggerPage() {
               aria-hidden
             />
           )}
-          {lastAction && !sentOk && (
+          {undoStack.length > 0 && !sentOk && (
             <button
               type="button"
               onClick={() => void handleUndo()}
+              title={`Undo last entry (${undoStack.length} available)`}
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
             >
               <Undo2 className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
-              Undo Last Entry
+              Undo
             </button>
           )}
         </div>
@@ -1173,16 +1261,134 @@ export function DataLoggerPage() {
           )}
         </div>
       )}
+      </>
+      )}
 
-      {/* ── HIKER COUNTER ───────────────────────────────── */}
+      {/* ── DISTANCE TRACKER ────────────────────────────── */}
+      <DistanceTracker
+        key={trackerResetKey}
+        sessionId={session?.id ?? null}
+        trailheadCoords={trailheadCoords ?? undefined}
+        wksiteId={session?.wksiteId}
+        onTrackersChange={setTrackers}
+        onPosition={handleLoggerPosition}
+      />
+
+      {/* ── NOTES ───────────────────────────────────────── */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+          Notes &amp; Photos
+        </span>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={noteText}
+            onChange={e => setNoteText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') void logNote() }}
+            placeholder="Observation…"
+            className="flex-1 min-w-0 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
+          />
+          <label
+            title="Take a photo — the note text becomes its caption"
+            className={`shrink-0 flex items-center justify-center px-3 py-2 rounded-lg border transition-colors ${
+              capturingPhoto
+                ? 'bg-stone-100 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-400 cursor-wait'
+                : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 cursor-pointer'
+            }`}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              disabled={capturingPhoto}
+              onChange={e => {
+                const f = e.target.files?.[0]
+                if (f) void logPhoto(f)
+                e.target.value = ''
+              }}
+            />
+            <Camera className="w-4 h-4" strokeWidth={2} aria-hidden />
+          </label>
+          <button
+            onClick={() => void logNote()}
+            disabled={!noteText.trim()}
+            className="shrink-0 px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-200 transition-colors"
+          >
+            Add
+          </button>
+        </div>
+        {notePhotoEntries.length > 0 && (
+          <div className="space-y-1.5">
+            {(showAllNotes ? notePhotoEntries : notePhotoEntries.slice(0, 2)).map(e => {
+              const src = e.type === 'photo' ? (e.photoData ?? e.photoUrl) : null
+              return (
+                <div
+                  key={e.id}
+                  className="flex items-start gap-2 text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
+                >
+                  {src && (
+                    <button
+                      onClick={() => setViewPhoto(src)}
+                      title={e.noteText || 'Photo'}
+                      className="shrink-0 w-12 h-12 rounded-md overflow-hidden border border-stone-200 dark:border-stone-700 hover:border-emerald-400 transition-colors"
+                    >
+                      <img src={src} alt={e.noteText || 'Photo'} className="w-full h-full object-cover" />
+                    </button>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="break-words">{e.noteText || (e.type === 'photo' ? 'Photo' : '')}</div>
+                    <div className="text-stone-400 dark:text-stone-500 mt-0.5">
+                      {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            {notePhotoEntries.length > 2 && (
+              <button
+                onClick={() => setShowAllNotes(p => !p)}
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
+              >
+                {showAllNotes ? 'Show less' : `Show ${notePhotoEntries.length - 2} more`}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {showMaintUI && (
+      <>
+      {/* ── PEOPLE COUNTER ──────────────────────────────── */}
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-            Hikers
+            People
           </span>
-          <span className="text-xs text-stone-400 dark:text-stone-500">
+          <span className="text-xs text-stone-400 dark:text-stone-500 shrink-0">
             Total: <strong className="text-stone-700 dark:text-stone-300">{hikerTotal}</strong>
           </span>
+        </div>
+
+        {/* Activity selector — Seen/Contacted below apply to the active one */}
+        <div className="grid grid-cols-6 gap-1">
+          {HIKER_ACTIVITIES.map(({ key, label }) => {
+            const active = key === hikerActivity
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setHikerActivity(key)}
+                className={`py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  active
+                    ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
+                    : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
+                }`}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
 
         <div className="flex items-stretch gap-2">
@@ -1192,7 +1398,7 @@ export function DataLoggerPage() {
             className="flex-1 flex flex-col items-center py-3 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
           >
             <span className="text-5xl font-bold tabular-nums text-stone-800 dark:text-stone-100">
-              {hikerCounts.seen}
+              {hikerCounts[hikerActivity].seen}
             </span>
             <div className="mt-1 text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500">Tap to log</div>
             <div className="text-sm font-medium capitalize text-stone-600 dark:text-stone-400">Seen</div>
@@ -1217,11 +1423,68 @@ export function DataLoggerPage() {
             className="flex-1 flex flex-col items-center py-3 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
           >
             <span className="text-5xl font-bold tabular-nums text-stone-800 dark:text-stone-100">
-              {hikerCounts.contacted}
+              {hikerCounts[hikerActivity].contacted}
             </span>
             <div className="mt-1 text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500">Tap to log</div>
             <div className="text-sm font-medium capitalize text-stone-600 dark:text-stone-400">Contacted</div>
           </button>
+        </div>
+
+        {/* Per-activity breakdown (Seen / Contacted); the active one is highlighted */}
+        <div className="grid grid-cols-4 gap-2">
+          {hikerBreakdown.map(({ key, label }) => {
+            const c = hikerCounts[key]
+            const active = key === hikerActivity
+            return (
+              <div
+                key={key}
+                className={`rounded-lg px-2.5 py-2 ${
+                  active
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-300 dark:ring-emerald-700'
+                    : 'bg-stone-50 dark:bg-stone-800/50'
+                }`}
+              >
+                <div className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-0.5">{label}</div>
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                  <span className="text-xs text-stone-500 dark:text-stone-400">
+                    S: <strong className="text-stone-700 dark:text-stone-300">{c.seen}</strong>
+                  </span>
+                  <span className="text-xs text-stone-500 dark:text-stone-400">
+                    C: <strong className="text-stone-700 dark:text-stone-300">{c.contacted}</strong>
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── DOG COUNTER ─────────────────────────────────── */}
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+            Dogs
+          </span>
+          <span className="text-xs text-stone-400 dark:text-stone-500">
+            Total: <strong className="text-stone-700 dark:text-stone-300">{dogTotal}</strong>
+          </span>
+        </div>
+        <div className="flex items-stretch gap-2">
+          {([
+            { key: 'onLeash',  label: 'On Leash'  },
+            { key: 'offLeash', label: 'Off Leash' },
+          ] as { key: DogSubtype; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => void logDog(key)}
+              className="flex-1 flex items-center justify-center gap-2.5 py-2.5 bg-stone-50 dark:bg-stone-800/50 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 active:scale-[0.98] transition-all select-none"
+            >
+              <span className="text-3xl font-bold tabular-nums text-stone-800 dark:text-stone-100 leading-none">
+                {dogCounts[key]}
+              </span>
+              <span className="text-sm font-medium text-stone-600 dark:text-stone-400">{label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -1335,99 +1598,6 @@ export function DataLoggerPage() {
       </div>
       </>
       )}
-
-      {/* ── DISTANCE TRACKER ────────────────────────────── */}
-      <DistanceTracker
-        key={trackerResetKey}
-        sessionId={session?.id ?? null}
-        trailheadCoords={trailheadCoords ?? undefined}
-        wksiteId={session?.wksiteId}
-        onTrackersChange={setTrackers}
-        onPosition={handleLoggerPosition}
-      />
-
-      {/* ── NOTES ───────────────────────────────────────── */}
-      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 space-y-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-          Notes &amp; Photos
-        </span>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={noteText}
-            onChange={e => setNoteText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') void logNote() }}
-            placeholder="Observation…"
-            className="flex-1 min-w-0 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder:text-stone-400 outline-none focus:border-emerald-400 transition-colors"
-          />
-          <label
-            title="Take a photo — the note text becomes its caption"
-            className={`shrink-0 flex items-center justify-center px-3 py-2 rounded-lg border transition-colors ${
-              capturingPhoto
-                ? 'bg-stone-100 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-400 cursor-wait'
-                : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 cursor-pointer'
-            }`}
-          >
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              disabled={capturingPhoto}
-              onChange={e => {
-                const f = e.target.files?.[0]
-                if (f) void logPhoto(f)
-                e.target.value = ''
-              }}
-            />
-            <Camera className="w-4 h-4" strokeWidth={2} aria-hidden />
-          </label>
-          <button
-            onClick={() => void logNote()}
-            disabled={!noteText.trim()}
-            className="shrink-0 px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-medium rounded-lg disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-200 transition-colors"
-          >
-            Add
-          </button>
-        </div>
-        {notePhotoEntries.length > 0 && (
-          <div className="space-y-1.5">
-            {(showAllNotes ? notePhotoEntries : notePhotoEntries.slice(0, 2)).map(e => {
-              const src = e.type === 'photo' ? (e.photoData ?? e.photoUrl) : null
-              return (
-                <div
-                  key={e.id}
-                  className="flex items-start gap-2 text-xs text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2"
-                >
-                  {src && (
-                    <button
-                      onClick={() => setViewPhoto(src)}
-                      title={e.noteText || 'Photo'}
-                      className="shrink-0 w-12 h-12 rounded-md overflow-hidden border border-stone-200 dark:border-stone-700 hover:border-emerald-400 transition-colors"
-                    >
-                      <img src={src} alt={e.noteText || 'Photo'} className="w-full h-full object-cover" />
-                    </button>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="break-words">{e.noteText || (e.type === 'photo' ? 'Photo' : '')}</div>
-                    <div className="text-stone-400 dark:text-stone-500 mt-0.5">
-                      {fmtTime(e.timestamp)} · {fmtCoords(e.lat, e.lng)}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-            {notePhotoEntries.length > 2 && (
-              <button
-                onClick={() => setShowAllNotes(p => !p)}
-                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 underline underline-offset-2 transition-colors"
-              >
-                {showAllNotes ? 'Show less' : `Show ${notePhotoEntries.length - 2} more`}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* ── EMAIL REPORT ────────────────────────────────── */}
       <div className="space-y-2 pb-2">
