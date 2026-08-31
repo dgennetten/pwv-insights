@@ -229,7 +229,6 @@ $fmtRow = function (array $row) use ($sizeLabels): string {
 };
 
 $hikerTotal = $hikerSeen;  // seen already includes auto-increments from contacted taps
-$startTime  = $sessionStart ? date('g:i A', intdiv($sessionStart, 1000)) : 'n/a';
 $sentTime   = date('g:i A');
 
 // Header trail line: sequence of trail selections, or the session's final trail
@@ -243,7 +242,7 @@ if (empty($trailNamesSeq) && $trailName !== '') $trailNamesSeq = [$trailName];
 $div = str_repeat('-', 22);
 
 $lines = [
-  'PWV Trail Patrol - Data Logger Report',
+  $isOther ? 'PWV Data Logger Report' : 'PWV Trail Patrol - Data Logger Report',
   "Member:  {$memberName}",
   "Date:    {$reportDate}",
 ];
@@ -335,6 +334,12 @@ $fmtPace = function (float $distM, int $durationMs): string {
   return "{$m}:" . str_pad((string)$s, 2, '0', STR_PAD_LEFT) . ' min/mi';
 };
 
+$fmtSpeed = function (float $distM, int $durationMs): string {
+  if ($durationMs <= 0 || $distM <= 0) return 'n/a';
+  $mph = ($distM / 1609.344) / ($durationMs / 1000 / 3600);
+  return number_format($mph, 1) . ' mph';
+};
+
 if (!empty($trackers)) {
   $lines[] = '';
   $lines[] = $div;
@@ -347,11 +352,11 @@ if (!empty($trackers)) {
     $tName = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
     $tDist = trailLogTrackerDistanceM($tr);
     $tDur  = (int)  ($tr['activeDurationMs'] ?? 0);
-    $lines[] = sprintf('  %-20s  %s, %s, %s', $tName . ':', $fmtMi($tDist), $fmtDur($tDur), $fmtPace($tDist, $tDur));
+    $lines[] = sprintf('  %-20s  %s, %s, %s, %s', $tName . ':', $fmtMi($tDist), $fmtDur($tDur), $fmtPace($tDist, $tDur), $fmtSpeed($tDist, $tDur));
   }
   if (count($trackers) > 1) {
     $lines[] = '  ' . str_repeat('-', 18);
-    $lines[] = sprintf('  %-20s  %s, %s, %s', 'Total:', $fmtMi($totalTrackerM), $fmtDur($totalTrackerMs), $fmtPace($totalTrackerM, $totalTrackerMs));
+    $lines[] = sprintf('  %-20s  %s, %s, %s, %s', 'Total:', $fmtMi($totalTrackerM), $fmtDur($totalTrackerMs), $fmtPace($totalTrackerM, $totalTrackerMs), $fmtSpeed($totalTrackerM, $totalTrackerMs));
   }
 }
 
@@ -376,7 +381,7 @@ if ($includeLocations && !empty($trackers)) {
     $lines[] = '';
     $lines[] = $div;
     $lines[] = "TRACKER: {$tName}";
-    $lines[] = "  Distance:  {$fmtMi($tDist)}    Duration: {$fmtDur($tDur)}    Pace: {$fmtPace($tDist, $tDur)}";
+    $lines[] = "  Distance:  {$fmtMi($tDist)}    Duration: {$fmtDur($tDur)}    Pace: {$fmtPace($tDist, $tDur)}    Speed: {$fmtSpeed($tDist, $tDur)}";
     $lines[] = "  Started:   {$tStart}   (" . count($segments) . ' segment' . (count($segments) !== 1 ? 's' : '') . ')';
     $prev_end = null;
     foreach ($segments as $si => $seg) {
@@ -500,10 +505,32 @@ if (!empty($photoLinks)) {
 
 $lines[] = '';
 $lines[] = $div;
-$lines[] = "Session started: {$startTime}";
+// Session start: earliest logged entry, falling back to the earliest tracker
+// start — sports/"other" sessions often carry trackers but no tapped entries,
+// which otherwise left a bare "Session started: n/a".
+$sessionStartMs = $sessionStart;
+if ($sessionStartMs === null) {
+  foreach ($trackers as $tr) {
+    if (!is_array($tr)) continue;
+    $cands = [$tr['startedAt'] ?? null];
+    foreach ((is_array($tr['segments'] ?? null) ? $tr['segments'] : []) as $seg) {
+      if (is_array($seg)) $cands[] = $seg['startAt'] ?? null;
+    }
+    foreach ($cands as $c) {
+      if ($c === null) continue;
+      $c = (int) $c;
+      if ($c > 0 && ($sessionStartMs === null || $c < $sessionStartMs)) $sessionStartMs = $c;
+    }
+  }
+}
+if ($sessionStartMs !== null) {
+  $lines[] = 'Session started: ' . date('g:i A', intdiv($sessionStartMs, 1000));
+}
 $lines[] = "Report sent:     {$sentTime}";
-$lines[] = '';
-$lines[] = "\u{2014} KDG" . ($appVersion !== '' ? " (v{$appVersion})" : '');
+if ($appVersion !== '') {
+  $lines[] = '';
+  $lines[] = "v{$appVersion}";
+}
 
 // Name the trail in the subject so each per-trail report is distinct in the
 // inbox — without it, same-day reports share one subject and Gmail threads
@@ -550,9 +577,10 @@ if (is_dir($dataLoggerDir)) {
 }
 
 // ── Prepend prominent map link to email body ──────────────────────
+$mapLabel  = $isOther ? 'VIEW INTERACTIVE MAP REPORT' : 'VIEW INTERACTIVE TRAIL MAP REPORT';
 $linkBlock =
   "{$div}\n" .
-  "  VIEW INTERACTIVE TRAIL MAP REPORT\n\n" .
+  "  {$mapLabel}\n\n" .
   "  {$spaUrl}\n\n" .
   "{$div}\n\n\n";
 
