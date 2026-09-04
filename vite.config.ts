@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => {
           short_name: "PWV Insights",
           description:
             "Poudre Wilderness Volunteers analytics and patrol data logger",
-          start_url: "/data-logger",
+          start_url: "/dashboard",
           scope: "/",
           display: "standalone",
           background_color: "#fafaf9",
