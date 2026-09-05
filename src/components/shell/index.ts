@@ -1,5 +1,6 @@
 export { AppShell } from './AppShell'
 export { MainNav } from './MainNav'
 export { UserMenu } from './UserMenu'
+export { WalkingBoots } from './WalkingBoots'
 export type { AppShellProps } from './AppShell'
 export type { NavItem } from './MainNav'

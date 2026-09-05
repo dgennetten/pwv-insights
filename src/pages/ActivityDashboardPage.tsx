@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { ActivityDashboard } from '../components/activity-dashboard/ActivityDashboard'
 import { roundTreesClearedForScope } from '../components/activity-dashboard/formatTreesCleared'
+import { WalkingBoots } from '../components/shell'
 import { getStoredAuthToken } from '../services/authService'
 import { fetchUserPreferences, getLocalPreferences } from '../services/settingsService'
 import { DEFAULT_PREFERENCES, type UserPreferences } from '../types/settings'
@@ -254,8 +255,9 @@ export function ActivityDashboardPage() {
 
   if (loading && !data) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-sm text-stone-400 dark:text-stone-500 animate-pulse">Loading dashboard…</div>
+      <div className="flex flex-col items-center justify-center gap-3 min-h-[60vh]">
+        <WalkingBoots size={30} label="Loading dashboard" className="text-emerald-600 dark:text-emerald-400" />
+        <div className="text-sm text-stone-400 dark:text-stone-500">Loading dashboard…</div>
       </div>
     )
   }
@@ -273,7 +275,13 @@ export function ActivityDashboardPage() {
   return (
     <div className="relative">
       {loading && (
-        <div className="absolute inset-x-0 top-0 h-0.5 bg-emerald-500 animate-pulse z-20" />
+        <>
+          <div className="absolute inset-x-0 top-0 h-0.5 bg-emerald-500 animate-pulse z-20" />
+          <div className="pointer-events-none fixed left-1/2 -translate-x-1/2 top-3 z-30 flex items-center gap-2 rounded-full border border-stone-200/70 bg-white/90 px-3 py-1.5 shadow-lg backdrop-blur dark:border-stone-700/70 dark:bg-stone-800/90">
+            <WalkingBoots size={20} label="Updating dashboard" className="text-emerald-600 dark:text-emerald-400" />
+            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Updating…</span>
+          </div>
+        </>
       )}
       <ActivityDashboard
         scope={scope}
