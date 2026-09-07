@@ -288,8 +288,8 @@ export function SettingsPage() {
                       <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Every</span>
                       <input
                         type="number"
-                        min={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
-                        step={loggerSettings.waypointMode === 'distance' ? 0.05 : 1}
+                        min={loggerSettings.waypointMode === 'distance' ? 0.025 : 1}
+                        step={loggerSettings.waypointMode === 'distance' ? 0.025 : 1}
                         value={loggerSettings.waypointMode === 'distance'
                           ? loggerSettings.waypointDistanceMi
                           : loggerSettings.waypointTimeMin}
@@ -308,6 +308,32 @@ export function SettingsPage() {
                       <span className="text-xs text-stone-400 dark:text-stone-500">
                         {loggerSettings.waypointMode === 'distance' ? 'mi' : 'min'}
                       </span>
+                      <div className="flex items-center gap-3 pl-1">
+                        {(loggerSettings.waypointMode === 'distance'
+                          ? ([{ v: 1, label: '1.0' }, { v: 0.25, label: '0.25' }, { v: 0.025, label: '0.025' }] as const)
+                          : ([{ v: 1, label: '1.0' }, { v: 5, label: '5.0' }, { v: 10, label: '10.0' }] as const)
+                        ).map(preset => {
+                          const current = loggerSettings.waypointMode === 'distance'
+                            ? loggerSettings.waypointDistanceMi
+                            : loggerSettings.waypointTimeMin
+                          return (
+                            <label key={preset.label} className="flex items-center gap-1 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name={`waypoint-${loggerSettings.waypointMode}-preset`}
+                                checked={Math.abs(current - preset.v) < 1e-9}
+                                onChange={() => updateLoggerSettings(
+                                  loggerSettings.waypointMode === 'distance'
+                                    ? { waypointDistanceMi: preset.v }
+                                    : { waypointTimeMin: preset.v }
+                                )}
+                                className="w-3.5 h-3.5 cursor-pointer accent-emerald-600 dark:accent-emerald-500"
+                              />
+                              <span className="text-xs text-stone-500 dark:text-stone-400">{preset.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
                     </div>
                     <PrefRow
                       label="Short vibration & beep at each Auto-Waypoint"
