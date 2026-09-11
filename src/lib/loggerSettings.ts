@@ -2,6 +2,11 @@ export interface LoggerSettings {
   // What the logger is configured for. 'patrol' shows the full trail
   // maintenance/patrol UI; 'other' hides Tree and Violation logging.
   profile: 'patrol' | 'other'
+  // How switching the Trail dropdown mid-session is handled (patrol only).
+  // 'separate' closes out the current trail as its own report and starts a
+  // fresh one on the next trail. 'combined' keeps one report, tallying each
+  // trail as its own delineated section within it.
+  multiTrailReport: 'separate' | 'combined'
   waypointsEnabled: boolean
   waypointMode: 'distance' | 'time'
   waypointDistanceMi: number
@@ -20,6 +25,7 @@ const STORAGE_KEY = 'pwv_logger_settings'
 
 const DEFAULTS: LoggerSettings = {
   profile: 'patrol',
+  multiTrailReport: 'separate',
   waypointsEnabled: true,
   waypointMode: 'distance',
   waypointDistanceMi: 0.1,

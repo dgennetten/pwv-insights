@@ -224,6 +224,48 @@ function clearExtentStats(sessionId: string): void {
   } catch { /* ignore */ }
 }
 
+// Pure tallies over a slice of entries — reused for both the current-trail
+// section (Combined mode resets the cards per trail) and the all-trails total.
+function tallyHikers(entries: LogEntry[]): Record<HikerActivity, { seen: number; contacted: number }> {
+  const init = () => ({ seen: 0, contacted: 0 })
+  const counts: Record<HikerActivity, { seen: number; contacted: number }> = {
+    hike: init(), bpack: init(), bike: init(), hunt: init(), fish: init(), stock: init(),
+  }
+  for (const e of entries) {
+    if (e.type !== 'hiker') continue
+    const act = e.hikerActivity ?? 'hike'
+    if (e.hikerSubtype === 'seen') counts[act].seen++
+    else if (e.hikerSubtype === 'contacted') counts[act].contacted++
+  }
+  return counts
+}
+
+function tallyDogs(entries: LogEntry[]): { onLeash: number; offLeash: number } {
+  const counts = { onLeash: 0, offLeash: 0 }
+  for (const e of entries) {
+    if (e.type !== 'dog') continue
+    if (e.dogSubtype === 'onLeash') counts.onLeash++
+    else if (e.dogSubtype === 'offLeash') counts.offLeash++
+  }
+  return counts
+}
+
+function tallyTrees(entries: LogEntry[]): Record<TreeSubtype, Record<TreeSize, number>> {
+  const init = (): Record<TreeSize, number> => ({ small: 0, medium: 0, large: 0, xl: 0 })
+  const counts: Record<TreeSubtype, Record<TreeSize, number>> = { cleared: init(), noted: init() }
+  for (const e of entries) {
+    if (e.type !== 'tree') continue
+    if (e.treeSubtype && e.treeSize) counts[e.treeSubtype][e.treeSize]++
+  }
+  return counts
+}
+
+const hikerSeenTotal = (c: Record<HikerActivity, { seen: number; contacted: number }>): number =>
+  c.hike.seen + c.bpack.seen + c.bike.seen + c.hunt.seen + c.fish.seen + c.stock.seen
+const treeGrandTotal = (c: Record<TreeSubtype, Record<TreeSize, number>>): number =>
+  c.cleared.small + c.cleared.medium + c.cleared.large + c.cleared.xl +
+  c.noted.small + c.noted.medium + c.noted.large + c.noted.xl
+
 type OnTrailLight = 'green' | 'red' | 'gray'
 
 export function DataLoggerPage() {
@@ -236,6 +278,9 @@ export function DataLoggerPage() {
   // 'patrol' shows the full trail-maintenance UI; 'other' hides Tree & Violation.
   const [loggerProfile] = useState(() => getLoggerSettings().profile)
   const showMaintUI = loggerProfile === 'patrol'
+  // 'combined' keeps one report across trail changes, delineating each trail as
+  // its own section; 'separate' closes out each trail as its own report.
+  const [multiTrailReport] = useState(() => getLoggerSettings().multiTrailReport)
   const [session,       setSession]       = useState<LogSession | null>(null)
   const [entries,       setEntries]       = useState<LogEntry[]>([])
   const [hikerActivity,   setHikerActivity]   = useState<HikerActivity>('hike')
@@ -927,19 +972,21 @@ export function DataLoggerPage() {
   }, [refreshQueue])
 
   // ── Trail switching ───────────────────────────────────────────────
-  // Each trail gets its own report, so leaving a trail with results on it
-  // closes out that report first. Only prompt when there is something to
-  // lose: results logged, and an actual trail to attribute them to.
+  // In 'separate' mode each trail gets its own report, so leaving a trail with
+  // results on it closes out that report first. Only prompt when there is
+  // something to lose: results logged, and an actual trail to attribute them to.
+  // In 'combined' mode the report spans every trail, so a change is just a
+  // trail-change event — the report delineates each trail as its own section.
   const handleTrailSelect = useCallback((nextWksiteId: number | null) => {
     const current = session?.wksiteId ?? null
     if (nextWksiteId === current) return
     const hasResults = entries.some(e => e.type !== 'trail')
-    if (!session || !hasResults || current == null) {
+    if (!session || !hasResults || current == null || multiTrailReport === 'combined') {
       void handleWksiteChange(nextWksiteId)
       return
     }
     setPendingWksite(nextWksiteId)
-  }, [session, entries, handleWksiteChange])
+  }, [session, entries, handleWksiteChange, multiTrailReport])
 
   const confirmTrailSwitch = useCallback(async () => {
     if (pendingWksite === undefined) return
@@ -983,38 +1030,37 @@ export function DataLoggerPage() {
     setTrackerResetKey(k => k + 1)
   }, [session])
 
+  // In Combined mode a single report spans several trails. The counter cards
+  // show only the *current* trail's section — resetting to zero on each trail
+  // change — while a small "All trails" line keeps the running grand total.
+  // The section boundary is the most recent trail-change event; only meaningful
+  // once a switch has actually happened (≥2 trail events), so before that the
+  // cards behave exactly as in Separate mode.
+  const trailEventCount = useMemo(
+    () => entries.reduce((n, e) => n + (e.type === 'trail' ? 1 : 0), 0),
+    [entries],
+  )
+  const lastTrailEventTs = useMemo(() => {
+    let ts = -Infinity
+    for (const e of entries) if (e.type === 'trail' && e.timestamp > ts) ts = e.timestamp
+    return ts
+  }, [entries])
+  const combinedMultiTrail = multiTrailReport === 'combined' && trailEventCount >= 2
+  const currentEntries = useMemo(
+    () => (combinedMultiTrail ? entries.filter(e => e.timestamp >= lastTrailEventTs) : entries),
+    [entries, combinedMultiTrail, lastTrailEventTs],
+  )
+
   // Computed aggregates — per-activity seen/contacted tallies. Legacy hiker
-  // entries with no activity are counted under 'hike'.
-  const hikerCounts = useMemo(() => {
-    const init = () => ({ seen: 0, contacted: 0 })
-    const counts: Record<HikerActivity, { seen: number; contacted: number }> = {
-      hike: init(), bpack: init(), bike: init(), hunt: init(), fish: init(), stock: init(),
-    }
-    entries.filter(e => e.type === 'hiker').forEach(e => {
-      const act = e.hikerActivity ?? 'hike'
-      if (e.hikerSubtype === 'seen') counts[act].seen++
-      else if (e.hikerSubtype === 'contacted') counts[act].contacted++
-    })
-    return counts
-  }, [entries])
+  // entries with no activity are counted under 'hike'. Cards read the
+  // current-trail section; the "grand" tallies span every trail in the report.
+  const hikerCounts = useMemo(() => tallyHikers(currentEntries), [currentEntries])
+  const dogCounts   = useMemo(() => tallyDogs(currentEntries),   [currentEntries])
+  const treeCounts  = useMemo(() => tallyTrees(currentEntries),  [currentEntries])
 
-  const dogCounts = useMemo(() => {
-    const counts = { onLeash: 0, offLeash: 0 }
-    entries.filter(e => e.type === 'dog').forEach(e => {
-      if (e.dogSubtype === 'onLeash') counts.onLeash++
-      else if (e.dogSubtype === 'offLeash') counts.offLeash++
-    })
-    return counts
-  }, [entries])
-
-  const treeCounts = useMemo(() => {
-    const init = (): Record<TreeSize, number> => ({ small: 0, medium: 0, large: 0, xl: 0 })
-    const counts: Record<TreeSubtype, Record<TreeSize, number>> = { cleared: init(), noted: init() }
-    entries.filter(e => e.type === 'tree').forEach(e => {
-      if (e.treeSubtype && e.treeSize) counts[e.treeSubtype][e.treeSize]++
-    })
-    return counts
-  }, [entries])
+  const grandHikerCounts = useMemo(() => tallyHikers(entries), [entries])
+  const grandDogCounts   = useMemo(() => tallyDogs(entries),   [entries])
+  const grandTreeCounts  = useMemo(() => tallyTrees(entries),  [entries])
 
   const noteEntries = useMemo(
     () => entries.filter(e => e.type === 'note').slice().reverse(),
@@ -1063,7 +1109,13 @@ export function DataLoggerPage() {
     (sum, s) => sum + treeCounts.cleared[s.key] + treeCounts.noted[s.key], 0
   )
   const dogTotal   = dogCounts.onLeash + dogCounts.offLeash
-  const hasData = hikerTotal > 0 || dogTotal > 0 || treeTotal > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0 || photoEntries.length > 0
+  // All-trails grand totals — shown small beneath each card's current-trail
+  // total in Combined mode, and used for hasData so a fresh (empty) trail
+  // section doesn't hide the Send/Stop controls while earlier trails hold data.
+  const grandHikerTotal = hikerSeenTotal(grandHikerCounts)
+  const grandDogTotal   = grandDogCounts.onLeash + grandDogCounts.offLeash
+  const grandTreeTotalN  = treeGrandTotal(grandTreeCounts)
+  const hasData = grandHikerTotal > 0 || grandDogTotal > 0 || grandTreeTotalN > 0 || noteEntries.length > 0 || trackers.length > 0 || violationEntries.length > 0 || photoEntries.length > 0
   const reportEmail = user?.email?.trim() ?? ''
   const currentSessionQueued = sendQueue.some(q => q.sessionId === session?.id && q.status !== 'sent')
 
@@ -1205,7 +1257,7 @@ export function DataLoggerPage() {
             onChange={e => handleTrailSelect(e.target.value ? parseInt(e.target.value, 10) : null)}
             className="flex-1 min-w-0 px-2.5 py-1.5 text-sm bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
           >
-            <option value="">— Select trail IF on a PWV trail —</option>
+            <option value="">— Non-PWV or Off Trail —</option>
             {(Object.entries(trailNames) as [string, string][])
               .sort((a, b) => a[1].localeCompare(b[1]))
               .map(([id, name]) => (
@@ -1365,9 +1417,16 @@ export function DataLoggerPage() {
           <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
             People
           </span>
-          <span className="text-xs text-stone-400 dark:text-stone-500 shrink-0">
-            Total: <strong className="text-stone-700 dark:text-stone-300">{hikerTotal}</strong>
-          </span>
+          <div className="flex flex-col items-end shrink-0 leading-tight">
+            <span className="text-xs text-stone-400 dark:text-stone-500">
+              Total: <strong className="text-stone-700 dark:text-stone-300">{hikerTotal}</strong>
+            </span>
+            {combinedMultiTrail && (
+              <span className="text-[10px] text-stone-400 dark:text-stone-500">
+                All trails: <strong className="text-stone-600 dark:text-stone-400">{grandHikerTotal}</strong>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Activity selector — Seen/Contacted below apply to the active one */}
@@ -1465,9 +1524,16 @@ export function DataLoggerPage() {
           <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
             Dogs
           </span>
-          <span className="text-xs text-stone-400 dark:text-stone-500">
-            Total: <strong className="text-stone-700 dark:text-stone-300">{dogTotal}</strong>
-          </span>
+          <div className="flex flex-col items-end shrink-0 leading-tight">
+            <span className="text-xs text-stone-400 dark:text-stone-500">
+              Total: <strong className="text-stone-700 dark:text-stone-300">{dogTotal}</strong>
+            </span>
+            {combinedMultiTrail && (
+              <span className="text-[10px] text-stone-400 dark:text-stone-500">
+                All trails: <strong className="text-stone-600 dark:text-stone-400">{grandDogTotal}</strong>
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-stretch gap-2">
           {([
@@ -1500,9 +1566,16 @@ export function DataLoggerPage() {
               value={treeMode}
               onChange={v => setTreeMode(v as TreeSubtype)}
             />
-            <span className="text-xs text-stone-400 dark:text-stone-500">
-              Total: <strong className="text-stone-700 dark:text-stone-300">{treeTotal}</strong>
-            </span>
+            <div className="flex flex-col items-end leading-tight">
+              <span className="text-xs text-stone-400 dark:text-stone-500">
+                Total: <strong className="text-stone-700 dark:text-stone-300">{treeTotal}</strong>
+              </span>
+              {combinedMultiTrail && (
+                <span className="text-[10px] text-stone-400 dark:text-stone-500">
+                  All trails: <strong className="text-stone-600 dark:text-stone-400">{grandTreeTotalN}</strong>
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -2118,10 +2191,10 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
               <strong>GPS works with no cell service</strong> — location comes from satellites, so waypoints, coordinates and trailhead distances all record normally out of range. The report map just fills in later when you're back online.
             </Tip>
             <Tip>
-              <strong>Each trail becomes its own report</strong> — when you change the trail, the one you're leaving is finalized. Offline, it's saved to a queue and sends automatically once you reconnect. Switch trails five times and you'll get five reports.
+              <strong>Separate or Combined reports</strong> — choose in <strong>Settings → Data Logger → Multi-Trail Report</strong>. In <strong>Separate</strong> (the default), changing the trail finalizes the one you're leaving as its own report — switch five times and you'll get five reports. In <strong>Combined</strong>, every trail stays in a single report, each totaled and delineated as its own section.
             </Tip>
             <Tip>
-              <strong>Save your last trail before you finish</strong> — switching trails only saves the trail you're <em>leaving</em>. The final trail you're on isn't captured until you tap <strong>STOP Logger</strong> (offline it reads "Save report to send later"). Do this before closing the app or you'll leave that trail's data unsent.
+              <strong>Save your last trail before you finish</strong> — in <strong>Separate</strong> mode, switching trails only saves the trail you're <em>leaving</em>. The final trail you're on isn't captured until you tap <strong>STOP Logger</strong> (offline it reads "Save report to send later"). Do this before closing the app or you'll leave that trail's data unsent.
             </Tip>
             <Tip>
               <strong>Watch the "reports saved on this phone" banner</strong> — while it's showing, unsent reports are held only on your device. <strong>Don't clear browser data or delete the app until it's gone</strong> and the emails have arrived. When you get back in range, open the app and keep it in front so the queue finishes sending.

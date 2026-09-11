@@ -237,7 +237,38 @@ export function SettingsPage() {
               </p>
             </div>
 
+            {/* Multi-trail report mode — only relevant to Trail Maint/Patrol */}
+            {loggerSettings.profile === 'patrol' && (
+              <div className="pb-3 mb-1 border-b border-stone-100 dark:border-stone-800">
+                <span className="text-sm text-stone-700 dark:text-stone-300">Multi-Trail Report</span>
+                <div className="mt-2 flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
+                  {([
+                    { value: 'separate', label: 'Separate' },
+                    { value: 'combined', label: 'Combined' },
+                  ] as const).map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => updateLoggerSettings({ multiTrailReport: value })}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                        loggerSettings.multiTrailReport === value
+                          ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
+                          : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1.5">
+                  {loggerSettings.multiTrailReport === 'combined'
+                    ? 'Changing the trail keeps one report — each trail is totaled and delineated as its own section within it.'
+                    : 'Changing the trail closes out the current trail as its own report and starts a fresh one.'}
+                </p>
+              </div>
+            )}
+
             <div className="divide-y divide-stone-100 dark:divide-stone-800">
+              {loggerSettings.profile === 'patrol' && (
               <div className="py-3">
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-stone-700 dark:text-stone-300 flex-1">On-trail distance</span>
@@ -258,6 +289,7 @@ export function SettingsPage() {
                   How far off the trail you can get and still count as on-trail (the On Trail light).
                 </p>
               </div>
+              )}
               <div>
                 <PrefRow
                   label="Record Auto-Waypoints"
