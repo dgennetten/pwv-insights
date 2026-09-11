@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredAuthToken } from '../services/authService'
@@ -93,7 +93,6 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
-  const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showLoggerTips, setShowLoggerTips] = useState(false)
 
@@ -104,7 +103,6 @@ export function SettingsPage() {
     try {
       const loaded = await fetchUserPreferences(token)
       setPrefs(loaded)
-      setDirty(false)
       setSavedAt(null)
     } finally {
       setLoading(false)
@@ -115,31 +113,70 @@ export function SettingsPage() {
     if (user?.personId) void loadPrefs()
   }, [user?.personId, loadPrefs])
 
+  // ── Auto-save member preferences ────────────────────────────────────────
+  // Member prefs (dashboard KPIs, trail cards, schedule columns) live on the
+  // server, so unlike the local logger/theme settings they need a round-trip.
+  // Rather than gate them behind a Save button (which confused users, since
+  // every other setting applies instantly), we debounce a save after each
+  // change. saveUserPreferences writes the local cache first, so the dashboard
+  // reflects a change immediately; the server sync follows a beat later.
+  const saveTimer   = useRef<number | null>(null)
+  const pendingRef  = useRef<UserPreferences | null>(null)
+
+  const flushSave = useCallback(async () => {
+    if (saveTimer.current !== null) { clearTimeout(saveTimer.current); saveTimer.current = null }
+    const toSave = pendingRef.current
+    if (!toSave) return
+    pendingRef.current = null
+    const token = getStoredAuthToken()
+    if (!token) { setError('No active session — sign in again.'); return }
+    setSaving(true)
+    setError(null)
+    try {
+      await saveUserPreferences(token, toSave)
+      setSavedAt(Date.now())
+    } catch (e) {
+      // Keep the change queued so the next edit (or unmount flush) retries it.
+      pendingRef.current = toSave
+      setError(e instanceof Error ? e.message : 'Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }, [])
+
+  const scheduleSave = useCallback((next: UserPreferences) => {
+    pendingRef.current = next
+    if (saveTimer.current !== null) clearTimeout(saveTimer.current)
+    saveTimer.current = window.setTimeout(() => { void flushSave() }, 600)
+  }, [flushSave])
+
+  // Flush any pending save when leaving the page so a quick change + navigate
+  // doesn't get dropped inside the debounce window.
+  useEffect(() => () => { void flushSave() }, [flushSave])
+
+  // Let the transient "Saved" confirmation fade on its own.
+  useEffect(() => {
+    if (savedAt === null) return
+    const t = setTimeout(() => setSavedAt(null), 2000)
+    return () => clearTimeout(t)
+  }, [savedAt])
+
   const updateKpi = (key: keyof DashboardKpiPrefs, value: boolean) => {
-    setSavedAt(null)
-    setDirty(true)
-    setPrefs(prev => ({
-      ...prev,
-      dashboardKpi: { ...prev.dashboardKpi, [key]: value },
-    }))
+    const next = { ...prefs, dashboardKpi: { ...prefs.dashboardKpi, [key]: value } }
+    setPrefs(next)
+    scheduleSave(next)
   }
 
   const updateTrailDetail = (key: keyof TrailDetailPrefs, value: boolean) => {
-    setSavedAt(null)
-    setDirty(true)
-    setPrefs(prev => ({
-      ...prev,
-      trailDetail: { ...prev.trailDetail, [key]: value },
-    }))
+    const next = { ...prefs, trailDetail: { ...prefs.trailDetail, [key]: value } }
+    setPrefs(next)
+    scheduleSave(next)
   }
 
   const updateScheduleColumns = (key: keyof ScheduleColumnsPrefs, value: boolean) => {
-    setSavedAt(null)
-    setDirty(true)
-    setPrefs(prev => ({
-      ...prev,
-      scheduleColumns: { ...prev.scheduleColumns, [key]: value },
-    }))
+    const next = { ...prefs, scheduleColumns: { ...prefs.scheduleColumns, [key]: value } }
+    setPrefs(next)
+    scheduleSave(next)
   }
 
   const updateLoggerSettings = (patch: Partial<LoggerSettings>) => {
@@ -156,25 +193,6 @@ export function SettingsPage() {
     applyTheme(t)
   }
 
-  const handleSave = async () => {
-    const token = getStoredAuthToken()
-    if (!token) {
-      setError('No active session — sign in again.')
-      return
-    }
-    setSaving(true)
-    setError(null)
-    try {
-      await saveUserPreferences(token, prefs)
-      setSavedAt(Date.now())
-      setDirty(false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save')
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
     <div className="min-h-full bg-stone-50 dark:bg-stone-950 p-4 md:p-6 lg:p-8">
 
@@ -185,7 +203,7 @@ export function SettingsPage() {
           <span className="text-xs text-stone-400 dark:text-stone-500">v{version}</span>
         </div>
         <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
-          Personalize your dashboard experience
+          Personalize your dashboard experience — changes save automatically
         </p>
       </div>
 
@@ -500,26 +518,21 @@ export function SettingsPage() {
                 <PrefRow label="Author"        checked={prefs.scheduleColumns.author}          onChange={v => updateScheduleColumns('author', v)} />
               </SectionCard>
 
-              {/* ── Save bar (sticky so it's always reachable) ──────── */}
-              <div className="sticky bottom-0 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 py-3 mt-2 flex items-center justify-between gap-3 bg-stone-50/90 dark:bg-stone-950/90 backdrop-blur border-t border-stone-200 dark:border-stone-800">
-                <div className="min-h-[1.25rem]">
+              {/* Auto-save status — changes save on their own, so there's no
+                  button; surface only in-flight / saved / error states. */}
+              {(saving || savedAt || error) && (
+                <div className="sticky bottom-0 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 py-2 mt-2 flex items-center justify-end gap-2 bg-stone-50/90 dark:bg-stone-950/90 backdrop-blur border-t border-stone-200 dark:border-stone-800">
                   {error ? (
-                    <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-                  ) : dirty ? (
-                    <p className="text-xs text-amber-600 dark:text-amber-400">Unsaved changes</p>
-                  ) : savedAt ? (
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400">Saved</p>
-                  ) : null}
+                    <p className="text-xs text-red-600 dark:text-red-400">{error} — will retry on your next change</p>
+                  ) : saving ? (
+                    <p className="text-xs text-stone-400 dark:text-stone-500">Saving…</p>
+                  ) : (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" strokeWidth={3} aria-hidden /> Saved
+                    </p>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void handleSave()}
-                  disabled={saving || !dirty}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? 'Saving…' : 'Save changes'}
-                </button>
-              </div>
+              )}
             </>
           )}
         </>
