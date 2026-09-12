@@ -6,9 +6,11 @@ import { trailGeoData, trailNames } from '../../data/trailGeoData'
 import { TRAILHEAD_PIN } from '../../lib/trailheadPin'
 import 'leaflet/dist/leaflet.css'
 import type { LogEntry, Tracker } from '../../types/dataLogger'
-import { isValidLatLng } from '../../lib/geo'
+import { isValidLatLng, fanOutColocated } from '../../lib/geo'
 import { getLoggerSettings } from '../../lib/loggerSettings'
 import { nearestTrailInfo } from '../../lib/trailheadDistance'
+import { paceSeriesFromTrackers } from '../../lib/gpsDistance'
+import { PaceChart } from './PaceChart'
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -140,6 +142,15 @@ function MapPopupController({ item }: { item: TimelineItem | null }) {
   return null
 }
 
+// Bottom-axis dot color for a logged observation on the pace chart.
+function paceDotColor(e: LogEntry): string {
+  return e.type === 'hiker' ? '#0ea5e9'
+    : e.type === 'dog'       ? '#14b8a6'
+    : e.type === 'tree'      ? '#f59e0b'
+    : e.type === 'violation' ? '#ef4444'
+    : '#78716c'
+}
+
 // ── MapModal ──────────────────────────────────────────────────────
 
 interface MapModalProps {
@@ -227,6 +238,26 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     }
     return [...ids]
   }, [wksiteId, entries])
+
+  // Pace chart (min/mi or mph), derived from the recorded breadcrumb — spans the
+  // whole session. Dots along the bottom mark each logged observation.
+  const paceSeries   = useMemo(() => paceSeriesFromTrackers(trackers), [trackers])
+  const paceFormat   = useMemo(() => getLoggerSettings().waypointPaceFormat, [])
+  const paceLogScale = useMemo(() => getLoggerSettings().waypointPaceLogScale, [])
+  const paceDots = useMemo(
+    () => timelineItems.map(item => ({ ts: item.ts, color: paceDotColor(item.entry) })),
+    [timelineItems],
+  )
+
+  // Photo markers, with co-located ones fanned out so none hides beneath another.
+  const photoMarkers = useMemo(
+    () => fanOutColocated(
+      entries.filter(e => e.type === 'photo' && e.lat !== null && e.lng !== null && (e.photoData || e.photoUrl)),
+      e => e.lat as number,
+      e => e.lng as number,
+    ),
+    [entries],
+  )
 
   const mapPoints = useMemo((): [number, number][] => {
     const pts: [number, number][] = []
@@ -325,6 +356,11 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
           </button>
         </div>
       </div>
+
+      {/* Pace / speed chart across the whole session */}
+      {paceSeries.length >= 2 && (
+        <PaceChart points={paceSeries} dots={paceDots} paceFormat={paceFormat} logScale={paceLogScale} />
+      )}
 
       {/* Map + Timeline */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
@@ -443,28 +479,23 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
               })
             }
 
-            {/* Photo markers — click to view the captured image */}
-            {timelineItems
-              .filter((item): item is Extract<TimelineItem, { kind: 'entry' }> => item.kind === 'entry')
-              .map((item, i) => {
-                const e = item.entry
-                if (e.type !== 'photo' || e.lat === null || e.lng === null) return null
-                const src = e.photoData ?? e.photoUrl
-                if (!src) return null
-                const caption = e.noteText?.trim()
-                return (
-                  <Marker key={`photo-${i}`} position={[e.lat, e.lng]} icon={CAMERA_ICON}>
-                    <Popup>
-                      <div className="text-xs space-y-1" style={{ width: 200 }}>
-                        <img src={src} alt={caption || 'Photo'} style={{ width: '100%', maxHeight: 150, objectFit: 'cover', borderRadius: 6, display: 'block' }} />
-                        {caption && <div className="font-medium">{caption}</div>}
-                        <div className="text-stone-500">{fmtTime(e.timestamp)}</div>
-                      </div>
-                    </Popup>
-                  </Marker>
-                )
-              })
-            }
+            {/* Photo markers — click to view the captured image. Co-located
+                photos are fanned out so the first one isn't hidden beneath. */}
+            {photoMarkers.map(({ item: e, displayLat, displayLng }, i) => {
+              const src = (e.photoData ?? e.photoUrl)!
+              const caption = e.noteText?.trim()
+              return (
+                <Marker key={`photo-${e.id ?? e.timestamp}-${i}`} position={[displayLat, displayLng]} icon={CAMERA_ICON}>
+                  <Popup>
+                    <div className="text-xs space-y-1" style={{ width: 200 }}>
+                      <img src={src} alt={caption || 'Photo'} style={{ width: '100%', maxHeight: 150, objectFit: 'cover', borderRadius: 6, display: 'block' }} />
+                      {caption && <div className="font-medium">{caption}</div>}
+                      <div className="text-stone-500">{fmtTime(e.timestamp)}</div>
+                    </div>
+                  </Popup>
+                </Marker>
+              )
+            })}
           </MapContainer>
         </div>
 

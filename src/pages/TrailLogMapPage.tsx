@@ -6,11 +6,11 @@ import 'leaflet/dist/leaflet.css'
 import { getSessionEntries, getSessionTrackers, getOrCreateSession } from '../services/dataLoggerService'
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredTheme, applyTheme } from '../lib/theme'
-import { surveyTrackingStats, fmtPaceMinPerMi } from '../lib/gpsDistance'
+import { surveyTrackingStats, fmtPaceMinPerMi, paceSeriesFromTrackers } from '../lib/gpsDistance'
 import { trailPaths } from '../data/trailPaths'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
 import { TRAILHEAD_PIN } from '../lib/trailheadPin'
-import { isValidLatLng } from '../lib/geo'
+import { isValidLatLng, fanOutColocated } from '../lib/geo'
 import { getLoggerSettings } from '../lib/loggerSettings'
 import { PaceChart } from '../components/data-logger/PaceChart'
 
@@ -465,11 +465,12 @@ export function TrailLogMapPage() {
 
   const photoMarkers = useMemo(() => {
     if (!log) return []
-    return log.entries
-      .filter(e => e.type === 'photo' && e.photoUrl && e.lat !== null && e.lng !== null)
-      .map(e => ({
-        lat:     e.lat as number,
-        lng:     e.lng as number,
+    // Fan out photos sharing a spot so the first one isn't hidden underneath.
+    const photos = log.entries.filter(e => e.type === 'photo' && e.photoUrl && e.lat !== null && e.lng !== null)
+    return fanOutColocated(photos, e => e.lat as number, e => e.lng as number)
+      .map(({ item: e, displayLat, displayLng }) => ({
+        lat:     displayLat,
+        lng:     displayLng,
         ts:      e.timestamp,
         url:     photoHref(e.photoUrl as string),
         caption: (e.noteText ?? '').trim(),
@@ -535,6 +536,8 @@ export function TrailLogMapPage() {
 
   const paceFormat = useMemo(() => getLoggerSettings().waypointPaceFormat, [])
   const paceLogScale = useMemo(() => getLoggerSettings().waypointPaceLogScale, [])
+  // Pace series from the recorded breadcrumb, spanning the whole session.
+  const paceSeries = useMemo(() => paceSeriesFromTrackers(log?.trackers ?? []), [log])
 
   const defaultCenter: [number, number] = [40.3772, -105.5217]
 
@@ -785,7 +788,7 @@ export function TrailLogMapPage() {
                 )}
               </div>
             </div>
-            <PaceChart trackers={trackers} dots={paceDots} paceFormat={paceFormat} logScale={paceLogScale} />
+            <PaceChart points={paceSeries} dots={paceDots} paceFormat={paceFormat} logScale={paceLogScale} />
             <div className="flex-1 relative" style={{ minHeight: '360px' }}>
               <button
                 onClick={() => setMapExpanded(v => !v)}

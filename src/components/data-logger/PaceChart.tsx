@@ -1,11 +1,8 @@
 // Pace / speed line chart shared by the in-app map modal (MapModal) and the
 // saved report page (TrailLogMapPage), so the two stay in sync.
 
-// Minimal structural shapes — both callers' richer tracker/timeline types
-// satisfy these.
-export interface PaceChartTracker {
-  segments: Array<{ waypoints?: Array<{ name?: string; paceMinPerMi?: number; ts: number }> }>
-}
+// Pace series point: minutes-per-mile at a moment in the session.
+export interface PaceChartPoint { ts: number; paceMinPerMi: number }
 
 // One dot rendered along the bottom axis per timeline observation.
 export interface PaceChartDot { ts: number; color: string }
@@ -16,19 +13,16 @@ function fmtPace(minPerMi: number) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export function PaceChart({ trackers, dots, paceFormat, logScale = false }: {
-  trackers:   PaceChartTracker[]
+export function PaceChart({ points, dots, paceFormat, logScale = false }: {
+  points:     PaceChartPoint[]
   dots:       PaceChartDot[]
   paceFormat: 'min-per-mi' | 'mph'
   logScale?:  boolean
 }) {
-  const rawPoints: { ts: number; pace: number }[] = []
-  for (const t of trackers)
-    for (const seg of t.segments)
-      for (const wp of seg.waypoints ?? [])
-        if (!wp.name && wp.paceMinPerMi != null)
-          rawPoints.push({ ts: wp.ts, pace: wp.paceMinPerMi })
-  rawPoints.sort((a, b) => a.ts - b.ts)
+  const rawPoints = points
+    .map(p => ({ ts: p.ts, pace: p.paceMinPerMi }))
+    .filter(p => p.pace > 0)
+    .sort((a, b) => a.ts - b.ts)
   if (rawPoints.length < 2) return null
 
   const W = 800; const H = 100
@@ -80,9 +74,9 @@ export function PaceChart({ trackers, dots, paceFormat, logScale = false }: {
         </p>
         <div className="flex gap-2.5 ml-auto text-[10px] text-stone-400 dark:text-stone-500">
           <span><span style={{ color: '#0ea5e9' }}>●</span> Hiker</span>
+          <span><span style={{ color: '#14b8a6' }}>●</span> Dog</span>
           <span><span style={{ color: '#f59e0b' }}>●</span> Tree</span>
           <span><span style={{ color: '#ef4444' }}>●</span> Viol</span>
-          <span><span style={{ color: '#a78bfa' }}>●</span> WP</span>
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: `${H}px`, display: 'block' }}>

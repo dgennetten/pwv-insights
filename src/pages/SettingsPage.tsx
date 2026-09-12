@@ -278,6 +278,49 @@ export function SettingsPage() {
                 </p>
               </div>
               )}
+              <div className="py-3 space-y-2">
+                <span className="text-sm text-stone-700 dark:text-stone-300">Pace chart</span>
+                <div className="flex items-center gap-4 pl-1">
+                  <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
+                    {(['min-per-mi', 'mph'] as const).map(fmt => (
+                      <button
+                        key={fmt}
+                        onClick={() => updateLoggerSettings({ waypointPaceFormat: fmt })}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                          loggerSettings.waypointPaceFormat === fmt
+                            ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
+                            : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
+                        }`}
+                      >
+                        {fmt === 'min-per-mi' ? 'time/dist' : 'dist/time'}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer group select-none">
+                    <div className={`
+                      relative w-4 h-4 rounded border transition-colors shrink-0
+                      ${loggerSettings.waypointPaceLogScale
+                        ? 'bg-emerald-600 border-emerald-600 dark:bg-emerald-500 dark:border-emerald-500'
+                        : 'bg-white dark:bg-stone-800 border-stone-300 dark:border-stone-600 group-hover:border-stone-400 dark:group-hover:border-stone-500'
+                      }
+                    `}>
+                      <input
+                        type="checkbox"
+                        checked={loggerSettings.waypointPaceLogScale}
+                        onChange={e => updateLoggerSettings({ waypointPaceLogScale: e.target.checked })}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                      />
+                      {loggerSettings.waypointPaceLogScale && (
+                        <Check className="absolute inset-0 w-full h-full p-0.5 text-white" strokeWidth={3} />
+                      )}
+                    </div>
+                    <span className="text-xs text-stone-600 dark:text-stone-300">Plot using log scale</span>
+                  </label>
+                </div>
+                <p className="text-xs text-stone-400 dark:text-stone-500">
+                  The Show Map view plots your pace across the whole session, from your GPS track. Choose time/dist (min per mile) or dist/time (mph).
+                </p>
+              </div>
               <PrefRow
                 label="Keep screen awake while tracking"
                 checked={loggerSettings.wakeLockEnabled}
