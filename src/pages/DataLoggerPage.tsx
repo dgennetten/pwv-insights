@@ -2063,6 +2063,12 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
             <Tip>
               <strong>Tap Stop &amp; Send when you're done</strong> — it saves and emails the full report (with the map), then resets the logger for your next patrol. Offline, it's saved and sent automatically when you reconnect.
             </Tip>
+            <Tip>
+              <strong>Show Map</strong> plots your red GPS track, every logged point, and a pace chart across the whole session. After a send, the <strong>blue Map button</strong> on the "session sent" note — and on each row in the Queued Sends card — reopens that report's map.
+            </Tip>
+            <Tip>
+              <strong>Unsent entries from an earlier run</strong> — if you start a new session while last run's taps were never sent, you'll be offered to send them as their own report first, or discard them, so they don't mix into your next patrol.
+            </Tip>
           </TipSection>
 
           <TipSection title="Working offline">

@@ -66,11 +66,6 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-08-31',
     content: `MAJOR LOGGER UPDATE — A batch of Data Logger improvements landed today, several straight from your field feedback:\n\n👥 PEOPLE (was "Hikers") — The counter now tracks what folks were doing, not just that you saw them. Pick an activity — Hike, Bpack, Bike, Hunt, Fish, or Stock — and the Seen/Contacted taps apply to that category. Small tallies below keep a running breakdown, and the emailed report now splits People out by activity.\n\n🐕 DOGS — A new card with two quick taps: On Leash and Off Leash. Logged, mapped, and rolled into the report like everything else.\n\n🪵 TREES — The card now shows a grand Total right in the header (alongside the Cleared/Noted toggle), and that total is included in the emailed report too.\n\n⚡ FASTER TAPS — Several of you noticed the counters could lag a beat or two before ticking up. Fixed — taps register instantly now by reusing the live GPS fix instead of waiting on a fresh read.\n\n↩️ DEEPER UNDO — Undo now remembers your last three entries, not just one, and tucks itself away when there's nothing left to undo.\n\n🧭 LAYOUT — The Distance Tracker now sits right under the Trail selector, with Notes & Photos just beneath it — the tools you reach for most are up top.\n\nGive it all a spin and Send Feedback! — KDG (v1.48.1)`,
   },
-  {
-    id: 13,
-    date: '2026-09-11',
-    content: `COMBINED MULTI-TRAIL REPORTS — Hit several trails in one outing? You can now get them in a single report instead of one email per trail. Turn it on in Settings → Data Logger → Multi-Trail Report → Combined (the default stays Separate, the way it worked before).\n\nIn Combined mode, switching the Trail dropdown no longer ends your report — it closes out that trail as its own section and keeps going, so the email reads trail-by-trail with each section totaled and clearly separated. On screen, the People/Dogs/Trees counters reset for each new trail, with a small "All trails" running total beneath.\n\nAlso: the first Trail choice now reads "Non-PWV or Off Trail" — pick it when you're not on a PWV trail (it hides the On Trail light and distance readouts). — KDG (v1.49.0)`,
-  },
 ]
 
 export type BlogPref =
