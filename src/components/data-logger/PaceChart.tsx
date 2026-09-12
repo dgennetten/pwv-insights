@@ -30,10 +30,15 @@ export function PaceChart({ points, dots, paceFormat, logScale = false }: {
   const plotW = W - PL - PR
   const plotH = H - PT - PB
 
-  const allTs  = [...dots.map(d => d.ts), ...rawPoints.map(p => p.ts)]
-  const tMin   = Math.min(...allTs); const tMax = Math.max(...allTs)
+  // Anchor the time axis to the pace series (the tracking window) so the line
+  // fills the width. Observation dots outside that window — e.g. a note logged
+  // before the first GPS fix — are clamped to the edges rather than stretching
+  // the axis and compressing the whole line into a sliver.
+  const tMin   = Math.min(...rawPoints.map(p => p.ts))
+  const tMax   = Math.max(...rawPoints.map(p => p.ts))
   const tRange = tMax - tMin || 1
-  const xS = (ts: number) => PL + ((ts - tMin) / tRange) * plotW
+  const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x)
+  const xS = (ts: number) => PL + clamp01((ts - tMin) / tRange) * plotW
 
   const isMph = paceFormat === 'mph'
   // For min/mi: slower (higher value) = top. For mph: faster (higher value) = top.
