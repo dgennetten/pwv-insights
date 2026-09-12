@@ -280,6 +280,8 @@ export function DataLoggerPage() {
   // the logger resets. The blue Map button in the sent-note opens this.
   const [sentSnapshot,    setSentSnapshot]    = useState<{ entries: LogEntry[]; trackers: Tracker[]; wksiteId?: number; reportDate: string } | null>(null)
   const [showSentMap,     setShowSentMap]     = useState(false)
+  // A queued (not-yet-sent) report whose map the user opened from its card row.
+  const [queuedMapItem,   setQueuedMapItem]   = useState<QueuedSend | null>(null)
   const processingQueueRef = useRef(false)
   // Most recent GPS fix, so logging a count can stamp coordinates instantly.
   const lastPosRef = useRef<{ lat: number; lng: number; ts: number } | null>(null)
@@ -1537,6 +1539,14 @@ export function DataLoggerPage() {
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setQueuedMapItem(q)}
+                  title="View this report's map"
+                  className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-colors"
+                >
+                  <MapPin className="w-3 h-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                  Map
+                </button>
                 <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
                   q.status === 'sent'    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
                   : q.status === 'sending' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
@@ -1601,6 +1611,18 @@ export function DataLoggerPage() {
         trailheadCoords={sentSnapshot.wksiteId != null ? (trailGeoData[sentSnapshot.wksiteId] ?? undefined) : undefined}
         wksiteId={showMaintUI ? sentSnapshot.wksiteId : undefined}
         onClose={() => setShowSentMap(false)}
+      />
+    )}
+
+    {queuedMapItem && (
+      <MapModal
+        entries={queuedMapItem.payload.entries}
+        trackers={queuedMapItem.payload.trackers as unknown as Tracker[]}
+        memberName={user?.name ?? ''}
+        reportDate={queuedMapItem.reportDate.slice(0, 10)}
+        trailheadCoords={queuedMapItem.payload.wksiteId != null ? (trailGeoData[queuedMapItem.payload.wksiteId] ?? undefined) : undefined}
+        wksiteId={queuedMapItem.payload.profile === 'patrol' && queuedMapItem.payload.wksiteId != null ? queuedMapItem.payload.wksiteId : undefined}
+        onClose={() => setQueuedMapItem(null)}
       />
     )}
 
