@@ -9,7 +9,6 @@ import type { LogEntry, Tracker } from '../../types/dataLogger'
 import { isValidLatLng } from '../../lib/geo'
 import { getLoggerSettings } from '../../lib/loggerSettings'
 import { nearestTrailInfo } from '../../lib/trailheadDistance'
-import { PaceChart } from './PaceChart'
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -21,15 +20,6 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
 }
 function fmtMiles(m: number) { return (m / 1609.344).toFixed(2) + ' mi' }
-function fmtPace(minPerMi: number) {
-  const m = Math.floor(minPerMi)
-  const s = Math.round((minPerMi - m) * 60)
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-function fmtPaceDisplay(minPerMi: number, fmt: 'min-per-mi' | 'mph') {
-  if (fmt === 'mph') return `${(60 / minPerMi).toFixed(1)} mph`
-  return `${fmtPace(minPerMi)}/mi`
-}
 function fmtTime(ms: number) {
   return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })
 }
@@ -67,21 +57,13 @@ const CAMERA_ICON = divIcon({
 
 type TimelineItem =
   | { kind: 'entry';    entry: LogEntry; ts: number }
-  | { kind: 'waypoint'; lat: number; lng: number; ts: number; name?: string; trackerName: string; paceMinPerMi?: number; segmentDistanceM: number }
 
 // ── Popup HTML builder ────────────────────────────────────────────
 
-function buildPopupHtml(item: TimelineItem, paceFormat: 'min-per-mi' | 'mph' = 'min-per-mi'): string {
+function buildPopupHtml(item: TimelineItem): string {
   const rows: string[] = []
 
-  if (item.kind === 'waypoint') {
-    rows.push(`<div style="font-weight:600;margin-bottom:3px">${item.name ? esc(item.name) : 'Auto-Waypoint'}</div>`)
-    rows.push(`<div>Tracker: ${esc(item.trackerName)}</div>`)
-    rows.push(`<div>At: ${fmtMiles(item.segmentDistanceM)} into segment</div>`)
-    if (item.paceMinPerMi != null) rows.push(`<div>Pace: <b>${fmtPaceDisplay(item.paceMinPerMi, paceFormat)}</b></div>`)
-    rows.push(`<div>${fmtTime(item.ts)}</div>`)
-    rows.push(`<div style="color:#a8a29e;margin-top:2px">${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>`)
-  } else {
+  {
     const e = item.entry
     const sub = (e.hikerSubtype ?? e.treeSubtype ?? '')
     const subCap = sub ? sub[0].toUpperCase() + sub.slice(1) : ''
@@ -144,27 +126,18 @@ function MapFocusController({ center }: { center: [number, number] | null }) {
 
 function MapPopupController({ item }: { item: TimelineItem | null }) {
   const map = useMap()
-  const paceFormat = useMemo(() => getLoggerSettings().waypointPaceFormat, [])
   useEffect(() => {
     if (!item) { map.closePopup(); return }
-    const lat = item.kind === 'entry' ? item.entry.lat : item.lat
-    const lng = item.kind === 'entry' ? item.entry.lng : item.lng
+    const lat = item.entry.lat
+    const lng = item.entry.lng
     if (lat == null || lng == null) return
     const p = createLPopup({ maxWidth: 280, closeButton: true })
       .setLatLng([lat, lng])
-      .setContent(buildPopupHtml(item, paceFormat))
+      .setContent(buildPopupHtml(item))
     map.openPopup(p)
     return () => { try { map.closePopup(p) } catch { /* ignore */ } }
-  }, [map, item, paceFormat])
+  }, [map, item])
   return null
-}
-
-// ── Pace chart dot colors ─────────────────────────────────────────
-
-function paceDotColor(item: TimelineItem): string {
-  if (item.kind === 'waypoint') return item.name ? '#7c3aed' : '#a78bfa'
-  const e = item.entry
-  return e.type === 'hiker' ? '#0ea5e9' : e.type === 'dog' ? '#14b8a6' : e.type === 'tree' ? '#f59e0b' : e.type === 'violation' ? '#ef4444' : '#78716c'
 }
 
 // ── MapModal ──────────────────────────────────────────────────────
@@ -224,24 +197,26 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
       .filter(e => !(e.type === 'hiker' && e.hikerSubtype === 'seen' && contactedTs.has(e.timestamp)))
       .map(e => ({ kind: 'entry' as const, entry: e, ts: e.timestamp }))
 
-    const waypointItems: TimelineItem[] = []
-    for (const tracker of trackers)
-      for (const seg of tracker.segments)
-        for (const wp of seg.waypoints ?? [])
-          if (wp.lat !== null && wp.lng !== null)
-            waypointItems.push({
-              kind:             'waypoint' as const,
-              lat:              wp.lat,
-              lng:              wp.lng,
-              ts:               wp.ts,
-              name:             wp.name,
-              trackerName:      tracker.name || 'Tracker',
-              paceMinPerMi:     wp.paceMinPerMi,
-              segmentDistanceM: wp.segmentDistanceM,
-            })
+    return entryItems.sort((a, b) => a.ts - b.ts)
+  }, [entries])
 
-    return [...entryItems, ...waypointItems].sort((a, b) => a.ts - b.ts)
-  }, [entries, trackers])
+  // Red breadcrumb: the thinned GPS path recorded by the tracker, one polyline
+  // per segment (falls back to start→end if a legacy tracker has no crumbs).
+  const breadcrumbLines = useMemo((): [number, number][][] => {
+    const lines: [number, number][][] = []
+    for (const tracker of trackers) {
+      for (const seg of tracker.segments) {
+        const pts = (seg.crumbs && seg.crumbs.length > 0)
+          ? seg.crumbs
+          : [seg.startPoint, seg.endPoint].filter((p): p is NonNullable<typeof p> => !!p)
+        const line = pts
+          .filter(p => isValidLatLng(p.lat, p.lng))
+          .map(p => [p.lat, p.lng] as [number, number])
+        if (line.length >= 2) lines.push(line)
+      }
+    }
+    return lines
+  }, [trackers])
 
   // Every trail involved in this session: current selection + trail-change events
   const loggedTrailIds = useMemo((): number[] => {
@@ -256,15 +231,12 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
   const mapPoints = useMemo((): [number, number][] => {
     const pts: [number, number][] = []
     for (const item of timelineItems) {
-      if (item.kind === 'entry') {
-        if (item.entry.lat !== null && item.entry.lng !== null)
-          pts.push([item.entry.lat, item.entry.lng])
-      } else {
-        pts.push([item.lat, item.lng])
-      }
+      if (item.entry.lat !== null && item.entry.lng !== null)
+        pts.push([item.entry.lat, item.entry.lng])
     }
+    for (const line of breadcrumbLines) pts.push(...line)
     return pts
-  }, [timelineItems])
+  }, [timelineItems, breadcrumbLines])
 
   // Trail centerline + trailhead coordinates for auto-fitting the map to the whole trail.
   const trailBoundsPoints = useMemo((): [number, number][] => {
@@ -288,23 +260,12 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [selectedItem])
 
-  const hasAutoWaypoints = useMemo(
-    () => trackers.some(t => t.segments.some(s => (s.waypoints ?? []).some(w => !w.name))),
-    [trackers]
-  )
-  const hasPaceData = useMemo(
-    () => trackers.some(t => t.segments.some(s => (s.waypoints ?? []).some(w => !w.name && w.paceMinPerMi != null))),
-    [trackers]
-  )
-  const loggerSettings = useMemo(() => getLoggerSettings(), [])
-
   // List row click: fly to location + open popup + highlight
   const handleListRowClick = (item: TimelineItem) => {
     const isDeselecting = selectedItem?.ts === item.ts
     setSelectedItem(isDeselecting ? null : item)
     if (!isDeselecting) {
-      const lat = item.kind === 'entry' ? item.entry.lat : item.lat
-      const lng = item.kind === 'entry' ? item.entry.lng : item.lng
+      const { lat, lng } = item.entry
       if (lat != null && lng != null) setFocusCenter([lat, lng])
     }
   }
@@ -364,16 +325,6 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
           </button>
         </div>
       </div>
-
-      {/* Page-wide pace chart */}
-      {hasPaceData && (
-        <PaceChart
-          trackers={trackers}
-          dots={timelineItems.map(item => ({ ts: item.ts, color: paceDotColor(item) }))}
-          paceFormat={loggerSettings.waypointPaceFormat}
-          logScale={loggerSettings.waypointPaceLogScale}
-        />
-      )}
 
       {/* Map + Timeline */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
@@ -446,6 +397,15 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
               )
             })}
 
+            {/* Red breadcrumb: the actual GPS path recorded while tracking */}
+            {breadcrumbLines.map((line, i) => (
+              <Polyline
+                key={`crumb-${i}`}
+                positions={line}
+                pathOptions={{ color: '#dc2626', weight: 4, opacity: 0.85 }}
+              />
+            ))}
+
             {livePos && isValidLatLng(livePos.lat, livePos.lng) && (
               <CircleMarker
                 center={[livePos.lat, livePos.lng]}
@@ -454,31 +414,8 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
               />
             )}
 
-            {/* Waypoint dots — click to select */}
-            {timelineItems
-              .filter((item): item is Extract<TimelineItem, { kind: 'waypoint' }> => item.kind === 'waypoint')
-              .map((item, i) => {
-                const sel = selectedItem?.ts === item.ts
-                return (
-                  <CircleMarker
-                    key={`wp-${i}`}
-                    center={[item.lat, item.lng]}
-                    radius={item.name ? 5 : 2.5}
-                    pathOptions={{
-                      color:       sel ? '#059669' : '#7c3aed',
-                      fillColor:   '#8b5cf6',
-                      fillOpacity: 0.8,
-                      weight:      sel ? 2.5 : 1,
-                    }}
-                    eventHandlers={{ click: () => handleMapPinClick(item) }}
-                  />
-                )
-              })
-            }
-
             {/* Entry dots — click to select */}
             {timelineItems
-              .filter((item): item is Extract<TimelineItem, { kind: 'entry' }> => item.kind === 'entry')
               .map((item, i) => {
                 const e = item.entry
                 if (e.type === 'trail' || e.type === 'photo') return null
@@ -543,27 +480,6 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
             </p>
           </div>
 
-          {/* Auto-waypoint settings banner */}
-          {hasAutoWaypoints && (
-            <div className="px-3 py-2 bg-violet-50 dark:bg-violet-950/30 border-b border-violet-100 dark:border-violet-900/40 shrink-0">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-500 dark:text-violet-400 mb-0.5">
-                Auto-Waypoint Settings
-              </p>
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-violet-700 dark:text-violet-300">
-                <span>
-                  {loggerSettings.waypointMode === 'distance'
-                    ? `Every ${loggerSettings.waypointDistanceMi} mi`
-                    : `Every ${loggerSettings.waypointTimeMin} min`}
-                </span>
-                <span className="text-violet-400 dark:text-violet-500">
-                  {loggerSettings.waypointMode === 'distance' ? 'distance' : 'time'} mode
-                </span>
-                {loggerSettings.waypointPace    && <span>● Pace recorded</span>}
-                {loggerSettings.waypointVibrate && <span>● Vibrate on</span>}
-              </div>
-            </div>
-          )}
-
           <div ref={timelineScrollRef} className="flex-1 overflow-y-auto divide-y divide-stone-100 dark:divide-stone-800">
             {timelineItems.length === 0 ? (
               <div className="flex items-center justify-center h-20">
@@ -576,7 +492,6 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
                   item={item}
                   selected={selectedItem?.ts === item.ts}
                   onClick={() => handleListRowClick(item)}
-                  paceFormat={loggerSettings.waypointPaceFormat}
                 />
               ))
             )}
@@ -590,28 +505,19 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
 
 // ── Timeline row ──────────────────────────────────────────────────
 
-function MapTimelineRow({ item, selected, onClick, paceFormat }: {
+function MapTimelineRow({ item, selected, onClick }: {
   item:       TimelineItem
   selected:   boolean
   onClick:    () => void
-  paceFormat: 'min-per-mi' | 'mph'
 }) {
-  const hasGps =
-    item.kind === 'waypoint' ||
-    (item.kind === 'entry' && item.entry.lat !== null && item.entry.lng !== null)
+  const hasGps = item.entry.lat !== null && item.entry.lng !== null
 
   let badge: string
   let badgeClass: string
   let label: string
   let sublabel: string | null = null
 
-  if (item.kind === 'waypoint') {
-    const isAuto = !item.name
-    badge      = isAuto ? 'AUTO' : 'WPT'
-    badgeClass = 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300'
-    label      = item.name ?? (item.paceMinPerMi != null ? fmtPaceDisplay(item.paceMinPerMi, paceFormat) : 'Auto-Waypoint')
-    sublabel   = `${item.trackerName} · ${fmtMiles(item.segmentDistanceM)}`
-  } else {
+  {
     const e           = item.entry
     const isTree      = e.type === 'tree'
     const isHiker     = e.type === 'hiker'

@@ -10,6 +10,7 @@ import { surveyTrackingStats, fmtPaceMinPerMi } from '../lib/gpsDistance'
 import { trailPaths } from '../data/trailPaths'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
 import { TRAILHEAD_PIN } from '../lib/trailheadPin'
+import { isValidLatLng } from '../lib/geo'
 import { getLoggerSettings } from '../lib/loggerSettings'
 import { PaceChart } from '../components/data-logger/PaceChart'
 
@@ -57,6 +58,8 @@ interface TrackerSegment {
   distanceM: number
   startPoint?: { lat: number; lng: number; ts: number }
   endPoint?: { lat: number; lng: number; ts: number }
+  /** Thinned GPS breadcrumb of the actual path walked (red trail). */
+  crumbs?: Array<{ lat: number; lng: number; ts: number }>
   waypoints?: Array<{
     lat: number | null
     lng: number | null
@@ -485,6 +488,23 @@ export function TrailLogMapPage() {
     return [...ids]
   }, [log])
 
+  // Red breadcrumb: the thinned GPS path recorded by the tracker.
+  const breadcrumbLines = useMemo((): [number, number][][] => {
+    const lines: [number, number][][] = []
+    for (const tracker of (log?.trackers ?? [])) {
+      for (const seg of tracker.segments) {
+        const pts = (seg.crumbs && seg.crumbs.length > 0)
+          ? seg.crumbs
+          : [seg.startPoint, seg.endPoint].filter((p): p is NonNullable<typeof p> => !!p)
+        const line = pts
+          .filter(p => isValidLatLng(p.lat, p.lng))
+          .map(p => [p.lat, p.lng] as [number, number])
+        if (line.length >= 2) lines.push(line)
+      }
+    }
+    return lines
+  }, [log])
+
   const mapPoints = useMemo(
     () => [
       ...timelineItems
@@ -494,8 +514,9 @@ export function TrailLogMapPage() {
           (item as { kind: 'entry'; entry: LogEntry; ts: number }).entry.lng!,
         ] as [number, number]),
       ...waypointMarkers.map(w => [w.lat, w.lng] as [number, number]),
+      ...breadcrumbLines.flat(),
     ],
-    [timelineItems, waypointMarkers]
+    [timelineItems, waypointMarkers, breadcrumbLines]
   )
 
   const paceDots = useMemo(
@@ -827,6 +848,14 @@ export function TrailLogMapPage() {
                     />
                   ))
                 )}
+                {/* Red breadcrumb: the actual GPS path recorded while tracking */}
+                {breadcrumbLines.map((line, i) => (
+                  <Polyline
+                    key={`crumb-${i}`}
+                    positions={line}
+                    pathOptions={{ color: '#dc2626', weight: 4, opacity: 0.85 }}
+                  />
+                ))}
                 {loggedTrailIds.map(id => trailGeoData[id] && (
                   <Marker
                     key={`th-${id}`}

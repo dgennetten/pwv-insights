@@ -93,6 +93,7 @@ $trees = [
   'noted'   => ['small' => 0, 'medium' => 0, 'large' => 0, 'xl' => 0],
 ];
 $sessionStart   = null;
+$sessionEnd     = null;  // latest entry timestamp (extended by trackers below)
 $detailRows     = [];  // chronological list for the detail section
 $summaryNotes   = [];  // time + text only, for the summary block
 $violationRows  = [];  // type + note, for the violations summary block
@@ -140,6 +141,9 @@ foreach ($entries as $e) {
 
   if ($sessionStart === null || ($ts !== null && $ts < $sessionStart)) {
     $sessionStart = $ts;
+  }
+  if ($ts !== null && ($sessionEnd === null || $ts > $sessionEnd)) {
+    $sessionEnd = $ts;
   }
 
   $time   = $ts ? date('g:i A', intdiv($ts, 1000)) : '--:--';
@@ -285,6 +289,24 @@ if (empty($trailNamesSeq) && $trailName !== '') $trailNamesSeq = [$trailName];
 
 $div = str_repeat('-', 22);
 
+// Session start/end for the header. Start is the earliest logged entry; end the
+// latest. Trackers extend both — sports/"other" sessions often carry a tracker
+// but no tapped entries, and a patrol's final GPS fix can outlast its last tap.
+$sessionStartMs = $sessionStart;
+$sessionEndMs   = $sessionEnd;
+foreach ($trackers as $tr) {
+  if (!is_array($tr)) continue;
+  $s = isset($tr['startedAt']) ? (int) $tr['startedAt'] : 0;
+  if ($s > 0 && ($sessionStartMs === null || $s < $sessionStartMs)) $sessionStartMs = $s;
+  foreach ((is_array($tr['segments'] ?? null) ? $tr['segments'] : []) as $seg) {
+    if (!is_array($seg)) continue;
+    $ss = isset($seg['startAt']) ? (int) $seg['startAt'] : 0;
+    $se = isset($seg['endAt'])   ? (int) $seg['endAt']   : 0;
+    if ($ss > 0 && ($sessionStartMs === null || $ss < $sessionStartMs)) $sessionStartMs = $ss;
+    if ($se > 0 && ($sessionEndMs   === null || $se > $sessionEndMs))   $sessionEndMs   = $se;
+  }
+}
+
 $lines = [
   $isOther ? 'PWV Data Logger Report' : 'PWV Trail Patrol - Data Logger Report',
   "Member:  {$memberName}",
@@ -292,6 +314,12 @@ $lines = [
 ];
 if (!empty($trailNamesSeq) && !$isOther) {
   $lines[] = (count($trailNamesSeq) === 1 ? 'Trail:   ' : 'Trails:  ') . implode(' -> ', $trailNamesSeq);
+}
+if ($sessionStartMs !== null) {
+  $lines[] = 'Started: ' . date('g:i A', intdiv($sessionStartMs, 1000));
+}
+if ($sessionEndMs !== null) {
+  $lines[] = 'Ended:   ' . date('g:i A', intdiv($sessionEndMs, 1000));
 }
 array_push($lines,
   '',
@@ -561,26 +589,11 @@ if (!empty($photoLinks)) {
 
 $lines[] = '';
 $lines[] = $div;
-// Session start: earliest logged entry, falling back to the earliest tracker
-// start — sports/"other" sessions often carry trackers but no tapped entries,
-// which otherwise left a bare "Session started: n/a".
-$sessionStartMs = $sessionStart;
-if ($sessionStartMs === null) {
-  foreach ($trackers as $tr) {
-    if (!is_array($tr)) continue;
-    $cands = [$tr['startedAt'] ?? null];
-    foreach ((is_array($tr['segments'] ?? null) ? $tr['segments'] : []) as $seg) {
-      if (is_array($seg)) $cands[] = $seg['startAt'] ?? null;
-    }
-    foreach ($cands as $c) {
-      if ($c === null) continue;
-      $c = (int) $c;
-      if ($c > 0 && ($sessionStartMs === null || $c < $sessionStartMs)) $sessionStartMs = $c;
-    }
-  }
-}
+// Start/End are shown in the header; down here we just note when it was sent.
 if ($sessionStartMs !== null) {
-  $lines[] = 'Session started: ' . date('g:i A', intdiv($sessionStartMs, 1000));
+  $lines[] = 'Session:         '
+    . date('g:i A', intdiv($sessionStartMs, 1000))
+    . ($sessionEndMs !== null ? ' - ' . date('g:i A', intdiv($sessionEndMs, 1000)) : '');
 }
 $lines[] = "Report sent:     {$sentTime}";
 if ($appVersion !== '') {

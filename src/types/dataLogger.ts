@@ -102,9 +102,15 @@ export interface TrackerSegment {
   distanceM: number
   startPoint?: GpsPoint
   endPoint?: GpsPoint
+  /** Thinned GPS breadcrumb of the actual path walked, for the red map trail. */
+  crumbs?: GpsPoint[]
+  /** @deprecated Auto/manual waypoints were removed in the v1.50 redesign; kept
+   *  only so legacy saved logs still type-check when rendered. */
   waypoints?: Waypoint[]
 }
 
+// 'paused'/'saved' are legacy; the redesigned single tracker only uses
+// 'tracking' (live) and 'ended' (stopped, about to send).
 export type TrackerState = 'tracking' | 'paused' | 'ended' | 'saved'
 
 export interface Tracker {

@@ -223,7 +223,7 @@ export function SettingsPage() {
                   Usage tips
                 </button>
               </div>
-              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Screen wake lock and auto-waypoint recording for distance tracking. All settings are saved locally.</p>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">On-trail distance and screen wake lock for patrol tracking. All settings are saved locally.</p>
             </div>
             {showLoggerTips && <UsageTipsModal onClose={() => setShowLoggerTips(false)} />}
 
@@ -255,36 +255,6 @@ export function SettingsPage() {
               </p>
             </div>
 
-            {/* Multi-trail report mode — only relevant to Trail Maint/Patrol */}
-            {loggerSettings.profile === 'patrol' && (
-              <div className="pb-3 mb-1 border-b border-stone-100 dark:border-stone-800">
-                <span className="text-sm text-stone-700 dark:text-stone-300">Multi-Trail Report</span>
-                <div className="mt-2 flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
-                  {([
-                    { value: 'separate', label: 'Separate' },
-                    { value: 'combined', label: 'Combined' },
-                  ] as const).map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => updateLoggerSettings({ multiTrailReport: value })}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                        loggerSettings.multiTrailReport === value
-                          ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
-                          : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1.5">
-                  {loggerSettings.multiTrailReport === 'combined'
-                    ? 'Changing the trail keeps one report — each trail is totaled and delineated as its own section within it.'
-                    : 'Changing the trail closes out the current trail as its own report and starts a fresh one.'}
-                </p>
-              </div>
-            )}
-
             <div className="divide-y divide-stone-100 dark:divide-stone-800">
               {loggerSettings.profile === 'patrol' && (
               <div className="py-3">
@@ -308,135 +278,6 @@ export function SettingsPage() {
                 </p>
               </div>
               )}
-              <div>
-                <PrefRow
-                  label="Record Auto-Waypoints"
-                  checked={loggerSettings.waypointsEnabled}
-                  onChange={v => updateLoggerSettings({ waypointsEnabled: v })}
-                />
-                {loggerSettings.waypointsEnabled && (
-                  <div className="pb-3 pl-2 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Mode</span>
-                      <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
-                        {(['distance', 'time'] as const).map(mode => (
-                          <button
-                            key={mode}
-                            onClick={() => updateLoggerSettings({ waypointMode: mode })}
-                            className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
-                              loggerSettings.waypointMode === mode
-                                ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
-                                : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
-                            }`}
-                          >
-                            {mode}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-stone-500 dark:text-stone-400 w-12">Every</span>
-                      <input
-                        type="number"
-                        min={loggerSettings.waypointMode === 'distance' ? 0.025 : 1}
-                        step={loggerSettings.waypointMode === 'distance' ? 0.025 : 1}
-                        value={loggerSettings.waypointMode === 'distance'
-                          ? loggerSettings.waypointDistanceMi
-                          : loggerSettings.waypointTimeMin}
-                        onChange={e => {
-                          const v = parseFloat(e.target.value)
-                          if (!isNaN(v) && v > 0) {
-                            updateLoggerSettings(
-                              loggerSettings.waypointMode === 'distance'
-                                ? { waypointDistanceMi: v }
-                                : { waypointTimeMin: v }
-                            )
-                          }
-                        }}
-                        className="w-16 px-2 py-1 text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 outline-none focus:border-emerald-400 transition-colors"
-                      />
-                      <span className="text-xs text-stone-400 dark:text-stone-500">
-                        {loggerSettings.waypointMode === 'distance' ? 'mi' : 'min'}
-                      </span>
-                      <div className="flex items-center gap-3 pl-1">
-                        {(loggerSettings.waypointMode === 'distance'
-                          ? ([{ v: 1, label: '1.0' }, { v: 0.25, label: '0.25' }, { v: 0.025, label: '0.025' }] as const)
-                          : ([{ v: 1, label: '1.0' }, { v: 5, label: '5.0' }, { v: 10, label: '10.0' }] as const)
-                        ).map(preset => {
-                          const current = loggerSettings.waypointMode === 'distance'
-                            ? loggerSettings.waypointDistanceMi
-                            : loggerSettings.waypointTimeMin
-                          return (
-                            <label key={preset.label} className="flex items-center gap-1 cursor-pointer select-none">
-                              <input
-                                type="radio"
-                                name={`waypoint-${loggerSettings.waypointMode}-preset`}
-                                checked={Math.abs(current - preset.v) < 1e-9}
-                                onChange={() => updateLoggerSettings(
-                                  loggerSettings.waypointMode === 'distance'
-                                    ? { waypointDistanceMi: preset.v }
-                                    : { waypointTimeMin: preset.v }
-                                )}
-                                className="w-3.5 h-3.5 cursor-pointer accent-emerald-600 dark:accent-emerald-500"
-                              />
-                              <span className="text-xs text-stone-500 dark:text-stone-400">{preset.label}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                    <PrefRow
-                      label="Short vibration & beep at each Auto-Waypoint"
-                      checked={loggerSettings.waypointVibrate}
-                      onChange={v => updateLoggerSettings({ waypointVibrate: v })}
-                    />
-                    <PrefRow
-                      label="Record average pace between Auto-Waypoints"
-                      checked={loggerSettings.waypointPace}
-                      onChange={v => updateLoggerSettings({ waypointPace: v })}
-                    />
-                    {loggerSettings.waypointPace && (
-                      <div className="flex items-center gap-4">
-                        <div className="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5">
-                          {(['min-per-mi', 'mph'] as const).map(fmt => (
-                            <button
-                              key={fmt}
-                              onClick={() => updateLoggerSettings({ waypointPaceFormat: fmt })}
-                              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                                loggerSettings.waypointPaceFormat === fmt
-                                  ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
-                                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
-                              }`}
-                            >
-                              {fmt === 'min-per-mi' ? 'time/dist' : 'dist/time'}
-                            </button>
-                          ))}
-                        </div>
-                        <label className="flex items-center gap-2 cursor-pointer group select-none">
-                          <div className={`
-                            relative w-4 h-4 rounded border transition-colors shrink-0
-                            ${loggerSettings.waypointPaceLogScale
-                              ? 'bg-emerald-600 border-emerald-600 dark:bg-emerald-500 dark:border-emerald-500'
-                              : 'bg-white dark:bg-stone-800 border-stone-300 dark:border-stone-600 group-hover:border-stone-400 dark:group-hover:border-stone-500'
-                            }
-                          `}>
-                            <input
-                              type="checkbox"
-                              checked={loggerSettings.waypointPaceLogScale}
-                              onChange={e => updateLoggerSettings({ waypointPaceLogScale: e.target.checked })}
-                              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                            />
-                            {loggerSettings.waypointPaceLogScale && (
-                              <Check className="absolute inset-0 w-full h-full p-0.5 text-white" strokeWidth={3} />
-                            )}
-                          </div>
-                          <span className="text-xs text-stone-600 dark:text-stone-300">Plot using log scale</span>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
               <PrefRow
                 label="Keep screen awake while tracking"
                 checked={loggerSettings.wakeLockEnabled}
