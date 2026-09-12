@@ -1086,11 +1086,13 @@ export function DataLoggerPage() {
       {/* ── "Now accumulating" banner ───────────────────── */}
       {tracking ? (
         <div className="text-xs font-semibold text-center text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
-          Now accumulating {trailName ? `${trailName} totals` : 'totals'}
+          {showMaintUI
+            ? `Now accumulating ${trailName ? `${trailName} totals` : 'totals'}`
+            : 'Now tracking — recording your route, distance & pace'}
         </div>
       ) : (
         <div className="text-xs text-center text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-800 rounded-lg px-3 py-2">
-          Tap <span className="font-semibold text-emerald-600 dark:text-emerald-400">Start Tracking</span> to begin logging{showMaintUI ? ' — pick a trail first' : ''}.
+          Tap <span className="font-semibold text-emerald-600 dark:text-emerald-400">Start Tracking</span> to begin{showMaintUI ? ' logging — pick a trail first' : ''}.
         </div>
       )}
 

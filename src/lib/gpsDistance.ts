@@ -81,42 +81,56 @@ interface PaceInputTracker {
 
 /**
  * Pace series across the whole session, derived from the recorded GPS breadcrumb.
- * The crumbs are binned by distance (~0.1 mi) so the line is smooth rather than
- * jumping between adjacent fixes; each point's pace is that bin's time ÷ distance,
- * plotted at the bin's midpoint time. Falls back to a segment's start/end points
- * when a (legacy) tracker recorded no crumbs. Computed on demand at view time —
- * i.e. once the session has ended and the map is shown.
+ * The crumbs are binned by distance so the line is smooth rather than jumping
+ * between adjacent fixes; each point's pace is that bin's time ÷ distance, plotted
+ * at the bin's midpoint time. The bin size adapts to the session's total distance
+ * (aiming for ~24 points, clamped 25–200 m) so a short walk still yields a chart
+ * and a long patrol isn't over-sampled — pass `binMeters` to override. Falls back
+ * to a segment's start/end points when a (legacy) tracker recorded no crumbs.
+ * Computed on demand at view time — once the session has ended and the map shows.
  */
-export function paceSeriesFromTrackers(trackers: PaceInputTracker[], binMeters = 161): PacePoint[] {
-  const pts: PacePoint[] = []
+export function paceSeriesFromTrackers(trackers: PaceInputTracker[], binMeters?: number): PacePoint[] {
+  // Gather each segment's ordered path, and the total distance, in one pass.
+  const paths: Array<Array<{ lat: number; lng: number; ts: number }>> = []
+  let totalDist = 0
   for (const t of trackers) {
     for (const seg of t.segments) {
       const path = (seg.crumbs && seg.crumbs.length >= 2)
         ? seg.crumbs
         : [seg.startPoint, seg.endPoint].filter((p): p is { lat: number; lng: number; ts: number } => !!p)
       if (path.length < 2) continue
-      let accDist    = 0
-      let binStartTs = path[0].ts
-      const emit = (endTs: number) => {
-        const dtMs = endTs - binStartTs
-        if (accDist > 0 && dtMs > 0) {
-          pts.push({
-            ts: Math.round((binStartTs + endTs) / 2),
-            paceMinPerMi: (dtMs / 60000) / (accDist / 1609.344),
-          })
-        }
-      }
       for (let i = 1; i < path.length; i++) {
-        accDist += haversineMeters(path[i - 1].lat, path[i - 1].lng, path[i].lat, path[i].lng)
-        if (accDist >= binMeters) {
-          emit(path[i].ts)
-          accDist = 0
-          binStartTs = path[i].ts
-        }
+        totalDist += haversineMeters(path[i - 1].lat, path[i - 1].lng, path[i].lat, path[i].lng)
       }
-      // Trailing remainder — keep it only if it covers a meaningful distance.
-      if (accDist >= binMeters * 0.5) emit(path[path.length - 1].ts)
+      paths.push(path)
     }
+  }
+  if (paths.length === 0 || totalDist <= 0) return []
+
+  const bin = binMeters ?? Math.max(25, Math.min(200, totalDist / 24))
+  const pts: PacePoint[] = []
+  for (const path of paths) {
+    let accDist    = 0
+    let binStartTs = path[0].ts
+    const emit = (endTs: number) => {
+      const dtMs = endTs - binStartTs
+      if (accDist > 0 && dtMs > 0) {
+        pts.push({
+          ts: Math.round((binStartTs + endTs) / 2),
+          paceMinPerMi: (dtMs / 60000) / (accDist / 1609.344),
+        })
+      }
+    }
+    for (let i = 1; i < path.length; i++) {
+      accDist += haversineMeters(path[i - 1].lat, path[i - 1].lng, path[i].lat, path[i].lng)
+      if (accDist >= bin) {
+        emit(path[i].ts)
+        accDist = 0
+        binStartTs = path[i].ts
+      }
+    }
+    // Trailing remainder — keep it only if it covers a meaningful distance.
+    if (accDist >= bin * 0.5) emit(path[path.length - 1].ts)
   }
   return pts.sort((a, b) => a.ts - b.ts)
 }
