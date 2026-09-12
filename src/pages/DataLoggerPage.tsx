@@ -2073,7 +2073,7 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
 
           <TipSection title="Working offline">
             <Tip>
-              <strong>Open the app once while online first</strong> — that lets it cache itself so it still opens with no signal. Confirm before a trip by switching to airplane mode and reopening it. The trail list works offline; only the background map tiles need a connection.
+              <strong>Open the app once while online first</strong> — that lets it cache itself so it still opens with no signal. Confirm before a trip by switching to airplane mode and reopening it. The trail list works offline, and the background map now fills in from tiles you've already viewed — <strong>open your trail's map (Show Map) at home first</strong> and pan/zoom the area you'll patrol so it's there when you're out of range.
             </Tip>
             <Tip>
               <strong>GPS works with no cell service</strong> — location comes from satellites, so your track, coordinates and trailhead distances all record normally out of range. The report map just fills in later when you're back online.

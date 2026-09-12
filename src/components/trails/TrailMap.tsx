@@ -141,6 +141,7 @@ export function TrailMap({
         className="rounded-none"
       >
         <TileLayer
+          crossOrigin="anonymous"
           attribution='&copy; <a href="https://opentopomap.org/">OpenTopoMap</a>'
           url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
         />

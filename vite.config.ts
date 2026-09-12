@@ -23,6 +23,26 @@ export default defineConfig(({ mode }) => {
           navigateFallbackDenylist: [/^\/api\//],
           // Leaflet bundles can push chunks past the 2 MiB default.
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+          // Cache basemap tiles as they're viewed so the maps still show terrain
+          // offline (the "open your trail's map at home first" workflow). The
+          // maps set crossOrigin, so these are CORS 200s (not opaque) — cheap to
+          // store and evicted LRU past maxEntries. Same "map-tiles" cache the
+          // per-trail offline download packs write into.
+          runtimeCaching: [
+            {
+              urlPattern:
+                /^https:\/\/(?:[a-z]\.tile\.openstreetmap\.org|server\.arcgisonline\.com|[a-z]\.tile\.opentopomap\.org)\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "map-tiles",
+                expiration: {
+                  maxEntries: 12000,
+                  maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
+                },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
         },
         manifest: {
           name: "PWV Insights",

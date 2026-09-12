@@ -829,6 +829,7 @@ export function TrailLogMapPage() {
               >
                 <TileLayer
                   key={baseLayer}
+                  crossOrigin="anonymous"
                   attribution={baseLayer === 'aerial'
                     ? 'Tiles &copy; Esri'
                     : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}

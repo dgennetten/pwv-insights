@@ -398,6 +398,7 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
           >
             <TileLayer
               key={baseLayer}
+              crossOrigin="anonymous"
               attribution={baseLayer === 'aerial'
                 ? 'Tiles &copy; Esri'
                 : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}
