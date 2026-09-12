@@ -123,3 +123,22 @@ export interface Tracker {
   totalDistanceM: number
   activeDurationMs: number  // sum of completed segment durations
 }
+
+// ── Offline map packs ──────────────────────────────────────────────
+// A per-trail set of basemap tiles downloaded for offline use, stored in the
+// "map-tiles" Cache Storage (shared with the runtime tile cache). This record
+// tracks what was downloaded so the manager can show size and delete precisely.
+
+export type TileLayerKey = 'street' | 'topo' | 'aerial'
+
+export interface MapPack {
+  wksiteId:  number
+  trailName: string
+  layers:    TileLayerKey[]
+  minZoom:   number
+  maxZoom:   number
+  tileCount: number
+  bytes:     number
+  updatedAt: number
+  tileUrls:  string[]   // exact URLs cached, for precise deletion
+}

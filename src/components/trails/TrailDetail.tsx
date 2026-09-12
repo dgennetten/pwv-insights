@@ -5,6 +5,7 @@ import { memberLinkUrl } from '../../lib/memberLink'
 import type { Trail, Difficulty, TreeSizeBreakdown } from '../../types/trails'
 import { trailMetadata } from '../../data/trailMetadata'
 import { TrailAISummary } from './TrailAISummary'
+import { OfflineMapButton } from '../OfflineMapButton'
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
@@ -353,6 +354,13 @@ export function TrailDetail({ trail, isAuthenticated = false, onBack, onSignInPr
           </button>
         )}
       </div>
+
+      {/* Offline map download for this trail (topo, as shown on the trail map) */}
+      {trail.wksiteId != null && (
+        <div className="mb-4">
+          <OfflineMapButton wksiteId={trail.wksiteId} layers={['topo']} />
+        </div>
+      )}
 
       {/* Trail header */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-4 mb-4">

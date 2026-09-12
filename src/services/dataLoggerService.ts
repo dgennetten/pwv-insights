@@ -1,7 +1,7 @@
-import type { LogEntry, LogSession, Tracker, QueuedSend } from '../types/dataLogger'
+import type { LogEntry, LogSession, Tracker, QueuedSend, MapPack } from '../types/dataLogger'
 
 const DB_NAME    = 'pwv_data_logger'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -20,6 +20,9 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (old < 3) {
         db.createObjectStore('sendQueue', { keyPath: 'id', autoIncrement: true })
+      }
+      if (old < 4) {
+        db.createObjectStore('mapPacks', { keyPath: 'wksiteId' })
       }
     }
     req.onsuccess = (e) => resolve((e.target as IDBOpenDBRequest).result)
@@ -219,6 +222,44 @@ export async function getAllSessions(): Promise<LogSession[]> {
   return new Promise((resolve, reject) => {
     const req = db.transaction('sessions', 'readonly').objectStore('sessions').getAll()
     req.onsuccess = () => resolve(req.result as LogSession[])
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+// ── Offline map packs ──────────────────────────────────────────────
+
+export async function saveMapPack(pack: MapPack): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('mapPacks', 'readwrite').objectStore('mapPacks').put(pack)
+    req.onsuccess = () => resolve()
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+export async function getMapPack(wksiteId: number): Promise<MapPack | undefined> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('mapPacks', 'readonly').objectStore('mapPacks').get(wksiteId)
+    req.onsuccess = () => resolve(req.result as MapPack | undefined)
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+export async function getAllMapPacks(): Promise<MapPack[]> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('mapPacks', 'readonly').objectStore('mapPacks').getAll()
+    req.onsuccess = () => resolve((req.result as MapPack[]).sort((a, b) => a.trailName.localeCompare(b.trailName)))
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+export async function deleteMapPack(wksiteId: number): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('mapPacks', 'readwrite').objectStore('mapPacks').delete(wksiteId)
+    req.onsuccess = () => resolve()
     req.onerror   = () => reject(req.error)
   })
 }

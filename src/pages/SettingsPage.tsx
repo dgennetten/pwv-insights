@@ -13,6 +13,7 @@ import {
 import { getStoredTheme, setStoredTheme, applyTheme, type Theme } from '../lib/theme'
 import { getLoggerSettings, saveLoggerSettings, type LoggerSettings } from '../lib/loggerSettings'
 import { UsageTipsModal } from './DataLoggerPage'
+import { OfflineMapsManager } from '../components/OfflineMapsManager'
 
 // ─── Checkbox row ─────────────────────────────────────────────────────────────
 
@@ -331,6 +332,7 @@ export function SettingsPage() {
                   </span>
                 }
               />
+              <OfflineMapsManager />
             </div>
           </div>
 

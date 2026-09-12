@@ -11,6 +11,7 @@ import { getLoggerSettings } from '../../lib/loggerSettings'
 import { nearestTrailInfo } from '../../lib/trailheadDistance'
 import { paceSeriesFromTrackers } from '../../lib/gpsDistance'
 import { PaceChart } from './PaceChart'
+import { OfflineMapButton } from '../OfflineMapButton'
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -356,6 +357,13 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
           </button>
         </div>
       </div>
+
+      {/* Offline map download for the selected trail */}
+      {wksiteId != null && (
+        <div className="px-4 py-2 border-b border-stone-200 dark:border-stone-800 shrink-0">
+          <OfflineMapButton wksiteId={wksiteId} layers={['street']} aerialOption />
+        </div>
+      )}
 
       {/* Pace / speed chart across the whole session */}
       {paceSeries.length >= 2 && (
