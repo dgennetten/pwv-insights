@@ -273,6 +273,8 @@ export function DataLoggerPage() {
   // Confirmation dialogs
   const [confirmRestart,  setConfirmRestart]  = useState(false)
   const [confirmLeftover, setConfirmLeftover] = useState(false)
+  const [leftoverDismissed, setLeftoverDismissed] = useState(false)
+  const [leftoverArmDiscard, setLeftoverArmDiscard] = useState(false)
   const [confirmStop,     setConfirmStop]     = useState(false)
   const [pendingWksite,   setPendingWksite]   = useState<number | null | undefined>(undefined)
   const [busy,            setBusy]            = useState(false)
@@ -766,54 +768,41 @@ export function DataLoggerPage() {
     void start()
   }, [tracking, leftoverCount, start])
 
-  // Discard everything in the current session and begin tracking fresh. Shared
-  // by the "already tracking" restart confirm and the leftover "Discard" option.
-  const clearAndStart = useCallback(async () => {
+  // Resolve the current session's data — either send it as a report or discard
+  // it — then reuse the session with a clean start time. `thenStart` begins
+  // tracking afterward (the Start-time flows) vs. just clearing (load banner).
+  const flushLeftover = useCallback(async (mode: 'send' | 'discard', thenStart: boolean) => {
     if (!session) return
     setBusy(true)
     try {
-      await clear()
-      await clearSessionEntries(session.id)
-      setEntries([])
-      setUndoStack([])
-      setSavedNote(null)
-      await start()
-    } finally {
-      setBusy(false)
-      setConfirmRestart(false)
-      setConfirmLeftover(false)
-    }
-  }, [session, clear, start])
-
-  // Send the leftover entries as their own report, then start a clean session.
-  const handleSendLeftover = useCallback(async () => {
-    if (!session) return
-    setBusy(true)
-    try {
-      const leftoverTrackers = await getSessionTrackers(session.id)
-      const online = navigator.onLine
-      const ok = online ? await sendReport(leftoverTrackers) : await queueReport(leftoverTrackers)
-      if (!ok) return   // keep the dialog open; error is shown
-      const snapEntries = await getSessionEntries(session.id)
-      setSentSnapshot({
-        entries:   snapEntries,
-        trackers:  leftoverTrackers,
-        wksiteId:  session.wksiteId,
-        reportDate: session.id.slice(0, 10),
-      })
-      setSavedNote({ at: Date.now(), queued: !online })
-      // Clear the now-sent leftovers and reuse the session (clean start time),
-      // then begin tracking the new session.
+      if (mode === 'send') {
+        const leftoverTrackers = await getSessionTrackers(session.id)
+        const online = navigator.onLine
+        const ok = online ? await sendReport(leftoverTrackers) : await queueReport(leftoverTrackers)
+        if (!ok) return   // keep the dialog/banner; error is shown
+        const snapEntries = await getSessionEntries(session.id)
+        setSentSnapshot({
+          entries:   snapEntries,
+          trackers:  leftoverTrackers,
+          wksiteId:  session.wksiteId,
+          reportDate: session.id.slice(0, 10),
+        })
+        setSavedNote({ at: Date.now(), queued: !online })
+      } else {
+        setSavedNote(null)
+      }
       await clear()
       await clearSessionEntries(session.id)
       const fresh = await resetSession(session.id)
       setSession(fresh)
       setEntries([])
       setUndoStack([])
-      await start()
+      if (thenStart) await start()
       setConfirmLeftover(false)
+      setLeftoverArmDiscard(false)
     } finally {
       setBusy(false)
+      setConfirmRestart(false)
     }
   }, [session, sendReport, queueReport, clear, start])
 
@@ -1035,6 +1024,62 @@ export function DataLoggerPage() {
               Start Fresh
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Leftover unsent entries in the current session (surfaced on load) */}
+      {leftoverCount > 0 && !tracking && !leftoverDismissed && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl px-4 py-3 space-y-2">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            Unsent entries in this session
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            {leftoverCount} entr{leftoverCount === 1 ? 'y' : 'ies'} from earlier {leftoverCount === 1 ? 'was' : 'were'} never sent.
+            Send {leftoverCount === 1 ? 'it' : 'them'} as a report, or discard, before your next session.
+          </p>
+          {leftoverArmDiscard ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setLeftoverArmDiscard(false)}
+                disabled={busy}
+                className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void flushLeftover('discard', false)}
+                disabled={busy}
+                className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-50 transition-colors"
+              >
+                {busy ? 'Working…' : `Delete ${leftoverCount}`}
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => void flushLeftover('send', false)}
+                disabled={busy || !reportEmail}
+                title={reportEmail ? undefined : 'No email on file'}
+                className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 transition-colors"
+              >
+                {busy ? 'Working…' : isOnline ? 'Send report' : 'Save report'}
+              </button>
+              <button
+                onClick={() => setLeftoverArmDiscard(true)}
+                disabled={busy}
+                className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 disabled:opacity-50 transition-colors"
+              >
+                Discard
+              </button>
+              <button
+                onClick={() => setLeftoverDismissed(true)}
+                disabled={busy}
+                className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 disabled:opacity-50 transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1688,7 +1733,7 @@ export function DataLoggerPage() {
         confirmLabel={busy ? 'Working…' : 'Clear & Restart'}
         confirmTone="red"
         busy={busy}
-        onConfirm={() => void clearAndStart()}
+        onConfirm={() => void flushLeftover('discard', true)}
         onCancel={() => setConfirmRestart(false)}
       />
     )}
@@ -1700,8 +1745,8 @@ export function DataLoggerPage() {
         isOnline={isOnline}
         email={reportEmail}
         busy={busy}
-        onSend={() => void handleSendLeftover()}
-        onDiscard={() => void clearAndStart()}
+        onSend={() => void flushLeftover('send', true)}
+        onDiscard={() => void flushLeftover('discard', true)}
         onCancel={() => setConfirmLeftover(false)}
       />
     )}
