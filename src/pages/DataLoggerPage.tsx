@@ -276,6 +276,10 @@ export function DataLoggerPage() {
   const [busy,            setBusy]            = useState(false)
   // Note shown at the bottom after a Stop & Send completes (sent or queued).
   const [savedNote,       setSavedNote]       = useState<{ at: number; queued: boolean } | null>(null)
+  // Frozen copy of the just-sent session so its map can still be viewed after
+  // the logger resets. The blue Map button in the sent-note opens this.
+  const [sentSnapshot,    setSentSnapshot]    = useState<{ entries: LogEntry[]; trackers: Tracker[]; wksiteId?: number; reportDate: string } | null>(null)
+  const [showSentMap,     setShowSentMap]     = useState(false)
   const processingQueueRef = useRef(false)
   // Most recent GPS fix, so logging a count can stamp coordinates instantly.
   const lastPosRef = useRef<{ lat: number; lng: number; ts: number } | null>(null)
@@ -775,6 +779,14 @@ export function DataLoggerPage() {
       const online = navigator.onLine
       const ok = online ? await sendReport(endedTrackers) : await queueReport(endedTrackers)
       if (!ok) return   // keep everything so the user can retry; error is shown
+      // Freeze the sent session so its map stays viewable after the reset below.
+      const snapEntries = await getSessionEntries(session.id)
+      setSentSnapshot({
+        entries:   snapEntries,
+        trackers:  endedTrackers,
+        wksiteId:  session.wksiteId,
+        reportDate: session.id.slice(0, 10),
+      })
       setSavedNote({ at: Date.now(), queued: !online })
       await clear()
       await startFreshSession()
@@ -1481,6 +1493,16 @@ export function DataLoggerPage() {
                 ? `Session saved at ${fmtTime(savedNote.at)} — will send to ${reportEmail} when connected.`
                 : `Session sent to ${reportEmail} at ${fmtTime(savedNote.at)}.`}
             </p>
+            {sentSnapshot && (
+              <button
+                onClick={() => setShowSentMap(true)}
+                title="View the map for this sent session"
+                className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors"
+              >
+                <MapPin className="w-3 h-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                Map
+              </button>
+            )}
           </div>
         )}
         {session && (
@@ -1567,6 +1589,18 @@ export function DataLoggerPage() {
         trailheadCoords={trailheadCoords ?? undefined}
         wksiteId={showMaintUI ? session.wksiteId : undefined}
         onClose={() => setShowMap(false)}
+      />
+    )}
+
+    {showSentMap && sentSnapshot && (
+      <MapModal
+        entries={sentSnapshot.entries}
+        trackers={sentSnapshot.trackers}
+        memberName={user?.name ?? ''}
+        reportDate={sentSnapshot.reportDate}
+        trailheadCoords={sentSnapshot.wksiteId != null ? (trailGeoData[sentSnapshot.wksiteId] ?? undefined) : undefined}
+        wksiteId={showMaintUI ? sentSnapshot.wksiteId : undefined}
+        onClose={() => setShowSentMap(false)}
       />
     )}
 
