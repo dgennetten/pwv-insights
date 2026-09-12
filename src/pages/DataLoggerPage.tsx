@@ -15,6 +15,7 @@ import {
   getSessionTrackers,
   markSessionEmailed,
   clearSessionEntries,
+  resetSession,
   enqueueSend,
   getSendQueue,
   updateQueuedSend,
@@ -271,6 +272,7 @@ export function DataLoggerPage() {
   const [recoveryCandidate,   setRecoveryCandidate]   = useState<RecoveryCandidate | null>(null)
   // Confirmation dialogs
   const [confirmRestart,  setConfirmRestart]  = useState(false)
+  const [confirmLeftover, setConfirmLeftover] = useState(false)
   const [confirmStop,     setConfirmStop]     = useState(false)
   const [pendingWksite,   setPendingWksite]   = useState<number | null | undefined>(undefined)
   const [busy,            setBusy]            = useState(false)
@@ -750,13 +752,23 @@ export function DataLoggerPage() {
 
   // ── Start / Stop / Trail switch ───────────────────────────────────
 
+  // Non-trail entries left in the current session from a prior run that was
+  // never sent — Start offers to send or discard them before a clean session.
+  const leftoverCount = useMemo(
+    () => entries.filter(e => e.type !== 'trail').length,
+    [entries],
+  )
+
   const handleStartClick = useCallback(() => {
     if (tracking) { setConfirmRestart(true); return }
+    if (leftoverCount > 0) { setConfirmLeftover(true); return }
     setSavedNote(null)
     void start()
-  }, [tracking, start])
+  }, [tracking, leftoverCount, start])
 
-  const handleRestart = useCallback(async () => {
+  // Discard everything in the current session and begin tracking fresh. Shared
+  // by the "already tracking" restart confirm and the leftover "Discard" option.
+  const clearAndStart = useCallback(async () => {
     if (!session) return
     setBusy(true)
     try {
@@ -769,8 +781,41 @@ export function DataLoggerPage() {
     } finally {
       setBusy(false)
       setConfirmRestart(false)
+      setConfirmLeftover(false)
     }
   }, [session, clear, start])
+
+  // Send the leftover entries as their own report, then start a clean session.
+  const handleSendLeftover = useCallback(async () => {
+    if (!session) return
+    setBusy(true)
+    try {
+      const leftoverTrackers = await getSessionTrackers(session.id)
+      const online = navigator.onLine
+      const ok = online ? await sendReport(leftoverTrackers) : await queueReport(leftoverTrackers)
+      if (!ok) return   // keep the dialog open; error is shown
+      const snapEntries = await getSessionEntries(session.id)
+      setSentSnapshot({
+        entries:   snapEntries,
+        trackers:  leftoverTrackers,
+        wksiteId:  session.wksiteId,
+        reportDate: session.id.slice(0, 10),
+      })
+      setSavedNote({ at: Date.now(), queued: !online })
+      // Clear the now-sent leftovers and reuse the session (clean start time),
+      // then begin tracking the new session.
+      await clear()
+      await clearSessionEntries(session.id)
+      const fresh = await resetSession(session.id)
+      setSession(fresh)
+      setEntries([])
+      setUndoStack([])
+      await start()
+      setConfirmLeftover(false)
+    } finally {
+      setBusy(false)
+    }
+  }, [session, sendReport, queueReport, clear, start])
 
   const handleStopAndSend = useCallback(async () => {
     if (!session) return
@@ -1643,8 +1688,21 @@ export function DataLoggerPage() {
         confirmLabel={busy ? 'Working…' : 'Clear & Restart'}
         confirmTone="red"
         busy={busy}
-        onConfirm={() => void handleRestart()}
+        onConfirm={() => void clearAndStart()}
         onCancel={() => setConfirmRestart(false)}
+      />
+    )}
+
+    {/* Leftover entries — offer to send them before a new session */}
+    {confirmLeftover && (
+      <LeftoverModal
+        count={leftoverCount}
+        isOnline={isOnline}
+        email={reportEmail}
+        busy={busy}
+        onSend={() => void handleSendLeftover()}
+        onDiscard={() => void clearAndStart()}
+        onCancel={() => setConfirmLeftover(false)}
       />
     )}
 
@@ -1743,6 +1801,75 @@ function ConfirmModal({
           >
             {confirmLabel}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Leftover-entries dialog ────────────────────────────────────
+// Shown when Start Tracking is pressed and the session still holds entries from
+// an earlier run that were never sent. Offer to send them as their own report,
+// discard them, or cancel — all before the new session begins.
+function LeftoverModal({
+  count, isOnline, email, busy, onSend, onDiscard, onCancel,
+}: {
+  count:    number
+  isOnline: boolean
+  email:    string
+  busy:     boolean
+  onSend:   () => void
+  onDiscard:() => void
+  onCancel: () => void
+}) {
+  const noun = `${count} entr${count === 1 ? 'y' : 'ies'}`
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onClick={e => { if (e.target === e.currentTarget && !busy) onCancel() }}
+    >
+      <div className="w-full max-w-sm bg-white dark:bg-stone-900 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
+        <div className="px-5 pt-5 pb-4">
+          <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 mb-2">Unsent entries from earlier</h3>
+          <p className="text-sm text-stone-600 dark:text-stone-400">
+            This session still has <span className="font-semibold text-stone-800 dark:text-stone-200">{noun}</span> that were never sent.
+            Send them as their own report before starting a new session?
+          </p>
+          {email
+            ? <p className="text-xs text-stone-400 dark:text-stone-500 mt-2">
+                {isOnline ? `Sends to ${email} now.` : `Saved and sent to ${email} when you reconnect.`}
+              </p>
+            : <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">No email on file — can't send.</p>}
+        </div>
+        <div className="px-5 pb-5 space-y-2">
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={busy || !email}
+            className="w-full px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 shadow-sm transition-colors"
+          >
+            {busy ? 'Working…' : isOnline ? 'Send report & start new' : 'Save report & start new'}
+          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={busy}
+              className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 disabled:opacity-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onDiscard}
+              disabled={busy}
+              className="flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-50 shadow-sm transition-colors"
+            >
+              Discard &amp; start
+            </button>
+          </div>
         </div>
       </div>
     </div>
