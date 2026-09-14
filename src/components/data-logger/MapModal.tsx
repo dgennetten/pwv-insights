@@ -307,28 +307,6 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     setSelectedItem(prev => prev?.ts === item.ts ? null : item)
   }
 
-  // Save a self-contained JSON backup of the log (entries incl. photos +
-  // trackers) to the device — a local safety net independent of the email.
-  const handleSaveLocal = () => {
-    const payload = {
-      savedAt:    new Date().toISOString(),
-      member:     memberName,
-      reportDate,
-      wksiteId:   wksiteId ?? null,
-      entries,
-      trackers,
-    }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href     = url
-    a.download = `pwv-log-${reportDate}.json`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-stone-900">
 
@@ -339,13 +317,6 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
           <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">{reportDate} · {memberName}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleSaveLocal}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
-            title="Download a local JSON backup of this log (entries, photos, trackers)"
-          >
-            Save Local
-          </button>
           <button
             onClick={onClose}
             aria-label="Close map"
