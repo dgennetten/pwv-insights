@@ -93,9 +93,14 @@ export function clearBlogPref(): void {
 }
 
 export function shouldShowBlog(): boolean {
-  const pref = getBlogPref()
-  if (!pref) return true
-  if (pref.mode === 'never') return false
   const latest = BLOG_ENTRIES[BLOG_ENTRIES.length - 1]
+  const pref = getBlogPref()
+  // First visit: don't surface the backlog. Seed a baseline so genuinely new
+  // entries shipped after this visit still pop up next time.
+  if (!pref) {
+    setBlogPref({ mode: 'until-new', lastSeenId: latest.id })
+    return false
+  }
+  if (pref.mode === 'never') return false
   return latest.id > pref.lastSeenId
 }

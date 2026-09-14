@@ -1,4 +1,4 @@
-import { Undo2, ArrowLeft, Camera, FileDown, MapPin } from 'lucide-react'
+import { Undo2, Camera, FileDown, MapPin } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -245,7 +245,6 @@ export function DataLoggerPage() {
 
   const [isOnline,      setIsOnline]      = useState(navigator.onLine)
   const [showTips,      setShowTips]      = useState(false)
-  const [showTipsHint,  setShowTipsHint]  = useState(true)
   // 'patrol' shows the full trail-maintenance UI; 'other' hides Tree & Violation.
   const [loggerProfile] = useState(() => getLoggerSettings().profile)
   const showMaintUI = loggerProfile === 'patrol'
@@ -302,12 +301,6 @@ export function DataLoggerPage() {
   const trailheadCoords = session?.wksiteId != null
     ? (trailGeoData[session.wksiteId] ?? null)
     : null
-
-  // Blink the "Usage tips" hint arrow a few times on launch, then remove it
-  useEffect(() => {
-    const timer = setTimeout(() => setShowTipsHint(false), 3200)
-    return () => clearTimeout(timer)
-  }, [])
 
   // Reflect the geolocation permission state in the GPS indicator.
   useEffect(() => {
@@ -946,18 +939,11 @@ export function DataLoggerPage() {
         <div className="flex items-center gap-2">
           <h1 className="text-base font-semibold text-stone-900 dark:text-stone-100">Data Logger</h1>
           <button
-            onClick={() => { setShowTips(true); setShowTipsHint(false) }}
+            onClick={() => setShowTips(true)}
             className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors"
           >
             Usage tips
           </button>
-          {showTipsHint && (
-            <ArrowLeft
-              className="tip-arrow-hint w-5 h-5 text-red-500 shrink-0"
-              strokeWidth={2.5}
-              aria-hidden
-            />
-          )}
           {undoStack.length > 0 && tracking && (
             <button
               type="button"
