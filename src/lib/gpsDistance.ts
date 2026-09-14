@@ -22,9 +22,15 @@ export function gpsPathDistanceM(points: Array<{ lat: number; lng: number }>): n
   return total
 }
 
-/** Best distance for a tracker: stored total or path reconstructed from recorded GPS points. */
+/**
+ * On-trail distance for a tracker. Prefer the stored total — accumulated one
+ * direction (forward progress), so an out-and-back isn't double-counted. Only
+ * when it's absent (legacy trackers that never stored a total) do we fall back
+ * to reconstructing the raw path length from recorded GPS points.
+ */
 export function trackerDistanceM(tracker: TrackerStats): number {
-  let best = tracker.totalDistanceM
+  if (tracker.totalDistanceM > 0) return tracker.totalDistanceM
+  let best = 0
   for (const seg of tracker.segments) {
     const points: Array<{ lat: number; lng: number }> = []
     if (seg.startPoint) points.push({ lat: seg.startPoint.lat, lng: seg.startPoint.lng })

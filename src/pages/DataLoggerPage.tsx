@@ -2041,7 +2041,7 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
               <strong>Tap counts as you go</strong> — People, Dogs, Trees, Violations and Notes/Photos all accumulate under the current trail. The red breadcrumb records your actual path automatically.
             </Tip>
             <Tip>
-              <strong>Distance traveled on trail</strong> counts your movement along the trail in either direction — up the trail and back both add to it. <strong>From trail head</strong> shows how far along the trail you are (a <strong>*</strong> means you're off the trail and it's a straight-line distance).
+              <strong>Distance traveled on trail</strong> counts how far you've covered along the trail, one direction — walking out and back doesn't double it. <strong>From trail head</strong> shows how far along the trail you are (a <strong>*</strong> means you're off the trail and it's a straight-line distance).
             </Tip>
             <Tip>
               <strong>Change trails mid-patrol</strong> — pick a new trail from the dropdown and confirm. Your totals for the trail you're leaving are saved as a section; the counters reset for the new trail. It all stays in one continuous report.
