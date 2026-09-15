@@ -2,7 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { Trash2, Loader2 } from 'lucide-react'
 import { getAllMapPacks } from '../services/dataLoggerService'
 import { deletePack, humanBytes } from '../lib/offlineTiles'
+import { trailNames } from '../data/trailGeoData'
 import type { MapPack } from '../types/dataLogger'
+
+/** Resolve the trail name live rather than trusting the stored one — older packs
+ *  may have been saved with an empty/stale name. */
+const packName = (p: MapPack) => trailNames[p.wksiteId] || p.trailName || `Trail ${p.wksiteId}`
 
 const LAYER_LABEL: Record<string, string> = { street: 'Street', topo: 'Topo', aerial: 'Aerial' }
 
@@ -53,7 +58,7 @@ export function OfflineMapsManager() {
             <div key={p.wksiteId} className="flex items-center justify-between gap-3 bg-stone-50 dark:bg-stone-800/50 rounded-lg px-3 py-2">
               <div className="min-w-0">
                 <div className="text-xs font-medium text-stone-700 dark:text-stone-200 truncate">
-                  <span className="text-stone-400 dark:text-stone-500 tabular-nums">#{p.wksiteId}</span> {p.trailName}
+                  <span className="text-stone-400 dark:text-stone-500 tabular-nums">#{p.wksiteId}</span> {packName(p)}
                 </div>
                 <div className="text-[11px] text-stone-400 dark:text-stone-500">
                   {humanBytes(p.bytes)} · z{p.minZoom}–{p.maxZoom} · {p.layers.map(l => LAYER_LABEL[l] ?? l).join(', ')}
@@ -62,7 +67,7 @@ export function OfflineMapsManager() {
               <button
                 onClick={() => void removeOne(p.wksiteId)}
                 disabled={busy !== null}
-                aria-label={`Delete offline map for #${p.wksiteId} ${p.trailName}`}
+                aria-label={`Delete offline map for #${p.wksiteId} ${packName(p)}`}
                 className="shrink-0 inline-flex items-center gap-1 text-xs text-stone-400 hover:text-red-500 disabled:opacity-50 transition-colors"
               >
                 {busy === p.wksiteId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
