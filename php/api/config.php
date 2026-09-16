@@ -495,6 +495,59 @@ function llmProviders(PDO $db): array {
   return $ordered;
 }
 
+/**
+ * Best-effort current account balance for the Admin "AI Provider" card, as a
+ * display string (e.g. "$49.59"), or null when the provider exposes none
+ * (Anthropic has no per-key balance endpoint; only Kimi/Moonshot does). Cached
+ * ~5 min in app_settings so opening the Admin page doesn't make an external call
+ * every time.
+ */
+function llmProviderBalance(PDO $db, array $provider): ?string {
+  $id  = (string) ($provider['id'] ?? '');
+  $key = 'llm_stats_' . $id;
+  $cached = appSettingGet($db, $key, null);
+  if ($cached !== null) {
+    $c = json_decode($cached, true);
+    if (is_array($c) && (time() - (int) ($c['at'] ?? 0)) < 300) {
+      return $c['balance'] ?? null;
+    }
+  }
+
+  $balance = ($id === 'kimi') ? moonshotBalance($provider) : null;
+
+  appSettingSet($db, $key, json_encode(['balance' => $balance, 'at' => time()]));
+  return $balance;
+}
+
+/**
+ * Kimi/Moonshot available balance as a display string (e.g. "$49.59"), or null on
+ * any failure. The balance endpoint lives under the OpenAI-style base
+ * (scheme+host + /v1/users/me/balance), not the configured /anthropic path, and
+ * uses Bearer auth rather than x-api-key.
+ */
+function moonshotBalance(array $provider): ?string {
+  $parts = parse_url((string) ($provider['baseUrl'] ?? ''));
+  if (empty($parts['host'])) return null;
+  $origin = ($parts['scheme'] ?? 'https') . '://' . $parts['host'];
+
+  $ch = curl_init($origin . '/v1/users/me/balance');
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . ($provider['apiKey'] ?? '')],
+    CURLOPT_TIMEOUT        => 6,
+  ]);
+  $resp = curl_exec($ch);
+  $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  curl_close($ch);
+
+  if ($code !== 200 || !$resp) {
+    error_log('moonshotBalance: HTTP ' . $code . ' ' . substr((string) ($resp ?: ''), 0, 200));
+    return null;
+  }
+  $bal = json_decode($resp, true)['data']['available_balance'] ?? null;
+  return is_numeric($bal) ? '$' . number_format((float) $bal, 2) : null;
+}
+
 /** One Messages-API call to a provider. Returns the text on HTTP 200, else null. */
 function callLLM(array $provider, string $prompt, int $maxTokens): ?string {
   $payload = json_encode([

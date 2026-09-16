@@ -392,7 +392,11 @@ export function AdminPage() {
                         <span className="text-sm font-medium text-stone-800 dark:text-stone-200">{p.label}</span>
                         <span className="ml-2 text-xs text-stone-400 dark:text-stone-500">{p.model}</span>
                       </span>
-                      <span className="text-[10px] font-semibold uppercase tracking-wider shrink-0">
+                      <span className="w-20 text-right shrink-0">
+                        <span className="block text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Balance</span>
+                        <span className="text-xs text-stone-700 dark:text-stone-300 tabular-nums">{p.balance || '—'}</span>
+                      </span>
+                      <span className="w-16 text-right text-[10px] font-semibold uppercase tracking-wider shrink-0">
                         {isPrimary
                           ? <span className="text-emerald-600 dark:text-emerald-400">Primary</span>
                           : <span className="text-stone-400 dark:text-stone-500">Fallback</span>}

@@ -23,6 +23,9 @@ export interface AiProvider {
   id: string
   label: string
   model: string
+  /** Current account balance as a display string, or null if the provider
+   *  doesn't expose one (e.g. Anthropic). */
+  balance?: string | null
 }
 
 export interface LlmSettings {

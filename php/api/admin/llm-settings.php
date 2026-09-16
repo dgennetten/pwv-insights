@@ -53,8 +53,13 @@ if (array_key_exists('primary', $body)) {
 }
 
 // ── Read effective state ──────────────────────────────────────────────────────
-$providers = array_values(array_map(function ($p) {
-  return ['id' => $p['id'], 'label' => $p['label'], 'model' => $p['model']];
+$providers = array_values(array_map(function ($p) use ($db) {
+  return [
+    'id'      => $p['id'],
+    'label'   => $p['label'],
+    'model'   => $p['model'],
+    'balance' => llmProviderBalance($db, $p),
+  ];
 }, $all));
 
 $primary = appSettingGet($db, 'llm_primary', null);
