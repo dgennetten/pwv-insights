@@ -16,6 +16,10 @@ function formatDate(iso: string) {
   })
 }
 
+function reportUrl(reportId: number): string {
+  return `https://clrdvol.org/groups/index.php?option=com_fs&view=report&Itemid=136&id=${reportId}`
+}
+
 export function TrailCoveragePatrolDetail({
   trail,
   patrols,
@@ -160,7 +164,16 @@ export function TrailCoveragePatrolDetail({
                   <tr key={row.reportId} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs text-stone-500 dark:text-stone-400 whitespace-nowrap align-top">
                       <div>{formatDate(row.date)}</div>
-                      <div className="text-[10px] text-stone-400 dark:text-stone-600 tabular-nums mt-0.5">#{row.reportId}</div>
+                      <div className="text-[10px] tabular-nums mt-0.5">
+                        <a
+                          href={reportUrl(row.reportId)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-700 dark:text-emerald-400 hover:underline underline-offset-2"
+                        >
+                          #{row.reportId}
+                        </a>
+                      </div>
                     </td>
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium break-words max-w-[11rem] sm:max-w-none align-top">
                       {row.memberName.split('|').map((name, i) => (

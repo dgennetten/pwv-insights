@@ -13,6 +13,10 @@ function formatDate(iso: string) {
   })
 }
 
+function reportUrl(reportId: number): string {
+  return `https://clrdvol.org/groups/index.php?option=com_fs&view=report&Itemid=136&id=${reportId}`
+}
+
 const SIZE_LABELS: Record<keyof TreeSizeBreakdown, string> = {
   small: '< 8"', medium: '8–15"', large: '16–23"', xl: '24–36"', xxl: '> 36"',
 }
@@ -184,7 +188,16 @@ function PatrolHistorySection({ history }: { history: Trail['patrolHistory'] }) 
                 <tr key={entry.reportId} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
                   <td className="px-4 py-2.5 text-xs text-stone-500 dark:text-stone-400 whitespace-nowrap align-top">
                     <div>{formatDate(entry.date)}</div>
-                    <div className="text-[10px] text-stone-400 dark:text-stone-600 tabular-nums mt-0.5">#{entry.reportId}</div>
+                    <div className="text-[10px] tabular-nums mt-0.5">
+                      <a
+                        href={reportUrl(entry.reportId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-700 dark:text-emerald-400 hover:underline underline-offset-2"
+                      >
+                        #{entry.reportId}
+                      </a>
+                    </div>
                   </td>
                   <td className="px-4 py-2.5 text-xs sm:text-sm font-medium break-words max-w-[11rem] sm:max-w-none align-top">
                     {entry.memberName.split('|').map((name, i) => (
