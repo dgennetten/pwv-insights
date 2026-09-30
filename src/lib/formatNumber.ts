@@ -21,9 +21,10 @@ export function formatDecimal(n: number, minFractionDigits: number, maxFractionD
   }).format(n)
 }
 
-/** Grouped number rounded to a fixed count of significant digits (e.g. 3 → 12.3, 1,230). */
+/** Grouped number with exactly this many significant digits, keeping trailing zeros (e.g. 3 → 5.00, 12.3, 1,230). */
 export function formatSignificant(n: number, significantDigits: number): string {
   return new Intl.NumberFormat(DISPLAY_NUMBER_LOCALE, {
+    minimumSignificantDigits: significantDigits,
     maximumSignificantDigits: significantDigits,
   }).format(Number.isFinite(n) ? n : 0)
 }
