@@ -29,7 +29,7 @@ import { TrailCoverageList } from './TrailCoverageList'
 import { ViolationsChart } from './ViolationsChart'
 import { TreesClearedChart } from './TreesClearedChart'
 import { MembersByAgeChart } from './MembersByAgeChart'
-import { formatInteger } from '../../lib/formatNumber'
+import { formatInteger, formatSignificant } from '../../lib/formatNumber'
 import { formatTreesClearedWhole } from './formatTreesCleared'
 import { TrailCoveragePatrolDetail } from './TrailCoveragePatrolDetail'
 import { MemberGate } from '../MemberGate'
@@ -437,9 +437,9 @@ export function ActivityDashboard({
         {kpi.sawyerSlice && (
           <KpiCard
             label="Sawyer Slice"
-            value={`${formatInteger(Number(summary.sawyerSlice))} m²`}
+            value={`${formatSignificant(Number(summary.sawyerSlice), 3)} m²`}
             delta={summary.sawyerSliceDelta}
-            deltaFormatter={(n) => `${formatInteger(n)} m²`}
+            deltaFormatter={(n) => `${formatSignificant(n, 3)} m²`}
             icon={<Axe className="w-4 h-4" strokeWidth={1.5} />}
           />
         )}

@@ -20,3 +20,10 @@ export function formatDecimal(n: number, minFractionDigits: number, maxFractionD
     maximumFractionDigits: maxFractionDigits,
   }).format(n)
 }
+
+/** Grouped number rounded to a fixed count of significant digits (e.g. 3 → 12.3, 1,230). */
+export function formatSignificant(n: number, significantDigits: number): string {
+  return new Intl.NumberFormat(DISPLAY_NUMBER_LOCALE, {
+    maximumSignificantDigits: significantDigits,
+  }).format(Number.isFinite(n) ? n : 0)
+}
