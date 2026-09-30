@@ -64,6 +64,11 @@ interface KpiCardProps {
   deltaFormatter?: (n: number) => string
 }
 
+/** Sawyer Slice: three significant digits below 1,000 m², whole numbers above. */
+function formatSawyerSlice(n: number): string {
+  return `${Math.abs(n) < 1000 ? formatSignificant(n, 3) : formatInteger(n)} m²`
+}
+
 function DeltaBadge({ delta, deltaFormatter }: { delta: number; deltaFormatter?: (n: number) => string }) {
   if (delta === 0) return (
     <span className="inline-flex items-center gap-0.5 text-[10px] text-stone-400 dark:text-stone-500">
@@ -437,9 +442,9 @@ export function ActivityDashboard({
         {kpi.sawyerSlice && (
           <KpiCard
             label="Sawyer Slice"
-            value={`${formatSignificant(Number(summary.sawyerSlice), 3)} m²`}
+            value={formatSawyerSlice(Number(summary.sawyerSlice))}
             delta={summary.sawyerSliceDelta}
-            deltaFormatter={(n) => `${formatSignificant(n, 3)} m²`}
+            deltaFormatter={formatSawyerSlice}
             icon={<Axe className="w-4 h-4" strokeWidth={1.5} />}
           />
         )}
