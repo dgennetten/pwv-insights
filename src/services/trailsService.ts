@@ -1,3 +1,5 @@
+import { apiUrl } from '../config/api'
+
 export interface TrailAISummaryResult {
   summary: string | null
   reason?: string
@@ -9,7 +11,7 @@ export interface TrailAISummaryResult {
 }
 
 export async function fetchTrailAISummary(wksiteId: number): Promise<TrailAISummaryResult> {
-  const res = await fetch(`/api/trails/ai-summary.php?wksiteId=${wksiteId}`)
+  const res = await fetch(apiUrl(`/api/trails/ai-summary.php?wksiteId=${wksiteId}`))
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json() as Promise<TrailAISummaryResult>
 }

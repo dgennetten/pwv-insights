@@ -1,3 +1,5 @@
+import { apiUrl } from '../config/api'
+
 export interface SendFeedbackPayload {
   message: string
   name?: string
@@ -8,7 +10,7 @@ export interface SendFeedbackPayload {
 }
 
 export async function sendFeedback(payload: SendFeedbackPayload): Promise<void> {
-  const res = await fetch('/api/feedback/send.php', {
+  const res = await fetch(apiUrl('/api/feedback/send.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

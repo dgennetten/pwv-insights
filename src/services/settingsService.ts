@@ -1,3 +1,4 @@
+import { apiUrl } from '../config/api'
 import { DEFAULT_PREFERENCES, mergeWithDefaults, type UserPreferences } from '../types/settings'
 
 const PREFS_KEY = 'pwv_user_prefs'
@@ -27,7 +28,7 @@ export function getLocalPreferences(): UserPreferences {
 
 export async function fetchUserPreferences(token: string): Promise<UserPreferences> {
   try {
-    const res = await fetch('/api/user/get-preferences.php', {
+    const res = await fetch(apiUrl('/api/user/get-preferences.php'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -45,7 +46,7 @@ export async function fetchUserPreferences(token: string): Promise<UserPreferenc
 
 export async function saveUserPreferences(token: string, prefs: UserPreferences): Promise<void> {
   writeLocalPrefs(prefs)  // instant local update before API round-trip
-  const res = await fetch('/api/user/save-preferences.php', {
+  const res = await fetch(apiUrl('/api/user/save-preferences.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, prefs }),
