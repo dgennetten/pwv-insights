@@ -353,32 +353,11 @@ Google manages the signing key for AAB uploads. To configure Digital Asset Links
 
 ## Backend Considerations
 
-The Android app makes API calls to `https://pwv-insights.gennetten.org/api/`. Ensure the PHP backend allows CORS for the `capacitor://localhost` and `https://localhost` origins.
+The Android app makes API calls to `https://pwv-insights.gennetten.org/api/` from the origin `https://localhost` (Capacitor's default `androidScheme`).
 
-**CORS headers needed** (in `.htaccess` or PHP responses):
-```apache
-Header set Access-Control-Allow-Origin "capacitor://localhost"
-Header add Access-Control-Allow-Origin "https://localhost"
-Header set Access-Control-Allow-Credentials "true"
-Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
-```
+**CORS Status**: The PHP backend already sends `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Headers: Content-Type` on all endpoints, and returns `204` on `OPTIONS` preflight requests. This works correctly for the Android app - no backend changes are needed.
 
-Or in PHP:
-```php
-$allowed_origins = ['capacitor://localhost', 'https://localhost', 'https://pwv-insights.gennetten.org'];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins, true)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header('Access-Control-Allow-Credentials: true');
-}
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-    exit(0);
-}
-```
+**Auth**: The app sends the authentication token in the JSON request body (not in cookies or headers), so no credential or SameSite cookie configuration is required.
 
-**Cookies**: Session cookies may need `SameSite=None; Secure` when accessed from Capacitor.
+**Deploy script**: Ensure `scripts/deploy.mjs` doesn't delete any future `.well-known/assetlinks.json` if you later add Digital Asset Links for TWA/App Links.
 
-**Deploy script**: Ensure `scripts/deploy.mjs` doesn't delete `.well-known/assetlinks.json` if using TWA/Digital Asset Links in the future.

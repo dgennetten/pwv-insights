@@ -3,7 +3,10 @@
  * 
  * - Web (dev): proxied via Vite to localhost:3001
  * - Web (prod): relative URLs to the same origin (pwv-insights.gennetten.org)
- * - Capacitor: absolute URLs to the production backend
+ * - Capacitor (Android): absolute URLs to production backend
+ * 
+ * Android origin is https://localhost (Capacitor's default androidScheme).
+ * The PHP backend already sends Access-Control-Allow-Origin: * for all endpoints.
  */
 
 import { Capacitor } from '@capacitor/core';

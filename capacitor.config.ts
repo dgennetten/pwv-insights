@@ -5,9 +5,8 @@ const config: CapacitorConfig = {
   appName: 'PWV Insights',
   webDir: 'dist',
   server: {
-    // Point to the live backend for API calls
-    url: undefined, // Uses bundled web assets; API calls go to production
-    cleartext: false,
+    // Uses bundled web assets; API calls go to production
+    androidScheme: 'https', // Default scheme; origin will be https://localhost
   },
   plugins: {
     SplashScreen: {
