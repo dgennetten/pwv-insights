@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PWV Insights</string>
+    <string name="title_activity_main">PWV Insights</string>
+    <string name="package_name">org.gennetten.pwvinsights</string>
+    <string name="custom_url_scheme">org.gennetten.pwvinsights</string>
+</resources>

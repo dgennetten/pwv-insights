@@ -11,8 +11,12 @@ import { SchedulePage } from "./pages/SchedulePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TrailsPage } from "./pages/TrailsPage";
 import { TrailLogMapPage } from "./pages/TrailLogMapPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import AccountDeletionPage from "./pages/AccountDeletionPage";
 
 export const router = createBrowserRouter([
+  { path: "/privacy", element: <PrivacyPage /> },
+  { path: "/account-deletion", element: <AccountDeletionPage /> },
   { path: "/trail-log", element: <TrailLogMapPage /> },
   { path: "/trail-log/:logId", element: <TrailLogMapPage /> },
   {

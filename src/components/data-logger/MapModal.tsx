@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, Tooltip, ScaleControl, useMap } from 'react-leaflet'
 import { popup as createLPopup, divIcon } from 'leaflet'
+import { watchPosition, clearWatch, isGeolocationAvailable } from '../../services/geolocationService'
 import { trailPaths } from '../../data/trailPaths'
 import { trailGeoData, trailNames } from '../../data/trailGeoData'
 import { TRAILHEAD_PIN } from '../../lib/trailheadPin'
@@ -168,18 +169,22 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
   const [selectedItem, setSelectedItem] = useState<TimelineItem | null>(null)
   const [baseLayer,    setBaseLayer]    = useState<'street' | 'aerial'>('street')
   const [livePos,      setLivePos]      = useState<{ lat: number; lng: number } | null>(null)
-  const livePosWatchRef = useRef<number | null>(null)
+  const livePosWatchRef = useRef<number | string | null>(null)
 
   useEffect(() => {
-    if (!navigator.geolocation) return
-    livePosWatchRef.current = navigator.geolocation.watchPosition(
-      pos => setLivePos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => { /* silent */ },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
-    )
+    const startLiveWatch = async () => {
+      if (!isGeolocationAvailable()) return
+      livePosWatchRef.current = await watchPosition(
+        pos => setLivePos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => { /* silent */ },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+      )
+    }
+    void startLiveWatch()
     return () => {
-      if (livePosWatchRef.current !== null)
-        navigator.geolocation.clearWatch(livePosWatchRef.current)
+      if (livePosWatchRef.current !== null) {
+        void clearWatch(livePosWatchRef.current)
+      }
     }
   }, [])
 

@@ -9,6 +9,12 @@
  */
 require_once __DIR__ . '/../config.php';
 
+header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Headers: Content-Type');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+
 define('TRIP_PWV_GROUP', 10);
 define('TRIP_MAX_REPORTS', 60);
 define('TRIP_CACHE_EXPIRY_MONTHS', 12);

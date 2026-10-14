@@ -2,9 +2,11 @@ import { Undo2, Camera, FileDown, MapPin } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { apiUrl } from '../config/api'
 import { version } from '../../package.json'
 import { useTracking } from '../components/data-logger/useTracking'
 import { MapModal } from '../components/data-logger/MapModal'
+import { getCurrentPosition, isGeolocationAvailable } from '../services/geolocationService'
 import {
   getOrCreateSession,
   getAllSessions,
@@ -106,14 +108,13 @@ function formatSessionDate(session: LogSession): string {
 }
 
 async function getPosition(): Promise<{ lat: number; lng: number } | null> {
-  return new Promise(resolve => {
-    if (!navigator.geolocation) return resolve(null)
-    navigator.geolocation.getCurrentPosition(
-      p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => resolve(null),
-      { timeout: 5000, maximumAge: 30000 },
-    )
-  })
+  try {
+    if (!isGeolocationAvailable()) return null
+    const pos = await getCurrentPosition({ timeout: 5000, maximumAge: 30000 })
+    return { lat: pos.coords.latitude, lng: pos.coords.longitude }
+  } catch {
+    return null
+  }
 }
 
 /** Trail in effect at a given time, from trail-change events (else the session's selection). */
@@ -304,7 +305,7 @@ export function DataLoggerPage() {
 
   // Reflect the geolocation permission state in the GPS indicator.
   useEffect(() => {
-    if (!('geolocation' in navigator)) { setGpsStatus('unavailable'); return }
+    if (!isGeolocationAvailable()) { setGpsStatus('unavailable'); return }
     if (!navigator.permissions?.query) return
     let permission: PermissionStatus | null = null
     const apply = () =>
@@ -318,13 +319,29 @@ export function DataLoggerPage() {
   // Keep a light GPS fix cached so taps stamp coordinates instantly even when a
   // trail path calc isn't running. (The tracker runs its own high-accuracy watch.)
   useEffect(() => {
-    if (!navigator.geolocation) return
-    const id = navigator.geolocation.watchPosition(
-      pos => { lastPosRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() } },
-      () => { /* keep last reading */ },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
-    )
-    return () => navigator.geolocation.clearWatch(id)
+    let watchId: number | string | null = null
+    const startBackgroundWatch = async () => {
+      if (!isGeolocationAvailable()) return
+      try {
+        const geoService = await import('../services/geolocationService')
+        watchId = await geoService.watchPosition(
+          pos => { lastPosRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() } },
+          () => { /* keep last reading */ },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+        )
+      } catch (error) {
+        console.error('Failed to start background GPS watch:', error)
+      }
+    }
+    void startBackgroundWatch()
+    return () => {
+      if (watchId !== null) {
+        void (async () => {
+          const geoService = await import('../services/geolocationService')
+          await geoService.clearWatch(watchId!)
+        })()
+      }
+    }
   }, [])
 
   const refreshEntries = useCallback(async (sessionId: string) => {
@@ -395,7 +412,7 @@ export function DataLoggerPage() {
       return { lat: cached.lat, lng: cached.lng }
     }
     const pos = await getPosition()
-    if (!navigator.geolocation) { setGpsStatus('unavailable'); return null }
+    if (!isGeolocationAvailable()) { setGpsStatus('unavailable'); return null }
     if (!pos) setGpsStatus('denied')
     else lastPosRef.current = { ...pos, ts: Date.now() }
     return pos
@@ -547,7 +564,7 @@ export function DataLoggerPage() {
     const current = await getSessionEntries(session.id)
     for (const e of current) {
       if (e.type !== 'photo' || !e.photoData || e.photoUrl || e.id == null) continue
-      const res = await fetch('/api/data-logger/upload-photo.php', {
+      const res = await fetch(apiUrl('/api/data-logger/upload-photo.php'), {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ photoId: e.photoId, photoData: e.photoData }),
@@ -614,7 +631,7 @@ export function DataLoggerPage() {
       const token = getStoredAuthToken()
       if (!token) throw new Error('Not authenticated')
       const freshEntries = await uploadPendingPhotos()
-      const res  = await fetch('/api/data-logger/send-report.php', {
+      const res  = await fetch(apiUrl('/api/data-logger/send-report.php'), {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
@@ -704,7 +721,7 @@ export function DataLoggerPage() {
         try {
           for (const e of item.payload.entries) {
             if (e.type !== 'photo' || !e.photoData || e.photoUrl) continue
-            const r = await fetch('/api/data-logger/upload-photo.php', {
+            const r = await fetch(apiUrl('/api/data-logger/upload-photo.php'), {
               method:  'POST',
               headers: { 'Content-Type': 'application/json' },
               body:    JSON.stringify({ photoId: e.photoId, photoData: e.photoData }),
@@ -716,7 +733,7 @@ export function DataLoggerPage() {
             await updateQueuedSend({ ...item, status: 'sending' })
           }
           const body = { token: item.token, memberName: item.memberName, sessionId: item.sessionId, reportDate: item.reportDate, emailFormat: 'text', appVersion: item.appVersion, includeLocations: item.includeLocations, ...item.payload }
-          const res  = await fetch('/api/data-logger/send-report.php', {
+          const res  = await fetch(apiUrl('/api/data-logger/send-report.php'), {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify(body),

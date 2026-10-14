@@ -70,6 +70,15 @@ export default defineConfig(({ mode }) => {
     define: {
       __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
     },
+    build: {
+      rollupOptions: {
+        // Exclude Capacitor native plugins from the web build
+        // They will be loaded dynamically only on native platforms
+        external: (id) => {
+          return id.includes('@capacitor-community/background-geolocation')
+        },
+      },
+    },
     server: {
       proxy: {
         // Forward /api calls to your DreamHost PHP files during dev.
