@@ -74,7 +74,7 @@ export const BLOG_ENTRIES: BlogEntry[] = [
   {
     id: 14,
     date: '2026-10-29',
-    content: `MEADOWS SNOW TRAIL ON THE MAP — The worksite listed as just "Meadows" is now shown as Meadows Snow Trail (USFS #977.2, the Meadow Snow winter route off Hwy 14 near Joe Wright). Its route is now drawn on the Trails map, using official Forest Service trail data, and it can be picked in the Data Logger. — KDG (v1.50.1)`,
+    content: `MEADOWS SNOW TRAIL ON THE MAP — The worksite listed as just "Meadows" is now shown as Meadows Snow Trail (USFS #977.2, the Meadow Snow winter route off Hwy 14 near Joe Wright). Its route is now drawn on the Trails map, using official Forest Service trail data, and it can be picked in the Data Logger. — KDG (v1.50.1)\n\nNOTE: Meadows Snow Trail is a Nordic Ranger trail; not yet a PWV trail`,
   },
 ]
 
