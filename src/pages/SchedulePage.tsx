@@ -8,6 +8,7 @@ import { fetchUserPreferences, getLocalPreferences } from '../services/settingsS
 import { getStoredAuthToken } from '../services/authService'
 import type { ScheduleColumnsPrefs } from '../types/settings'
 import { DEFAULT_PREFERENCES } from '../types/settings'
+import { trailNameOverride } from '../data/trailNameOverride'
 
 export function SchedulePage() {
   const { user } = useAuth()
@@ -69,7 +70,10 @@ export function SchedulePage() {
       const json = (await res.json()) as ScheduleData & { error?: string }
       if (json.error) throw new Error(json.error)
       setData({
-        schedules:  json.schedules  ?? [],
+        schedules:  (json.schedules ?? []).map(s => {
+          const name = s.wksiteId != null ? trailNameOverride[s.wksiteId] : undefined
+          return name != null ? { ...s, wksiteName: name } : s
+        }),
         totalCount: json.totalCount ?? 0,
         members:    json.members    ?? [],
       })

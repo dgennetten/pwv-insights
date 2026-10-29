@@ -71,6 +71,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-09-14',
     content: `DATA LOGGER, REBUILT — The Data Logger just got its biggest overhaul yet. The whole screen now revolves around three big buttons:\n\n🟢 START TRACKING — Nothing logs until you tap Start, so no more stray taps before you're on trail. Once you're rolling, a live card up top shows your elapsed time, distance traveled along the trail, distance from the trailhead, average pace, and the On-Trail light — all driven by one always-on GPS tracker running at high accuracy.\n\n🔴 STOP & SEND — One tap ends the outing, saves it, and emails your report with the map, then resets the logger for next time. Out of signal? It quietly queues and sends the moment you reconnect.\n\n🔵 SHOW MAP — Your actual route is now drawn as a red breadcrumb trail — the real path you walked, not just the trailhead and endpoints — on both the live map and the emailed report.\n\nA few more things that rode along with it:\n\n🥾 SWITCHING TRAILS IS AUTOMATIC — Pick a new worksite mid-patrol and the logger closes out the trail you're leaving as its own section and starts fresh, all in one continuous report.\n\n📥 OFFLINE MAPS — You can now download a trail's map ahead of time (the Download button on any trail map, or Settings → Data Logger). The basemap is then guaranteed to be there with zero signal — no more blank gray tiles deep in the wilderness.\n\nTake it for a spin around the neighborhood and Send Feedback. See you on the trail! — KDG (v1.50.0)`,
   },
+  {
+    id: 14,
+    date: '2026-10-29',
+    content: `MEADOWS SNOW TRAIL ON THE MAP — The worksite listed as just "Meadows" is now shown as Meadows Snow Trail (USFS #977.2, the Meadow Snow winter route off Hwy 14 near Joe Wright). Its route is now drawn on the Trails map, using official Forest Service trail data, and it can be picked in the Data Logger. — KDG (v1.50.1)`,
+  },
 ]
 
 export type BlogPref =

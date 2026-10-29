@@ -58,6 +58,7 @@ export const trailGeoData: Record<number, { lat: number; lng: number }> = {
   318: { lat: 40.68883,        lng: -105.348   },  // Young Gulch
   321: { lat: 40.60983,        lng: -105.75717 },  // Zimmerman
   324: { lat: 40.54,           lng: -105.88217 },  // Zimmerman Lake
+  339: { lat: 40.543,          lng: -105.86961 },  // Meadows Snow Trail (USFS #977.2, south end)
   348: { lat: 40.80817,        lng: -103.98933 },  // Pawnee Buttes
   // Combined worksites (400+) — what members actually use in patrol reports
   400: { lat: 40.44233,        lng: -105.37833 },  // Crosier Mountain (Garden Gate)
@@ -134,6 +135,7 @@ export const trailNames: Record<number, string> = {
   318: 'Young Gulch',
   321: 'Zimmerman',
   324: 'Zimmerman Lake',
+  339: 'Meadows Snow Trail',
   348: 'Pawnee Buttes',
   400: 'Crosier Mountain (Garden Gate)',
   403: 'Crosier Mountain (Glen Haven)',

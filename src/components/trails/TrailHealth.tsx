@@ -7,6 +7,7 @@ import { TrailList } from './TrailList'
 import { TrailDetail } from './TrailDetail'
 import { trailGeoData } from '../../data/trailGeoData'
 import { trailLengthOverride } from '../../data/trailLengthOverride'
+import { trailNameOverride } from '../../data/trailNameOverride'
 
 // Lazy-load the map (pulls in Leaflet — ~330KB) only when first toggled open
 const TrailMap = lazy(() => import('./TrailMap').then(m => ({ default: m.TrailMap })))
@@ -22,11 +23,13 @@ interface TrailHealthProps {
   refreshing?: boolean
 }
 
-/** Enrich trails with lat/lng and official length overrides, keyed by wksiteId. */
+/** Enrich trails with lat/lng and official length/name overrides, keyed by wksiteId. */
 function attachGeo(trails: Trail[]): Trail[] {
   return trails.map(t => {
     const lenOverride = t.wksiteId != null ? trailLengthOverride[t.wksiteId] : undefined
-    const base = lenOverride != null ? { ...t, lengthMiles: lenOverride } : t
+    const nameOverride = t.wksiteId != null ? trailNameOverride[t.wksiteId] : undefined
+    let base = lenOverride != null ? { ...t, lengthMiles: lenOverride } : t
+    if (nameOverride != null) base = { ...base, name: nameOverride }
     if (base.latitude != null || !base.wksiteId) return base
     const geo = trailGeoData[base.wksiteId]
     return geo ? { ...base, latitude: geo.lat, longitude: geo.lng } : base

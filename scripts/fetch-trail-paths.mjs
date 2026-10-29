@@ -115,6 +115,11 @@ const USFS_TRAILS = [
     trimMiles: 4.25,          // officially shortened to the first 4.25 mi
     startNear: [-106.0475, 40.815],  // trailhead-access (mile 0) end
   },
+  {
+    wksiteId:  339,           // Meadows Snow Trail (Neota Wilderness; winter route)
+    trailNo:   'SNO-977.2',   // COTREX #977.2 "Meadow Snow" — absent from OSM
+    adminOrg:  '021005',      // Arapaho & Roosevelt NF
+  },
 ]
 
 const USFS_QUERY_BASE =
