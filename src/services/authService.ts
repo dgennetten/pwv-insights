@@ -1,3 +1,5 @@
+import { apiUrl } from '../config/api'
+
 const AUTH_BASE = '/api/auth'
 
 /** Must match `TOKEN_KEY` in AuthContext (session token in localStorage). */
@@ -36,7 +38,7 @@ export interface LlmSettings {
 
 /** Read the configured AI providers + current primary (admin only). */
 export async function fetchAdminLlmSettings(token: string): Promise<LlmSettings> {
-  const res = await fetch('/api/admin/llm-settings.php', {
+  const res = await fetch(apiUrl('/api/admin/llm-settings.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -49,7 +51,7 @@ export async function fetchAdminLlmSettings(token: string): Promise<LlmSettings>
 
 /** Set the global primary AI provider (admin only). Returns the updated state. */
 export async function setAdminLlmProvider(token: string, primary: string): Promise<LlmSettings> {
-  const res = await fetch('/api/admin/llm-settings.php', {
+  const res = await fetch(apiUrl('/api/admin/llm-settings.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -62,7 +64,7 @@ export async function setAdminLlmProvider(token: string, primary: string): Promi
 
 /** Recent sign-ins (admin only). */
 export async function fetchAdminRecentLogins(token: string): Promise<AdminLoginRow[]> {
-  const res = await fetch('/api/admin/recent-logins.php', {
+  const res = await fetch(apiUrl('/api/admin/recent-logins.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token }),
@@ -115,7 +117,7 @@ export async function fetchAdminMemberLookup(
   token: string,
   memberId: number
 ): Promise<MemberLookupResult> {
-  const res = await fetch('/api/admin/member-lookup.php', {
+  const res = await fetch(apiUrl('/api/admin/member-lookup.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, memberId }),
@@ -141,7 +143,7 @@ export interface TrailLogRow {
 }
 
 export async function fetchAdminTrailLogs(token: string): Promise<TrailLogRow[]> {
-  const res = await fetch('/api/data-logger/list-logs.php', {
+  const res = await fetch(apiUrl('/api/data-logger/list-logs.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token }),
@@ -156,7 +158,7 @@ export async function fetchAdminTrailLogs(token: string): Promise<TrailLogRow[]>
 }
 
 export async function fetchAdminMemberSearch(token: string, query: string): Promise<MemberSearchResult[]> {
-  const res = await fetch('/api/admin/member-search.php', {
+  const res = await fetch(apiUrl('/api/admin/member-search.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, query }),
@@ -173,7 +175,7 @@ export async function fetchAdminMemberSearch(token: string, query: string): Prom
 }
 
 export async function fetchMemberSearch(token: string, query: string): Promise<MemberSearchResult[]> {
-  const res = await fetch('/api/user/member-search.php', {
+  const res = await fetch(apiUrl('/api/user/member-search.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, query }),
@@ -190,7 +192,7 @@ export async function fetchMemberSearch(token: string, query: string): Promise<M
 }
 
 export async function fetchMemberLookup(token: string, memberId: number): Promise<MemberLookupResult> {
-  const res = await fetch('/api/user/member-lookup.php', {
+  const res = await fetch(apiUrl('/api/user/member-lookup.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, memberId }),
@@ -223,7 +225,7 @@ export interface TrialLoginResult {
  * open (idempotent afterward). Rejects revoked/expired links.
  */
 export async function trialLogin(token: string): Promise<TrialLoginResult> {
-  const res = await fetch(`${AUTH_BASE}/trial-login.php`, {
+  const res = await fetch(apiUrl(`${AUTH_BASE}/trial-login.php`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -257,7 +259,7 @@ export interface TrialLink {
 }
 
 export async function fetchAdminTrialLinks(token: string): Promise<TrialLink[]> {
-  const res = await fetch('/api/admin/trial-links.php', {
+  const res = await fetch(apiUrl('/api/admin/trial-links.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -269,7 +271,7 @@ export async function fetchAdminTrialLinks(token: string): Promise<TrialLink[]> 
 }
 
 export async function createAdminTrialLink(token: string, label: string): Promise<TrialLink> {
-  const res = await fetch('/api/admin/trial-links.php', {
+  const res = await fetch(apiUrl('/api/admin/trial-links.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -281,7 +283,7 @@ export async function createAdminTrialLink(token: string, label: string): Promis
 }
 
 export async function revokeAdminTrialLink(token: string, id: number): Promise<void> {
-  const res = await fetch('/api/admin/trial-links.php', {
+  const res = await fetch(apiUrl('/api/admin/trial-links.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -292,7 +294,7 @@ export async function revokeAdminTrialLink(token: string, id: number): Promise<v
 }
 
 export async function deleteAdminTrialLink(token: string, id: number): Promise<void> {
-  const res = await fetch('/api/admin/trial-links.php', {
+  const res = await fetch(apiUrl('/api/admin/trial-links.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -303,7 +305,7 @@ export async function deleteAdminTrialLink(token: string, id: number): Promise<v
 }
 
 export async function requestOtp(email: string): Promise<void> {
-  const res = await fetch(`${AUTH_BASE}/request-otp.php`, {
+  const res = await fetch(apiUrl(`${AUTH_BASE}/request-otp.php`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -335,7 +337,7 @@ export interface SessionResult {
 /** Validate a stored session token (Remember this device) without OTP. */
 export async function validateStoredSession(token: string): Promise<SessionResult | null> {
   try {
-    const res = await fetch(`${AUTH_BASE}/session.php`, {
+    const res = await fetch(apiUrl(`${AUTH_BASE}/session.php`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -349,7 +351,7 @@ export async function validateStoredSession(token: string): Promise<SessionResul
 /** Local dev only — see php/api/auth/dev-auto-login.php */
 export async function devAutoLogin(): Promise<VerifyResult | null> {
   try {
-    const res = await fetch(`${AUTH_BASE}/dev-auto-login.php`, {
+    const res = await fetch(apiUrl(`${AUTH_BASE}/dev-auto-login.php`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
@@ -364,7 +366,7 @@ export async function devAutoLogin(): Promise<VerifyResult | null> {
 
 /** Auto-login via PWV.ORG link token (YYYYMMDD + PersonID). Issues a 365-day remembered session. */
 export async function autoLogin(id: string): Promise<VerifyResult> {
-  const res = await fetch(`${AUTH_BASE}/auto-login.php`, {
+  const res = await fetch(apiUrl(`${AUTH_BASE}/auto-login.php`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
@@ -375,7 +377,7 @@ export async function autoLogin(id: string): Promise<VerifyResult> {
 }
 
 export async function verifyOtp(email: string, code: string, remember: boolean): Promise<VerifyResult> {
-  const res = await fetch(`${AUTH_BASE}/verify-otp.php`, {
+  const res = await fetch(apiUrl(`${AUTH_BASE}/verify-otp.php`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code, remember }),

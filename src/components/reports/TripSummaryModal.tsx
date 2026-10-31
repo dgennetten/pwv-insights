@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Loader2, X, Copy, Check } from 'lucide-react'
+import { apiUrl } from '../../config/api'
 import { getStoredAuthToken } from '../../services/authService'
 import { formatInteger } from '../../lib/formatNumber'
 import type { TripSummaryResponse } from '../../types/reports'
@@ -40,7 +41,7 @@ export function TripSummaryModal({ reportIds, onClose }: TripSummaryModalProps) 
     setError(null)
     const token = getStoredAuthToken()
     if (!token) { setError('No session token found. Sign in again.'); setLoading(false); return }
-    fetch('/api/reports/trip-summary.php', {
+    fetch(apiUrl('/api/reports/trip-summary.php'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',

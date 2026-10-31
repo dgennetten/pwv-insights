@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { saveTracker, getSessionTrackers, clearSessionTrackers } from '../../services/dataLoggerService'
+import { watchPosition, clearWatch, isGeolocationAvailable, type GeolocationPosition } from '../../services/geolocationService'
 import { getLoggerSettings } from '../../lib/loggerSettings'
 import { haversineMeters } from '../../lib/gpsDistance'
 import { nearestTrailInfo } from '../../lib/trailheadDistance'
@@ -67,7 +68,7 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
   const [, setTick]           = useState(0)
 
   const trackerRef     = useRef<Tracker | null>(null)
-  const watchIdRef     = useRef<number | null>(null)
+  const watchIdRef     = useRef<number | string | null>(null)
   const tickRef        = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastFixRef     = useRef<{ lat: number; lng: number } | null>(null)
   const pendingRef     = useRef(0)          // sub-jitter distance carried forward
@@ -212,18 +213,22 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
     }
   }, [setAndNotify])
 
-  const startWatch = useCallback(() => {
-    if (watchIdRef.current !== null || !navigator.geolocation) return
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      onPosition,
-      () => { /* keep last reading */ },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    )
+  const startWatch = useCallback(async () => {
+    if (watchIdRef.current !== null || !isGeolocationAvailable()) return
+    try {
+      watchIdRef.current = await watchPosition(
+        onPosition,
+        () => { /* keep last reading */ },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      )
+    } catch (error) {
+      console.error('Failed to start geolocation watch:', error)
+    }
   }, [onPosition])
 
-  const stopWatch = useCallback(() => {
+  const stopWatch = useCallback(async () => {
     if (watchIdRef.current === null) return
-    navigator.geolocation.clearWatch(watchIdRef.current)
+    await clearWatch(watchIdRef.current)
     watchIdRef.current = null
   }, [])
 
@@ -239,16 +244,16 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
 
   // Load any in-progress tracker for this session (e.g. after a refresh).
   useEffect(() => {
-    stopWatch()
-    lastFixRef.current = null
-    pendingRef.current = 0
-    lastCrumbRef.current = null
-    maxAlongRef.current = null
-    alongTrailRef.current = undefined
-    setLight('gray'); setThDistM(null); setThCrow(false)
-
-    if (!sessionId) { setAndNotify(null); return }
     void (async () => {
+      await stopWatch()
+      lastFixRef.current = null
+      pendingRef.current = 0
+      lastCrumbRef.current = null
+      maxAlongRef.current = null
+      alongTrailRef.current = undefined
+      setLight('gray'); setThDistM(null); setThCrow(false)
+
+      if (!sessionId) { setAndNotify(null); return }
       const saved = await getSessionTrackers(sessionId)
       const live  = saved.find(t => t.state === 'tracking') ?? null
       setAndNotify(live)
@@ -259,7 +264,7 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
           lastFixRef.current   = { lat: lastCrumb.lat, lng: lastCrumb.lng }
           lastCrumbRef.current = { lat: lastCrumb.lat, lng: lastCrumb.lng }
         }
-        startWatch()
+        await startWatch()
         void requestWakeLock()
       }
     })()
@@ -267,9 +272,11 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
   }, [sessionId])
 
   useEffect(() => () => {
-    stopWatch()
-    releaseWakeLock()
-    if (tickRef.current) clearInterval(tickRef.current)
+    void (async () => {
+      await stopWatch()
+      releaseWakeLock()
+      if (tickRef.current) clearInterval(tickRef.current)
+    })()
   }, [stopWatch, releaseWakeLock])
 
   // ── Public actions ─────────────────────────────────────────────────────────
@@ -284,13 +291,13 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
     lastSaveRef.current = Date.now()
     setAndNotify(t)
     await saveTracker(t)
-    startWatch()
+    await startWatch()
     void requestWakeLock()
   }, [sessionId, setAndNotify, startWatch, requestWakeLock])
 
   const stop = useCallback(async () => {
     const cur = trackerRef.current
-    stopWatch()
+    await stopWatch()
     releaseWakeLock()
     if (!cur) return null
     const now = Date.now()
@@ -311,7 +318,7 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
   /** Discard the tracker and its saved rows — used by Start's restart-confirm
    *  and by the page's full reset after a send. */
   const clear = useCallback(async () => {
-    stopWatch()
+    await stopWatch()
     releaseWakeLock()
     lastFixRef.current = null
     pendingRef.current = 0
