@@ -27,7 +27,7 @@ import { trailGeoData, trailNames } from '../data/trailGeoData'
 import type { LogEntry, LogSession, HikerSubtype, HikerActivity, DogSubtype, TreeSubtype, TreeSize, EntryType, Tracker, QueuedSend, QueuedSendSummary } from '../types/dataLogger'
 import { trackerDistanceM } from '../lib/gpsDistance'
 import { distFromTrailheadM } from '../lib/trailheadDistance'
-import { getLoggerSettings } from '../lib/loggerSettings'
+import { getLoggerSettings, saveLoggerSettings, type LoggerSettings } from '../lib/loggerSettings'
 import { fileToCompressedDataUrl } from '../lib/photo'
 import { buildTextPdf, downloadBlob } from '../lib/textPdf'
 
@@ -246,8 +246,14 @@ export function DataLoggerPage() {
   const [isOnline,      setIsOnline]      = useState(navigator.onLine)
   const [showTips,      setShowTips]      = useState(false)
   // 'patrol' shows the full trail-maintenance UI; 'other' hides Tree & Violation.
-  const [loggerProfile] = useState(() => getLoggerSettings().profile)
+  // Switching profiles only changes what is shown — the session's trail and all
+  // logged entries stay in IndexedDB, so flipping back to TRAIL restores them.
+  const [loggerProfile, setLoggerProfile] = useState(() => getLoggerSettings().profile)
   const showMaintUI = loggerProfile === 'patrol'
+  const changeLoggerProfile = useCallback((profile: LoggerSettings['profile']) => {
+    setLoggerProfile(profile)
+    saveLoggerSettings({ ...getLoggerSettings(), profile })
+  }, [])
   const [session,       setSession]       = useState<LogSession | null>(null)
   const [entries,       setEntries]       = useState<LogEntry[]>([])
   const [hikerActivity,   setHikerActivity]   = useState<HikerActivity>('hike')
@@ -1149,6 +1155,30 @@ export function DataLoggerPage() {
               </div>
             )}
           </div>
+          {!showMaintUI ? (
+            <>
+              {/* Sport: big at-a-glance KPI cards — TIME + DISTANCE, then PACE */}
+              <div className="grid grid-cols-2 gap-3">
+                {([
+                  { label: 'Time',     value: fmtDuration(stats.elapsedMs), wide: false },
+                  { label: 'Distance', value: fmtMiles(stats.distanceM),    wide: false },
+                  { label: 'Pace',     value: stats.paceMinPerMi != null ? fmtPace(stats.paceMinPerMi) : '—', wide: true },
+                ]).map(k => (
+                  <div
+                    key={k.label}
+                    className={`${k.wide ? 'col-span-2 ' : ''}rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-4 text-center min-w-0`}
+                  >
+                    <div className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      {k.label}
+                    </div>
+                    <div className="mt-1 text-3xl sm:text-4xl font-bold tabular-nums text-stone-900 dark:text-stone-100 truncate">
+                      {k.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <Stat label="Elapsed time" value={fmtDuration(stats.elapsedMs)} />
             <Stat
@@ -1165,7 +1195,8 @@ export function DataLoggerPage() {
             )}
             <Stat label="Average pace" value={stats.paceMinPerMi != null ? fmtPace(stats.paceMinPerMi) : '—'} />
           </div>
-          {stats.trailheadCrow && stats.trailheadDistM != null && (
+          )}
+          {showMaintUI && stats.trailheadCrow && stats.trailheadDistM != null && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
               * Off the trail — straight-line distance from the trailhead.
             </p>
@@ -1653,6 +1684,34 @@ export function DataLoggerPage() {
           ))}
         </div>
       )}
+
+      {/* ── TRAIL | SPORT TOGGLE ────────────────────────── */}
+      <div className="flex items-center justify-center">
+        <div
+          role="radiogroup"
+          aria-label="Logger mode"
+          className="inline-flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5 gap-0.5"
+        >
+          {([
+            { value: 'patrol', label: 'TRAIL' },
+            { value: 'other',  label: 'SPORT' },
+          ] as const).map(({ value, label }) => (
+            <button
+              key={value}
+              role="radio"
+              aria-checked={loggerProfile === value}
+              onClick={() => changeLoggerProfile(value)}
+              className={`px-4 py-1.5 rounded-md text-xs font-semibold tracking-wider transition-colors ${
+                loggerProfile === value
+                  ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-sm'
+                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── SETTINGS LINK ───────────────────────────────── */}
       <div className="pb-6 flex items-center justify-center">
