@@ -7,10 +7,11 @@ import { getSessionEntries, getSessionTrackers, getOrCreateSession } from '../se
 import { useAuth } from '../contexts/AuthContext'
 import { getStoredTheme, applyTheme } from '../lib/theme'
 import { surveyTrackingStats, fmtPaceMinPerMi, paceSeriesFromTrackers } from '../lib/gpsDistance'
+import { fillBreadcrumbGaps, breadcrumbStyle } from '../lib/breadcrumbGapFill'
 import { trailPaths } from '../data/trailPaths'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
 import { TRAILHEAD_PIN } from '../lib/trailheadPin'
-import { isValidLatLng, fanOutColocated } from '../lib/geo'
+import { fanOutColocated } from '../lib/geo'
 import { getLoggerSettings } from '../lib/loggerSettings'
 import { PaceChart } from '../components/data-logger/PaceChart'
 
@@ -74,6 +75,7 @@ interface SavedTracker {
   name: string
   state: string
   totalDistanceM: number
+  traveledDistanceM?: number
   activeDurationMs: number
   startedAt: number
   segments: TrackerSegment[]
@@ -380,6 +382,7 @@ export function TrailLogMapPage() {
               name:             t.name,
               state:            t.state,
               totalDistanceM:   t.totalDistanceM,
+              traveledDistanceM: t.traveledDistanceM,
               activeDurationMs: t.activeDurationMs,
               startedAt:        t.startedAt,
               segments:         t.segments,
@@ -489,22 +492,13 @@ export function TrailLogMapPage() {
     return [...ids]
   }, [log])
 
-  // Red breadcrumb: the thinned GPS path recorded by the tracker.
-  const breadcrumbLines = useMemo((): [number, number][][] => {
-    const lines: [number, number][][] = []
-    for (const tracker of (log?.trackers ?? [])) {
-      for (const seg of tracker.segments) {
-        const pts = (seg.crumbs && seg.crumbs.length > 0)
-          ? seg.crumbs
-          : [seg.startPoint, seg.endPoint].filter((p): p is NonNullable<typeof p> => !!p)
-        const line = pts
-          .filter(p => isValidLatLng(p.lat, p.lng))
-          .map(p => [p.lat, p.lng] as [number, number])
-        if (line.length >= 2) lines.push(line)
-      }
-    }
-    return lines
-  }, [log])
+  // Red breadcrumb: the thinned GPS path recorded by the tracker, with GPS gaps
+  // (app suspended, signal lost) routed along the trail instead of drawn straight.
+  const breadcrumb = useMemo(
+    () => fillBreadcrumbGaps(log?.trackers ?? [], loggedTrailIds),
+    [log, loggedTrailIds],
+  )
+  const hasInferredPath = breadcrumb.runs.some(r => r.kind === 'trail')
 
   const mapPoints = useMemo(
     () => [
@@ -515,9 +509,9 @@ export function TrailLogMapPage() {
           (item as { kind: 'entry'; entry: LogEntry; ts: number }).entry.lng!,
         ] as [number, number]),
       ...waypointMarkers.map(w => [w.lat, w.lng] as [number, number]),
-      ...breadcrumbLines.flat(),
+      ...breadcrumb.runs.flatMap(r => r.points),
     ],
-    [timelineItems, waypointMarkers, breadcrumbLines]
+    [timelineItems, waypointMarkers, breadcrumb]
   )
 
   const paceDots = useMemo(
@@ -536,15 +530,15 @@ export function TrailLogMapPage() {
 
   const paceFormat = useMemo(() => getLoggerSettings().waypointPaceFormat, [])
   const paceLogScale = useMemo(() => getLoggerSettings().waypointPaceLogScale, [])
-  // Pace series from the recorded breadcrumb, spanning the whole session.
-  const paceSeries = useMemo(() => paceSeriesFromTrackers(log?.trackers ?? []), [log])
+  // Pace series from the gap-filled breadcrumb, spanning the whole session.
+  const paceSeries = useMemo(() => paceSeriesFromTrackers(breadcrumb.trackers), [breadcrumb])
 
   const defaultCenter: [number, number] = [40.3772, -105.5217]
 
   const { summary, trackers } = log ?? { summary: null, trackers: [] }
   const isOther = log?.profile === 'other'
 
-  const { distanceM: totalDistanceM, durationMs: totalDurationMs } = surveyTrackingStats(trackers)
+  const { distanceM: totalDistanceM, traveledM: totalTraveledM, durationMs: totalDurationMs } = surveyTrackingStats(trackers)
 
   const treeClearedTotal = summary
     ? Object.values(summary.trees.cleared).reduce((s, v) => s + v, 0)
@@ -719,10 +713,15 @@ export function TrailLogMapPage() {
                 <path d="M12 6v6l4 2" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
+            {!isOther && totalDistanceM > 0 && (
+              <div className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                trail covered · <strong className="text-stone-700 dark:text-stone-300">{(totalTraveledM / 1609.344).toFixed(2)} mi</strong> traveled on trail
+              </div>
+            )}
             {totalDurationMs > 0 && (
               <div className="mt-2 text-xs text-stone-500 dark:text-stone-400 space-y-0.5">
                 <div>Duration: <strong className="text-stone-700 dark:text-stone-300">{fmtDuration(totalDurationMs)}</strong></div>
-                <div>Avg Pace: <strong className="text-stone-700 dark:text-stone-300">{fmtPace(totalDistanceM, totalDurationMs)}</strong></div>
+                <div>Avg Pace: <strong className="text-stone-700 dark:text-stone-300">{fmtPace(totalTraveledM, totalDurationMs)}</strong></div>
               </div>
             )}
             {totalDurationMs === 0 && (
@@ -752,6 +751,12 @@ export function TrailLogMapPage() {
                   <span className="flex items-center gap-1.5">
                     <span className="w-4 h-1 rounded-full bg-emerald-600 inline-block" />
                     Trail
+                  </span>
+                )}
+                {hasInferredPath && (
+                  <span className="flex items-center gap-1.5" title="GPS was paused or lost here; path assumed to follow the trail">
+                    <span className="w-4 border-t-2 border-dashed border-red-600 inline-block" />
+                    Inferred path
                   </span>
                 )}
                 {!isOther && (
@@ -852,12 +857,12 @@ export function TrailLogMapPage() {
                     />
                   ))
                 )}
-                {/* Red breadcrumb: the actual GPS path recorded while tracking */}
-                {breadcrumbLines.map((line, i) => (
+                {/* Red breadcrumb: solid = recorded GPS, dashed = gap inferred along trail */}
+                {breadcrumb.runs.map((run, i) => (
                   <Polyline
                     key={`crumb-${i}`}
-                    positions={line}
-                    pathOptions={{ color: '#dc2626', weight: 4, opacity: 0.85 }}
+                    positions={run.points}
+                    pathOptions={breadcrumbStyle(run.kind)}
                   />
                 ))}
                 {loggedTrailIds.map(id => trailGeoData[id] && (

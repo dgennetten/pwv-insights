@@ -10,6 +10,7 @@ import { isValidLatLng, fanOutColocated } from '../../lib/geo'
 import { getLoggerSettings } from '../../lib/loggerSettings'
 import { nearestTrailInfo } from '../../lib/trailheadDistance'
 import { paceSeriesFromTrackers } from '../../lib/gpsDistance'
+import { fillBreadcrumbGaps, breadcrumbStyle } from '../../lib/breadcrumbGapFill'
 import { PaceChart } from './PaceChart'
 import { OfflineMapButton } from '../OfflineMapButton'
 
@@ -212,24 +213,6 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     return entryItems.sort((a, b) => a.ts - b.ts)
   }, [entries])
 
-  // Red breadcrumb: the thinned GPS path recorded by the tracker, one polyline
-  // per segment (falls back to start→end if a legacy tracker has no crumbs).
-  const breadcrumbLines = useMemo((): [number, number][][] => {
-    const lines: [number, number][][] = []
-    for (const tracker of trackers) {
-      for (const seg of tracker.segments) {
-        const pts = (seg.crumbs && seg.crumbs.length > 0)
-          ? seg.crumbs
-          : [seg.startPoint, seg.endPoint].filter((p): p is NonNullable<typeof p> => !!p)
-        const line = pts
-          .filter(p => isValidLatLng(p.lat, p.lng))
-          .map(p => [p.lat, p.lng] as [number, number])
-        if (line.length >= 2) lines.push(line)
-      }
-    }
-    return lines
-  }, [trackers])
-
   // Every trail involved in this session: current selection + trail-change events
   const loggedTrailIds = useMemo((): number[] => {
     const ids = new Set<number>()
@@ -240,9 +223,16 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
     return [...ids]
   }, [wksiteId, entries])
 
-  // Pace chart (min/mi or mph), derived from the recorded breadcrumb — spans the
+  // Red breadcrumb: the thinned GPS path recorded by the tracker, with GPS gaps
+  // (app suspended, signal lost) routed along the trail instead of drawn straight.
+  const breadcrumb = useMemo(
+    () => fillBreadcrumbGaps(trackers, loggedTrailIds),
+    [trackers, loggedTrailIds],
+  )
+
+  // Pace chart (min/mi or mph), derived from the gap-filled breadcrumb — spans the
   // whole session. Dots along the bottom mark each logged observation.
-  const paceSeries   = useMemo(() => paceSeriesFromTrackers(trackers), [trackers])
+  const paceSeries   = useMemo(() => paceSeriesFromTrackers(breadcrumb.trackers), [breadcrumb])
   const paceFormat   = useMemo(() => getLoggerSettings().waypointPaceFormat, [])
   const paceLogScale = useMemo(() => getLoggerSettings().waypointPaceLogScale, [])
   const paceDots = useMemo(
@@ -266,9 +256,9 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
       if (item.entry.lat !== null && item.entry.lng !== null)
         pts.push([item.entry.lat, item.entry.lng])
     }
-    for (const line of breadcrumbLines) pts.push(...line)
+    for (const run of breadcrumb.runs) pts.push(...run.points)
     return pts
-  }, [timelineItems, breadcrumbLines])
+  }, [timelineItems, breadcrumb])
 
   // Trail centerline + trailhead coordinates for auto-fitting the map to the whole trail.
   const trailBoundsPoints = useMemo((): [number, number][] => {
@@ -413,12 +403,12 @@ export function MapModal({ entries, trackers, memberName, reportDate, trailheadC
               )
             })}
 
-            {/* Red breadcrumb: the actual GPS path recorded while tracking */}
-            {breadcrumbLines.map((line, i) => (
+            {/* Red breadcrumb: solid = recorded GPS, dashed = gap inferred along trail */}
+            {breadcrumb.runs.map((run, i) => (
               <Polyline
                 key={`crumb-${i}`}
-                positions={line}
-                pathOptions={{ color: '#dc2626', weight: 4, opacity: 0.85 }}
+                positions={run.points}
+                pathOptions={breadcrumbStyle(run.kind)}
               />
             ))}
 

@@ -1,7 +1,9 @@
 import type { Tracker } from '../types/dataLogger'
 
 /** Minimal tracker shape for distance/pace stats (saved logs omit id/sessionId). */
-export type TrackerStats = Pick<Tracker, 'totalDistanceM' | 'activeDurationMs' | 'startedAt' | 'segments'>
+export type TrackerStats =
+  Pick<Tracker, 'totalDistanceM' | 'activeDurationMs' | 'startedAt' | 'segments'> &
+  Partial<Pick<Tracker, 'traveledDistanceM'>>
 
 export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000
@@ -23,8 +25,17 @@ export function gpsPathDistanceM(points: Array<{ lat: number; lng: number }>): n
 }
 
 /**
- * On-trail distance for a tracker. Prefer the stored total — accumulated one
- * direction (forward progress), so an out-and-back isn't double-counted. Only
+ * Distance traveled along the trail (every direction — an out-and-back counts
+ * twice). Trackers recorded before this was stored fall back to trail covered.
+ */
+export function trackerTraveledM(tracker: TrackerStats): number {
+  const covered = trackerDistanceM(tracker)
+  return Math.max(tracker.traveledDistanceM ?? 0, covered)
+}
+
+/**
+ * Trail covered by a tracker. Prefer the stored total — the stretch of trail
+ * visited, so an out-and-back isn't double-counted. Only
  * when it's absent (legacy trackers that never stored a total) do we fall back
  * to reconstructing the raw path length from recorded GPS points.
  */
@@ -66,12 +77,13 @@ export function trackersWallClockDurationMs(trackers: TrackerStats[]): number {
  * Distance and duration for survey summary / pace.
  * Single tracker: active time (excludes pauses). Multiple trackers: wall-clock span (no overlap double-count).
  */
-export function surveyTrackingStats(trackers: TrackerStats[]): { distanceM: number; durationMs: number } {
+export function surveyTrackingStats(trackers: TrackerStats[]): { distanceM: number; traveledM: number; durationMs: number } {
   const distanceM = trackers.reduce((s, t) => s + trackerDistanceM(t), 0)
+  const traveledM = trackers.reduce((s, t) => s + trackerTraveledM(t), 0)
   const durationMs = trackers.length <= 1
     ? (trackers[0]?.activeDurationMs ?? trackersWallClockDurationMs(trackers))
     : trackersWallClockDurationMs(trackers)
-  return { distanceM, durationMs }
+  return { distanceM, traveledM, durationMs }
 }
 
 export interface PacePoint { ts: number; paceMinPerMi: number }

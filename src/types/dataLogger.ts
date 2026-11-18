@@ -120,7 +120,12 @@ export interface Tracker {
   state: TrackerState
   startedAt: number
   segments: TrackerSegment[]
+  /** Miles of trail covered: the extent of trail visited, so an out-and-back
+   *  counts once. (Falls back to raw GPS movement off a mapped trail.) */
   totalDistanceM: number
+  /** Distance traveled along the trail, every direction — an out-and-back counts
+   *  twice. Absent on trackers recorded before v1.51; treat as totalDistanceM. */
+  traveledDistanceM?: number
   activeDurationMs: number  // sum of completed segment durations
 }
 

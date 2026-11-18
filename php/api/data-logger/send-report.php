@@ -429,18 +429,23 @@ if (!empty($trackers)) {
   $lines[] = $div;
   $lines[] = 'DISTANCE / TIME TRACKERS';
   $surveyStats = trailLogSurveyTrackingStats($trackers);
+  // Trail covered (out-and-back counts once) vs traveled on trail (counts twice);
+  // pace and speed use traveled.
   $totalTrackerM  = $surveyStats['distanceM'];
+  $totalTravelM   = 0.0;
   $totalTrackerMs = $surveyStats['durationMs'];
   foreach ($trackers as $tr) {
     if (!is_array($tr)) continue;
-    $tName = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
-    $tDist = trailLogTrackerDistanceM($tr);
-    $tDur  = (int)  ($tr['activeDurationMs'] ?? 0);
-    $lines[] = sprintf('  %-20s  %s, %s, %s, %s', $tName . ':', $fmtMi($tDist), $fmtDur($tDur), $fmtPace($tDist, $tDur), $fmtSpeed($tDist, $tDur));
+    $tName   = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
+    $tDist   = trailLogTrackerDistanceM($tr);
+    $tTravel = trailLogTrackerTraveledM($tr);
+    $totalTravelM += $tTravel;
+    $tDur    = (int)  ($tr['activeDurationMs'] ?? 0);
+    $lines[] = sprintf('  %-20s  %s covered, %s traveled, %s, %s, %s', $tName . ':', $fmtMi($tDist), $fmtMi($tTravel), $fmtDur($tDur), $fmtPace($tTravel, $tDur), $fmtSpeed($tTravel, $tDur));
   }
   if (count($trackers) > 1) {
     $lines[] = '  ' . str_repeat('-', 18);
-    $lines[] = sprintf('  %-20s  %s, %s, %s, %s', 'Total:', $fmtMi($totalTrackerM), $fmtDur($totalTrackerMs), $fmtPace($totalTrackerM, $totalTrackerMs), $fmtSpeed($totalTrackerM, $totalTrackerMs));
+    $lines[] = sprintf('  %-20s  %s covered, %s traveled, %s, %s, %s', 'Total:', $fmtMi($totalTrackerM), $fmtMi($totalTravelM), $fmtDur($totalTrackerMs), $fmtPace($totalTravelM, $totalTrackerMs), $fmtSpeed($totalTravelM, $totalTrackerMs));
   }
 }
 
@@ -459,13 +464,14 @@ if ($includeLocations && !empty($trackers)) {
     if (!is_array($tr)) continue;
     $tName    = trim((string)($tr['name'] ?? 'Unnamed')) ?: 'Unnamed';
     $tDist    = trailLogTrackerDistanceM($tr);
+    $tTravel  = trailLogTrackerTraveledM($tr);
     $tDur     = (int)  ($tr['activeDurationMs'] ?? 0);
     $tStart   = isset($tr['startedAt']) ? date('g:i A', intdiv((int)$tr['startedAt'], 1000)) : 'n/a';
     $segments = is_array($tr['segments'] ?? null) ? $tr['segments'] : [];
     $lines[] = '';
     $lines[] = $div;
     $lines[] = "TRACKER: {$tName}";
-    $lines[] = "  Distance:  {$fmtMi($tDist)}    Duration: {$fmtDur($tDur)}    Pace: {$fmtPace($tDist, $tDur)}    Speed: {$fmtSpeed($tDist, $tDur)}";
+    $lines[] = "  Covered:   {$fmtMi($tDist)}    Traveled: {$fmtMi($tTravel)}    Duration: {$fmtDur($tDur)}    Pace: {$fmtPace($tTravel, $tDur)}    Speed: {$fmtSpeed($tTravel, $tDur)}";
     $lines[] = "  Started:   {$tStart}   (" . count($segments) . ' segment' . (count($segments) !== 1 ? 's' : '') . ')';
     $prev_end = null;
     foreach ($segments as $si => $seg) {

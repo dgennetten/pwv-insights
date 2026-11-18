@@ -25,7 +25,7 @@ import {
 import { getStoredAuthToken } from '../services/authService'
 import { trailGeoData, trailNames } from '../data/trailGeoData'
 import type { LogEntry, LogSession, HikerSubtype, HikerActivity, DogSubtype, TreeSubtype, TreeSize, EntryType, Tracker, QueuedSend, QueuedSendSummary } from '../types/dataLogger'
-import { trackerDistanceM } from '../lib/gpsDistance'
+import { trackerDistanceM, trackerTraveledM } from '../lib/gpsDistance'
 import { distFromTrailheadM } from '../lib/trailheadDistance'
 import { getLoggerSettings, saveLoggerSettings, type LoggerSettings } from '../lib/loggerSettings'
 import { fileToCompressedDataUrl } from '../lib/photo'
@@ -585,7 +585,8 @@ export function DataLoggerPage() {
       trackers:  srcTrackers.map(t => ({
         name:             t.name || 'Patrol',
         state:            t.state,
-        totalDistanceM:   trackerDistanceM(t),
+        totalDistanceM:    trackerDistanceM(t),
+        traveledDistanceM: trackerTraveledM(t),
         activeDurationMs: t.activeDurationMs,
         startedAt:        t.startedAt,
         segments:         t.segments.map(s => ({
@@ -1161,7 +1162,7 @@ export function DataLoggerPage() {
               <div className="grid grid-cols-2 gap-3">
                 {([
                   { label: 'Time',     value: fmtDuration(stats.elapsedMs), wide: false },
-                  { label: 'Distance', value: fmtMiles(stats.distanceM),    wide: false },
+                  { label: 'Distance', value: fmtMiles(stats.traveledM),    wide: false },
                   { label: 'Pace',     value: stats.paceMinPerMi != null ? fmtPace(stats.paceMinPerMi) : '—', wide: true },
                 ]).map(k => (
                   <div
@@ -1181,10 +1182,8 @@ export function DataLoggerPage() {
           ) : (
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <Stat label="Elapsed time" value={fmtDuration(stats.elapsedMs)} />
-            <Stat
-              label={showMaintUI ? 'Distance traveled on trail' : 'Distance traveled'}
-              value={fmtMiles(stats.distanceM)}
-            />
+            <Stat label="Trail covered"     value={fmtMiles(stats.distanceM)} />
+            <Stat label="Traveled on trail" value={fmtMiles(stats.traveledM)} />
             {showMaintUI && session?.wksiteId != null && (
               <Stat
                 label="From trail head"
@@ -2100,7 +2099,7 @@ export function UsageTipsModal({ onClose }: { onClose: () => void }) {
               <strong>Tap counts as you go</strong> — People, Dogs, Trees, Violations and Notes/Photos all accumulate under the current trail. The red breadcrumb records your actual path automatically.
             </Tip>
             <Tip>
-              <strong>Distance traveled on trail</strong> counts how far you've covered along the trail, one direction — walking out and back doesn't double it. <strong>From trail head</strong> shows how far along the trail you are (a <strong>*</strong> means you're off the trail and it's a straight-line distance).
+              <strong>Trail covered</strong> is how much of the trail you've been on — walking out and back counts it once. <strong>Traveled on trail</strong> is how far you actually walked along it, so an out-and-back counts twice; pace uses this. If GPS drops out (or the app was in the background) while you're on the trail, both assume you stayed on the trail. <strong>From trail head</strong> shows how far along the trail you are (a <strong>*</strong> means you're off the trail and it's a straight-line distance).
             </Tip>
             <Tip>
               <strong>Change trails mid-patrol</strong> — pick a new trail from the dropdown and confirm. Your totals for the trail you're leaving are saved as a section; the counters reset for the new trail. It all stays in one continuous report.

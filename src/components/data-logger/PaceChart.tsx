@@ -13,6 +13,35 @@ function fmtPace(minPerMi: number) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+// Round gridline values inside [lo, hi] — e.g. 1.5 / 2.0 / 2.5 mph rather than
+// the raw 1.7 / 2.2 / 2.7 you get from splitting the padded range evenly.
+// Picks the largest round step that still gives at least three gridlines.
+// Speed uses 1-2-5 steps; pace (min/mi) uses clock-friendly steps.
+const PACE_STEPS = [60, 30, 15, 10, 5, 2, 1, 0.5, 0.25]
+
+function ticksFor(lo: number, hi: number, step: number): number[] {
+  const out: number[] = []
+  for (let i = Math.ceil(lo / step - 1e-9); i * step <= hi + 1e-9; i++) {
+    out.push(+(i * step).toPrecision(12))
+  }
+  return out
+}
+
+function niceTicks(lo: number, hi: number, isMph: boolean): { ticks: number[]; step: number } {
+  let steps = PACE_STEPS
+  if (isMph) {
+    const top = Math.pow(10, Math.ceil(Math.log10(hi - lo || 1)))
+    steps = []
+    for (let mag = top; mag >= top / 1000; mag /= 10) steps.push(5 * mag, 2 * mag, mag)
+  }
+  for (const step of steps) {
+    const ticks = ticksFor(lo, hi, step)
+    if (ticks.length >= 3) return { ticks, step }
+  }
+  const step = steps[steps.length - 1]
+  return { ticks: ticksFor(lo, hi, step), step }
+}
+
 export function PaceChart({ points, dots, paceFormat, logScale = false }: {
   points:     PaceChartPoint[]
   dots:       PaceChartDot[]
@@ -57,6 +86,7 @@ export function PaceChart({ points, dots, paceFormat, logScale = false }: {
     const pad = (vMax - vMin) * 0.3 || 1
     yLo = Math.max(0, vMin - pad); yHi = vMax + pad
   }
+  const { ticks: yTicks, step: tickStep } = niceTicks(inv(yLo), inv(yHi), isMph)
   const yRange = yHi - yLo || 1
   const yS = (v: number) => PT + plotH * (1 - (tf(v) - yLo) / yRange)
 
@@ -65,8 +95,9 @@ export function PaceChart({ points, dots, paceFormat, logScale = false }: {
     const v = isMph ? 60 / d.pace : d.pace
     return `${i === 0 ? 'M' : 'L'}${xS(d.ts).toFixed(1)},${yS(v).toFixed(1)}`
   }).join(' ')
-  const yTicks = [0, 0.5, 1].map(f => inv(yLo + f * yRange))
-  const fmtTick = (v: number) => isMph ? v.toFixed(1) : fmtPace(v)
+  // As many decimals as the step needs (0.25 → 2), never fewer than one (2.0).
+  const tickDecimals = Math.min(2, Math.max(1, (String(+tickStep.toPrecision(6)).split('.')[1] ?? '').length))
+  const fmtTick = (v: number) => isMph ? v.toFixed(tickDecimals) : fmtPace(v)
 
   return (
     <div className="shrink-0 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 px-2 pt-1.5 pb-0">

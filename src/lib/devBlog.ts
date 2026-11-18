@@ -76,6 +76,11 @@ export const BLOG_ENTRIES: BlogEntry[] = [
     date: '2026-10-29',
     content: `MEADOWS SNOW TRAIL ON THE MAP — The worksite listed as just "Meadows" is now shown as Meadows Snow Trail (USFS #977.2, the Meadow Snow winter route off Hwy 14 near Joe Wright). Its route is now drawn on the Trails map, using official Forest Service trail data, and it can be picked in the Data Logger. — KDG (v1.50.1)\n\nNOTE: Meadows Snow Trail is a Nordic Ranger trail; not yet a PWV trail`,
   },
+  {
+    id: 15,
+    date: '2026-11-18',
+    content: `SMARTER BREADCRUMBS + TWO KINDS OF DISTANCE — Two Data Logger upgrades today, both about getting your route and mileage right:\n\n🗺️ NO MORE SHORTCUTS ACROSS THE MAP — Your phone puts the app to sleep when the screen locks or you switch to another app, and GPS goes quiet until you come back. That used to leave long, straight red lines slicing across switchbacks on your breadcrumb. Now, when there's a gap and you were on the trail at both ends, the logger assumes you stayed on the trail and draws that stretch along the trail's route instead — shown as a dashed red line, so you can always tell what was inferred from what GPS actually recorded. The pace chart fills those gaps the same way, so they no longer show up as a false slow spike.\n\n📏 TRAIL COVERED vs. TRAVELED ON TRAIL — The live card now shows two distances. Trail covered is how much of the trail you've been on: hike 3 miles out and 3 back, and that's 3 miles of trail covered. Traveled on trail is how far you actually walked along it — 6 miles in that example. On a one-way trip the two match. Trail covered now counts in either direction too, so starting mid-trail and heading toward the trailhead first is no longer missed. Average pace is based on distance traveled, so an out-and-back no longer looks twice as slow. Both numbers appear in the emailed report and on the saved map. (In Sport mode, the big Distance card shows distance traveled.)\n\nGive it a spin and Send Feedback! — KDG (v1.51.0)`,
+  },
 ]
 
 export type BlogPref =

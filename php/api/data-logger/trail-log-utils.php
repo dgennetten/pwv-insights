@@ -135,6 +135,11 @@ function trailLogTrackerDistanceM(array $tracker): float {
   return $best;
 }
 
+/** Distance traveled along the trail (out-and-back counts twice); older trackers fall back to trail covered. */
+function trailLogTrackerTraveledM(array $tracker): float {
+  return max((float) ($tracker['traveledDistanceM'] ?? 0), trailLogTrackerDistanceM($tracker));
+}
+
 /** @param list<array<string, mixed>> $trackers */
 function trailLogTrackersWallClockDurationMs(array $trackers): int {
   if ($trackers === []) return 0;

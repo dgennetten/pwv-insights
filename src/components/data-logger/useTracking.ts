@@ -12,6 +12,7 @@ import type { Tracker, TrackerSegment, GpsPoint } from '../../types/dataLogger'
 const JITTER_M    = 3    // ignore GPS deltas < 3 m (noise while standing still)
 const ACCURACY_M  = 50   // reject fixes with accuracy worse than 50 m
 const CRUMB_MIN_M = 8    // thin the breadcrumb: keep a point every ~8 m of travel
+const TRAVEL_STEP_M = 5  // along-trail movement must exceed this to count as travel (GPS wobble)
 
 export type OnTrailLight = 'green' | 'red' | 'gray'
 
@@ -19,10 +20,12 @@ export interface LiveStats {
   tracking:       boolean
   startedAt:      number | null
   elapsedMs:      number
-  /** Distance travelled along the trail, one direction — forward progress only,
-   *  so an out-and-back isn't double-counted. Falls back to total GPS movement
-   *  when the trail has no mapped centerline. */
+  /** Trail covered — the stretch of trail visited, so an out-and-back counts
+   *  once. Falls back to total GPS movement when the trail has no centerline. */
   distanceM:      number
+  /** Distance traveled along the trail in every direction — an out-and-back
+   *  counts twice. Same fallback as distanceM. Pace is based on this. */
+  traveledM:      number
   trailheadDistM: number | null
   trailheadCrow:  boolean       // true = off-trail straight-line distance ("*")
   light:          OnTrailLight
@@ -47,8 +50,9 @@ function newTracker(sessionId: string): Tracker {
     state:            'tracking',
     startedAt:        now,
     segments:         [segment],
-    totalDistanceM:   0,
-    activeDurationMs: 0,
+    totalDistanceM:    0,
+    traveledDistanceM: 0,
+    activeDurationMs:  0,
   }
 }
 
@@ -72,8 +76,10 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
   const lastFixRef     = useRef<{ lat: number; lng: number } | null>(null)
   const pendingRef     = useRef(0)          // sub-jitter distance carried forward
   const lastCrumbRef   = useRef<{ lat: number; lng: number } | null>(null)
-  const maxAlongRef    = useRef<number | null>(null)      // furthest along the current trail
-  const alongTrailRef  = useRef<number | undefined>(undefined) // wksite that baseline belongs to
+  const minAlongRef    = useRef<number | null>(null)      // covered stretch of the current trail…
+  const maxAlongRef    = useRef<number | null>(null)      // …as [min, max] along it
+  const travelAnchorRef = useRef<number | null>(null)     // along position travel was last counted from
+  const alongTrailRef  = useRef<number | undefined>(undefined) // wksite those belong to
   const lastSaveRef    = useRef(0)          // last IndexedDB persist time
   const wakeLockRef    = useRef<WakeLockSentinel | null>(null)
   const wksiteRef      = useRef<number | undefined>(wksiteId)
@@ -164,21 +170,39 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
     }
     lastFixRef.current = { lat: point.lat, lng: point.lng }
 
-    // On-trail distance counts one direction only: accumulate forward progress
-    // along the trail (the furthest point reached), so walking out and back
-    // isn't double-counted. The baseline re-sets when the trail changes. Without
-    // a mapped centerline we can't project, so fall back to raw GPS movement.
-    let countDist = 0
+    // Two on-trail distances, both measured along the trail centerline:
+    //  • covered  — grows only when you reach trail you haven't been on yet (past
+    //    the [min, max] stretch visited), so an out-and-back counts once;
+    //  • traveled — every along-trail move, either direction, so it counts twice.
+    // Between two on-trail fixes we assume you stayed on the trail, so a GPS gap
+    // (app suspended, signal lost) is measured along the trail, not straight.
+    // The baseline re-sets when the trail changes. Without a mapped centerline we
+    // can't project, so both fall back to raw GPS movement.
+    let countDist  = 0
+    let travelDist = 0
     if (!classifiable) {
-      countDist = distAdd
+      countDist  = distAdd
+      travelDist = distAdd
     } else if (onTrail && alongM != null) {
-      if (alongTrailRef.current !== wks || maxAlongRef.current == null) {
+      if (alongTrailRef.current !== wks || minAlongRef.current == null || maxAlongRef.current == null) {
         // First on-trail fix for this trail — set the baseline, count nothing.
-        alongTrailRef.current = wks
-        maxAlongRef.current   = alongM
-      } else if (alongM > maxAlongRef.current) {
-        countDist           = alongM - maxAlongRef.current
-        maxAlongRef.current = alongM
+        alongTrailRef.current   = wks
+        minAlongRef.current     = alongM
+        maxAlongRef.current     = alongM
+        travelAnchorRef.current = alongM
+      } else {
+        if (alongM > maxAlongRef.current) {
+          countDist           = alongM - maxAlongRef.current
+          maxAlongRef.current = alongM
+        } else if (alongM < minAlongRef.current) {
+          countDist           = minAlongRef.current - alongM
+          minAlongRef.current = alongM
+        }
+        const moved = Math.abs(alongM - (travelAnchorRef.current ?? alongM))
+        if (moved >= TRAVEL_STEP_M) {
+          travelDist              = moved
+          travelAnchorRef.current = alongM
+        }
       }
     }
 
@@ -198,8 +222,9 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
     }
     const next: Tracker = {
       ...cur,
-      totalDistanceM: cur.totalDistanceM + countDist,
-      segments:       [...cur.segments.slice(0, -1), newSeg],
+      totalDistanceM:    cur.totalDistanceM + countDist,
+      traveledDistanceM: (cur.traveledDistanceM ?? cur.totalDistanceM) + travelDist,
+      segments:          [...cur.segments.slice(0, -1), newSeg],
     }
     setAndNotify(next)
 
@@ -243,7 +268,9 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
     lastFixRef.current = null
     pendingRef.current = 0
     lastCrumbRef.current = null
+    minAlongRef.current = null
     maxAlongRef.current = null
+    travelAnchorRef.current = null
     alongTrailRef.current = undefined
     setLight('gray'); setThDistM(null); setThCrow(false)
 
@@ -279,7 +306,9 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
     lastFixRef.current = null
     pendingRef.current = 0
     lastCrumbRef.current = null
+    minAlongRef.current = null
     maxAlongRef.current = null
+    travelAnchorRef.current = null
     alongTrailRef.current = undefined
     lastSaveRef.current = Date.now()
     setAndNotify(t)
@@ -316,7 +345,9 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
     lastFixRef.current = null
     pendingRef.current = 0
     lastCrumbRef.current = null
+    minAlongRef.current = null
     maxAlongRef.current = null
+    travelAnchorRef.current = null
     alongTrailRef.current = undefined
     setLight('gray'); setThDistM(null); setThCrow(false)
     setAndNotify(null)
@@ -328,11 +359,12 @@ export function useTracking({ sessionId, wksiteId, onTrackerChange }: UseTrackin
   const startedAt = tracker?.startedAt ?? null
   const elapsedMs = tracking && startedAt != null ? Date.now() - startedAt : (tracker?.activeDurationMs ?? 0)
   const distanceM = tracker?.totalDistanceM ?? 0
-  const distMi    = distanceM / 1609.344
+  const traveledM = tracker?.traveledDistanceM ?? distanceM
+  const distMi    = traveledM / 1609.344
   const paceMinPerMi = tracking && distMi > 0.02 ? (elapsedMs / 60000) / distMi : null
 
   const stats: LiveStats = {
-    tracking, startedAt, elapsedMs, distanceM,
+    tracking, startedAt, elapsedMs, distanceM, traveledM,
     trailheadDistM: tracking ? thDistM : null,
     trailheadCrow:  thCrow,
     light:          tracking ? light : 'gray',
