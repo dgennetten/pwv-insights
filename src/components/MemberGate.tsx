@@ -50,6 +50,12 @@ export function MemberGate({ children, onBack }: MemberGateProps) {
             >
               Sign In
             </button>
+            <a
+              href="https://www.pwv.org"
+              className="px-4 py-1.5 rounded-lg border border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-sm font-medium transition-colors"
+            >
+              Sign in via PWV.org
+            </a>
             {onBack && (
               <button
                 type="button"
