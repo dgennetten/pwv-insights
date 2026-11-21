@@ -104,7 +104,7 @@ try {
 
   $treesClearedPayload = treesClearedSafeEmpty();
   try {
-    $treesClearedPayload = treesCleared($db, $start, $end, $memberCtx);
+    $treesClearedPayload = treesCleared($db, $start, $end, $memberCtx, $timeRange);
   } catch (Throwable $e) {
     error_log('dashboard treesCleared: ' . $e->getMessage() . ' @' . $e->getFile() . ':' . $e->getLine());
   }
@@ -797,11 +797,11 @@ AND (
 /**
  * @return array{aggregate: list<array{sizeClass: string, label: string, count: float}>, byTrail: list<array{trailName: string, trailNumber: string, trees: list<array{sizeClass: string, count: float}>, total: float}>}
  */
-function treesClearedMemberScoped(PDO $db, ?string $s, ?string $e, int $personId): array {
-  return treesClearedMemberScopedQuery($db, $s, $e, $personId);
+function treesClearedMemberScoped(PDO $db, ?string $s, ?string $e, int $personId, ?string $grain = null): array {
+  return treesClearedMemberScopedQuery($db, $s, $e, $personId, $grain);
 }
 
-function treesClearedMemberScopedQuery(PDO $db, ?string $s, ?string $e, int $personId): array {
+function treesClearedMemberScopedQuery(PDO $db, ?string $s, ?string $e, int $personId, ?string $grain = null): array {
   [$w, $pBase] = scopeWhereBase($s, $e);
   $wExpr = implode(' AND ', $w);
   [$writerSql, $nw] = treesClearedWriterMatchSql($db);
@@ -908,7 +908,37 @@ ORDER BY total DESC
     );
   }
 
-  return ['aggregate' => $aggregate, 'byTrail' => $byTrail];
+  $byPeriod = null;
+  if ($grain !== null) {
+    $periodExpr = treesClearedPeriodExpr($grain);
+    $byPeriodSql = "
+SELECT x.period,
+       $trailSelect,
+       SUM(x.numCleared * x.w) AS total
+FROM (
+  SELECT tc.TrailClearingID, $innerQty AS numCleared, $periodExpr AS period, $weightCase AS w
+  FROM $tcf tc
+  JOIN t_report r ON r.ReportID = tc.ReportID
+  LEFT JOIN ($partySql) party ON party.ReportID = r.ReportID
+  WHERE $wExpr AND ($treeIds)
+  AND (
+    (COALESCE(party.party_n, 0) > 0 AND $onRoster)
+    OR (COALESCE(party.party_n, 0) = 0 AND ($writerSql))
+  )
+) x
+GROUP BY x.period
+ORDER BY x.period
+";
+    try {
+      $periodStmt = $db->prepare($byPeriodSql);
+      $periodStmt->execute($bindParams);
+      $byPeriod = treesClearedBuildPeriodSeries($periodStmt->fetchAll(PDO::FETCH_ASSOC), $grain, $s, $e, $buckets);
+    } catch (Throwable $ex) {
+      error_log('treesClearedMemberScoped byPeriod query: ' . $ex->getMessage() . ' @' . $ex->getFile() . ':' . $ex->getLine());
+    }
+  }
+
+  return ['aggregate' => $aggregate, 'byTrail' => $byTrail, 'byPeriod' => $byPeriod];
 }
 
 function summary(PDO $db, ?string $s, ?string $e, $ctx): array {
@@ -1284,17 +1314,73 @@ function treesClearedSafeEmpty(): array {
       'count'     => 0.0,
     ];
   }
-  return ['aggregate' => $aggregate, 'byTrail' => []];
+  return ['aggregate' => $aggregate, 'byTrail' => [], 'byPeriod' => null];
 }
 
-function treesCleared(PDO $db, ?string $s, ?string $e, $ctx): array {
+/**
+ * Time-series grain for the Trees Cleared card's By Month / By Year choice.
+ * Short ranges (last week / last month) get none; season ranges get months; all-time gets years.
+ */
+function treesClearedPeriodGrain(string $timeRange): ?string {
+  return match ($timeRange) {
+    '3m', '1y' => 'month',
+    'all'      => 'year',
+    default    => null,
+  };
+}
+
+function treesClearedPeriodExpr(string $grain): string {
+  return $grain === 'year' ? "DATE_FORMAT(r.ActivityDate, '%Y')" : "DATE_FORMAT(r.ActivityDate, '%Y-%m')";
+}
+
+/**
+ * Turn GROUP BY period rows (keys period, s0..s4, total) into a gap-filled, chronological series.
+ *
+ * @return array{grain: string, points: list<array{period: string, trees: list<array{sizeClass: string, count: float}>, total: float}>}
+ */
+function treesClearedBuildPeriodSeries(array $rows, string $grain, ?string $s, ?string $e, array $buckets): array {
+  $byKey = [];
+  foreach ($rows as $row) {
+    $k = (string)($row['period'] ?? '');
+    if ($k !== '') $byKey[$k] = $row;
+  }
+  ksort($byKey);
+
+  $keys = [];
+  if ($grain === 'month') {
+    $first = $s ? substr($s, 0, 7) : (array_key_first($byKey) ?? date('Y-m'));
+    $last  = $e ? substr($e, 0, 7) : date('Y-m');
+    for ($t = strtotime($first . '-01'), $stop = strtotime($last . '-01'); $t <= $stop; $t = strtotime('+1 month', $t)) {
+      $keys[] = date('Y-m', $t);
+    }
+  } else {
+    $first = $s ? (int)substr($s, 0, 4) : (int)(array_key_first($byKey) ?? date('Y'));
+    $last  = $e ? (int)substr($e, 0, 4) : (int)date('Y');
+    for ($y = $first; $y <= $last; $y++) $keys[] = (string)$y;
+  }
+
+  $points = [];
+  foreach ($keys as $k) {
+    $row = $byKey[$k] ?? [];
+    $trees = [];
+    foreach ($buckets as $i => $b) {
+      $trees[] = ['sizeClass' => $b['sizeClass'], 'count' => round((float)($row["s$i"] ?? 0), 2)];
+    }
+    $points[] = ['period' => $k, 'trees' => $trees, 'total' => round((float)($row['total'] ?? 0), 2)];
+  }
+  return ['grain' => $grain, 'points' => $points];
+}
+
+function treesCleared(PDO $db, ?string $s, ?string $e, $ctx, string $timeRange = '7d'): array {
   $buckets = treesClearedTreeBuckets();
   $treeIds = trailClearingTreeCountIdsFilterSql();
   $tcf = treesClearedTableRef();
   $qty = trailClearingQtyExpr($db);
 
+  $grain = treesClearedPeriodGrain($timeRange);
+
   if ($ctx !== 'all') {
-    return treesClearedMemberScoped($db, $s, $e, (int)$ctx);
+    return treesClearedMemberScoped($db, $s, $e, (int)$ctx, $grain);
   }
 
   $caseCols = [];
@@ -1353,7 +1439,29 @@ function treesCleared(PDO $db, ?string $s, ?string $e, $ctx): array {
     ];
   }
 
-  return ['aggregate' => $aggregate, 'byTrail' => $byTrail];
+  $byPeriod = null;
+  if ($grain !== null) {
+    try {
+      $periodExpr = treesClearedPeriodExpr($grain);
+      [$w3, $p3] = scopeWhereTrees($db, $s, $e, $ctx);
+      $periodStmt = $db->prepare("
+        SELECT $periodExpr AS period,
+               $trailSumSql,
+               SUM($qty) AS total
+        FROM $tcf tc
+        JOIN t_report r ON r.ReportID = tc.ReportID
+        WHERE $w3 AND ($treeIds)
+        GROUP BY period
+        ORDER BY period
+      ");
+      $periodStmt->execute($p3);
+      $byPeriod = treesClearedBuildPeriodSeries($periodStmt->fetchAll(PDO::FETCH_ASSOC), $grain, $s, $e, $buckets);
+    } catch (Throwable $ex) {
+      error_log('treesCleared byPeriod: ' . $ex->getMessage() . ' @' . $ex->getFile() . ':' . $ex->getLine());
+    }
+  }
+
+  return ['aggregate' => $aggregate, 'byTrail' => $byTrail, 'byPeriod' => $byPeriod];
 }
 
 function membersByAge(PDO $db, ?string $s, ?string $e): array {

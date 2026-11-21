@@ -106,9 +106,21 @@ export interface TrailTreesCleared {
   total: number
 }
 
+/** One time bucket of trees cleared: `period` is 'YYYY-MM' (month grain) or 'YYYY' (year grain). */
+export interface PeriodTreesCleared {
+  period: string
+  trees: Array<{ sizeClass: TreeSizeClass; count: number }>
+  total: number
+}
+
 export interface TreesCleared {
   aggregate: TreeSizeCount[]
   byTrail: TrailTreesCleared[]
+  /**
+   * Time series for the By Month / By Year view. Null (or absent) for short ranges
+   * (last week / last month) where a time breakdown isn't meaningful.
+   */
+  byPeriod?: { grain: 'month' | 'year'; points: PeriodTreesCleared[] } | null
 }
 
 // ─── Member age histogram ─────────────────────────────────────────────────────

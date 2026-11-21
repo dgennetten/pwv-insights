@@ -82,6 +82,20 @@ function normalizeTreesClearedPayload(tc: TreesCleared, memberScoped: boolean): 
         count: roundTreesClearedForScope(Number(t.count), memberScoped),
       })),
     })),
+    byPeriod:
+      tc.byPeriod && Array.isArray(tc.byPeriod.points)
+        ? {
+            grain: tc.byPeriod.grain === 'year' ? 'year' : 'month',
+            points: tc.byPeriod.points.map(p => ({
+              ...p,
+              total: roundTreesClearedForScope(Number(p.total), memberScoped),
+              trees: p.trees.map(t => ({
+                ...t,
+                count: roundTreesClearedForScope(Number(t.count), memberScoped),
+              })),
+            })),
+          }
+        : null,
   }
 }
 
@@ -169,7 +183,13 @@ export function ActivityDashboardPage() {
   const [userPrefs, setUserPrefs] = useState<UserPreferences>(getLocalPreferences)
   const autoSwitchedRef = useRef(false)
 
+  /** Incremented per request; responses from superseded requests are ignored so a slow
+   *  earlier range (e.g. All Time) can't overwrite the one the user picked last, and vice versa. */
+  const requestSeqRef = useRef(0)
+
   const fetchData = useCallback(async (s: DashboardScope) => {
+    const seq = ++requestSeqRef.current
+    const isStale = () => seq !== requestSeqRef.current
     setLoading(true)
     setError(null)
     try {
@@ -178,8 +198,10 @@ export function ActivityDashboardPage() {
         `/api/dashboard/data.php?timeRange=${s.timeRange}&memberContext=${encodeURIComponent(mc)}`,
         { cache: 'no-store' } // live analytics — never read a stale HTTP-cached payload
       )
+      if (isStale()) return
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = (await res.json()) as Record<string, unknown>
+      if (isStale()) return
       if (json && json.ok === false && json.error) {
         const detail = typeof json.detail === 'string' ? json.detail : String(json.error)
         throw new Error(`Dashboard API: ${detail}`)
@@ -199,9 +221,10 @@ export function ActivityDashboardPage() {
         setScope(prev => ({ ...prev, memberContext: 'all' }))
       }
     } catch (e) {
+      if (isStale()) return
       setError(e instanceof Error ? e.message : 'Failed to load dashboard data')
     } finally {
-      setLoading(false)
+      if (!isStale()) setLoading(false)
     }
   }, [])
 
@@ -282,6 +305,23 @@ export function ActivityDashboardPage() {
             <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Updating…</span>
           </div>
         </>
+      )}
+      {error && !loading && (
+        <div
+          role="alert"
+          className="fixed left-1/2 -translate-x-1/2 top-3 z-30 flex items-center gap-3 rounded-full border border-red-200 bg-red-50/95 px-4 py-1.5 shadow-lg backdrop-blur dark:border-red-900 dark:bg-red-950/90"
+        >
+          <span className="text-xs font-medium text-red-700 dark:text-red-300">
+            Couldn’t load this range ({error}) — showing previous data.
+          </span>
+          <button
+            type="button"
+            onClick={() => fetchData(scope)}
+            className="text-xs font-semibold text-red-700 dark:text-red-300 underline underline-offset-2 hover:opacity-75"
+          >
+            Retry
+          </button>
+        </div>
       )}
       <ActivityDashboard
         scope={scope}

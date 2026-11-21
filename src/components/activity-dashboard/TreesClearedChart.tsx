@@ -13,14 +13,24 @@ interface TreesClearedChartProps {
   memberScoped?: boolean
 }
 
-type TreeView = 'aggregate' | 'byTrail'
+type TreeView = 'aggregate' | 'byTrail' | 'byPeriod'
 
-const SIZE_CLASS_COLORS: Record<TreeSizeClass, { bar: string; label: string; dot: string }> = {
-  '< 8"':     { bar: 'bg-emerald-300 dark:bg-emerald-700', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-300' },
-  '8" – 15"': { bar: 'bg-emerald-400 dark:bg-emerald-600', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-400' },
-  '16" – 23"':{ bar: 'bg-emerald-500 dark:bg-emerald-500', label: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  '24" – 36"':{ bar: 'bg-emerald-600 dark:bg-emerald-400', label: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-600' },
-  '> 36"':    { bar: 'bg-emerald-800 dark:bg-emerald-300', label: 'text-emerald-800 dark:text-emerald-200', dot: 'bg-emerald-800' },
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** 'YYYY-MM' → { short: 'Oct', long: 'Oct 2025' }; 'YYYY' → { short: '2025', long: '2025' }. */
+function periodLabels(period: string): { short: string; long: string } {
+  const [y, m] = period.split('-')
+  if (!m) return { short: y, long: y }
+  const name = MONTH_ABBR[Number(m) - 1] ?? m
+  return { short: name, long: `${name} ${y}` }
+}
+
+const SIZE_CLASS_COLORS: Record<TreeSizeClass, { bar: string; label: string }> = {
+  '< 8"':     { bar: 'bg-emerald-300 dark:bg-emerald-700', label: 'text-emerald-600 dark:text-emerald-400' },
+  '8" – 15"': { bar: 'bg-emerald-400 dark:bg-emerald-600', label: 'text-emerald-600 dark:text-emerald-400' },
+  '16" – 23"':{ bar: 'bg-emerald-500 dark:bg-emerald-500', label: 'text-emerald-600 dark:text-emerald-400' },
+  '24" – 36"':{ bar: 'bg-emerald-600 dark:bg-emerald-400', label: 'text-emerald-700 dark:text-emerald-300' },
+  '> 36"':    { bar: 'bg-emerald-800 dark:bg-emerald-300', label: 'text-emerald-800 dark:text-emerald-200' },
 }
 
 /** lu_trail_clearing tree lines (TrailClearingID 1–5) mapped to diameter-class labels; counts are NumCleared trees. */
@@ -60,35 +70,110 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
   )
   const maxAgg = Math.max(...aggNumeric, 1)
 
+  // By Month / By Year only exists when the API supplies a series for this time range
+  // (none for Last Week / Last Month). If the range changes away, fall back to All Trails.
+  const byPeriod = data.byPeriod && data.byPeriod.points.length > 0 ? data.byPeriod : null
+  const activeView: TreeView = view === 'byPeriod' && !byPeriod ? 'aggregate' : view
+
+  const viewOptions: { value: TreeView; label: string }[] = [
+    { value: 'aggregate', label: 'All Trails' },
+    { value: 'byTrail', label: 'By Trail' },
+    ...(byPeriod
+      ? [{ value: 'byPeriod' as const, label: byPeriod.grain === 'year' ? 'By Year' : 'By Month' }]
+      : []),
+  ]
+
+  const periodRows = byPeriod
+    ? byPeriod.points.map(p => {
+        const segments = p.trees.map(t => ({
+          sizeClass: t.sizeClass,
+          n: memberScoped ? roundTreesCleared(Number(t.count)) : roundWholeTreesCleared(Number(t.count)),
+        }))
+        const total = segments.reduce((a, t) => a + (Number.isFinite(t.n) ? t.n : 0), 0)
+        return { period: p.period, ...periodLabels(p.period), segments, total }
+      })
+    : []
+  const maxPeriod = Math.max(...periodRows.map(r => r.total), 1)
+  const periodLabelEvery = Math.ceil(periodRows.length / 12)
+
   return (
     <div className="space-y-4">
-      {/* Toggle */}
+      {/* View choice */}
       <div className="flex items-center gap-2">
         <div className="flex bg-stone-100 dark:bg-stone-800 rounded-md p-0.5 text-xs">
-          <button
-            onClick={() => setView('aggregate')}
-            className={`px-3 py-1 rounded transition-colors ${
-              view === 'aggregate'
-                ? 'bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 shadow-sm font-medium'
-                : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
-            }`}
-          >
-            All Trails
-          </button>
-          <button
-            onClick={() => setView('byTrail')}
-            className={`px-3 py-1 rounded transition-colors ${
-              view === 'byTrail'
-                ? 'bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 shadow-sm font-medium'
-                : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
-            }`}
-          >
-            By Trail
-          </button>
+          {viewOptions.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setView(opt.value)}
+              className={`px-3 py-1 rounded transition-colors ${
+                activeView === opt.value
+                  ? 'bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 shadow-sm font-medium'
+                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {view === 'aggregate' ? (
+      {activeView === 'byPeriod' ? (
+        <div className="space-y-2">
+          {/* Stacked columns, one per month/year; smallest size class at the bottom. */}
+          <div className="flex items-end gap-1" style={{ height: CHART_HEIGHT + 'px' }}>
+            {periodRows.map(row => {
+              const heightPct = row.total <= EPS ? 0 : Math.max((row.total / maxPeriod) * 100, 4)
+              return (
+                <div
+                  key={row.period}
+                  className="flex-1 flex flex-col items-center justify-end gap-1 group h-full min-w-0"
+                  title={`${row.long} · ${formatTreeCount(row.total, memberScoped)} trees`}
+                >
+                  <span
+                    className={`text-[10px] font-medium tabular-nums text-stone-500 dark:text-stone-400 ${
+                      row.total > EPS && periodRows.length <= 14 ? '' : 'opacity-0'
+                    }`}
+                  >
+                    {formatTreeCount(row.total, memberScoped)}
+                  </span>
+                  <div
+                    className="w-full flex flex-col-reverse rounded-t-sm overflow-hidden transition-opacity group-hover:opacity-80 cursor-default"
+                    style={{ height: `${heightPct}%` }}
+                  >
+                    {row.segments.map(seg =>
+                      seg.n > EPS ? (
+                        <div
+                          key={seg.sizeClass}
+                          className={colorForSizeClass(seg.sizeClass).bar}
+                          style={{ height: `${(seg.n / row.total) * 100}%` }}
+                          title={`${row.long} · ${sizeClassTooltip(seg.sizeClass as TreeSizeClass, seg.n, memberScoped)}`}
+                        />
+                      ) : null
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex gap-1">
+            {periodRows.map((row, i) => (
+              <div key={row.period} className="flex-1 text-center min-w-0">
+                {i % periodLabelEvery === 0 && (
+                  <span className="text-[10px] text-stone-400 dark:text-stone-500 truncate block">{row.short}</span>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-3 pt-1">
+            {(Object.entries(SIZE_CLASS_COLORS) as [TreeSizeClass, typeof SIZE_CLASS_COLORS[TreeSizeClass]][]).map(([cls, colors]) => (
+              <div key={cls} className="flex items-center gap-1">
+                <div className={`w-2.5 h-2.5 rounded-sm ${colors.bar}`} />
+                <span className="text-[10px] text-stone-500 dark:text-stone-400">{cls}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : activeView === 'aggregate' ? (
         <>
           {/* Aggregate bar chart */}
           <div className="flex items-end gap-4" style={{ height: CHART_HEIGHT + 'px' }}>
@@ -200,7 +285,7 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
               <div className="flex flex-wrap gap-3 pt-1">
                 {(Object.entries(SIZE_CLASS_COLORS) as [TreeSizeClass, typeof SIZE_CLASS_COLORS[TreeSizeClass]][]).map(([cls, colors]) => (
                   <div key={cls} className="flex items-center gap-1">
-                    <div className={`w-2.5 h-2.5 rounded-sm ${colors.dot}`} />
+                    <div className={`w-2.5 h-2.5 rounded-sm ${colors.bar}`} />
                     <span className="text-[10px] text-stone-500 dark:text-stone-400">{cls}</span>
                   </div>
                 ))}

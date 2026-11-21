@@ -254,7 +254,20 @@ async function proxyPhpUpstream(req, res) {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       init.body = await readReqBuffer(req)
     }
-    const r = await fetch(targetUrl, init)
+    // Node's fetch has a fixed ~10s TCP+TLS connect timeout; connects to the shared host are
+    // sometimes slower than that from dev machines. Retry connect timeouts (the request never
+    // reached the server, so even non-GET retries are safe).
+    let r
+    for (let attempt = 1; ; attempt++) {
+      try {
+        r = await fetch(targetUrl, init)
+        break
+      } catch (e) {
+        const code = e?.cause?.code
+        if (attempt >= 4 || code !== 'UND_ERR_CONNECT_TIMEOUT') throw e
+        console.log(`[proxy] ${targetUrl.pathname} connect ${code} — retry ${attempt}/3`)
+      }
+    }
     const ct = r.headers.get('content-type') || 'application/octet-stream'
     const out = Buffer.from(await r.arrayBuffer())
     res.writeHead(r.status, { 'Content-Type': ct, 'Access-Control-Allow-Origin': '*' })
