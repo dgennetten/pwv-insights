@@ -93,6 +93,10 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
         return { period: p.period, ...periodLabels(p.period), segments, total }
       })
     : []
+  // Many year columns don't fit '2026' at phone width — use '26 style.
+  if (byPeriod?.grain === 'year' && periodRows.length > 8) {
+    for (const r of periodRows) r.short = `’${r.short.slice(-2)}`
+  }
   const maxPeriod = Math.max(...periodRows.map(r => r.total), 1)
   const periodLabelEvery = Math.ceil(periodRows.length / 12)
 
@@ -159,7 +163,7 @@ export function TreesClearedChart({ data, memberScoped = false }: TreesClearedCh
             {periodRows.map((row, i) => (
               <div key={row.period} className="flex-1 text-center min-w-0">
                 {i % periodLabelEvery === 0 && (
-                  <span className="text-[10px] text-stone-400 dark:text-stone-500 truncate block">{row.short}</span>
+                  <span className="text-[10px] text-stone-400 dark:text-stone-500 whitespace-nowrap">{row.short}</span>
                 )}
               </div>
             ))}
